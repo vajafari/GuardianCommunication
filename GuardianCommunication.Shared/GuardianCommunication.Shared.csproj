@@ -1,0 +1,566 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{D94D085A-D8AB-41BE-91F9-A394DC773B20}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GuardianCommunication.Shared</RootNamespace>
+    <AssemblyName>GuardianCommunication.Shared</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <TargetFrameworkProfile />
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Publish|AnyCPU'">
+    <OutputPath>bin\Publish\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithEventViewerLog|AnyCPU'">
+    <OutputPath>bin\ReleaseWithEventViewerLog\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Publish|x86'">
+    <OutputPath>bin\x86\Publish\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithEventViewerLog|x86'">
+    <OutputPath>bin\x86\ReleaseWithEventViewerLog\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Publish|x64'">
+    <OutputPath>bin\x64\Publish\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithEventViewerLog|x64'">
+    <OutputPath>bin\x64\ReleaseWithEventViewerLog\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="MD.PersianDateTime, Version=4.6.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MD.PersianDateTime.4.6.0\lib\net20\MD.PersianDateTime.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Data" />
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Xml" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="CommunicationModels\DeviceInvalidAttendanceModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeIrisModel.cs" />
+    <Compile Include="CommunicationModels\NewIrisModelEnrolled.cs" />
+    <Compile Include="CommunicationModels\OpenDoorWithDelayModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerCalendarDetailsModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerAccessLevelDoorModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerAccessGroupAccessDataModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndAccessLevelModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerAccessLevelModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerCalendarModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndWiegandModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndCalendarModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndRelayModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndIoPortModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerUserLimitationAttendanceModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerUserLimitationTimeModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerEasyPermissionModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerWiegandModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerIoPortModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerRelayModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerUserAccessDataModel.cs" />
+    <Compile Include="CommunicationModels\FaceDetectionCameraAttendanceReportResultModel.cs" />
+    <Compile Include="CommunicationModels\FaceDetectionCameraAttendanceReportFilterModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1DeviceAndDoorWithDelayModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndDoorModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceAndDoorWithDelayModel.cs" />
+    <Compile Include="CommunicationModels\OpenCabinetDoorModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2DeviceAndDoorWithDelayModel.cs" />
+    <Compile Include="CommunicationModels\PadisControllerDeviceDoorModel.cs" />
+    <Compile Include="Definition\PadisControllerRelayTypeEnumeration.cs" />
+    <Compile Include="Definition\PadisControllerWiegandDataTypeEnumeration.cs" />
+    <Compile Include="Definition\PadisControllerWiegandFormatEnumeration.cs" />
+    <Compile Include="Definition\AttendanceVerificationStyleEnumeration.cs" />
+    <Compile Include="Definition\LogLevelPrintServiceEnumeration.cs" />
+    <Compile Include="Definition\LogLevelPadisControllerEnumeration.cs" />
+    <Compile Include="Definition\FaceDetectionCameraDetectionStatusEnumeration.cs" />
+    <Compile Include="Definition\HardwareTypeEnumeration.cs" />
+    <Compile Include="Definition\LogLevelMetalDetectorEnumeration.cs" />
+    <Compile Include="Definition\VirdiAccessControlDataTypeEnumeration.cs" />
+    <Compile Include="Dto\DtoTimyHoliday.cs" />
+    <Compile Include="Dto\DtoDeviceDoor.cs" />
+    <Compile Include="Dto\DtoPadisControllerAccessGroupAccessData.cs" />
+    <Compile Include="Dto\DtoPadisControllerAccessGroup.cs" />
+    <Compile Include="Dto\DtoPadisControllerAccessLevelDoor.cs" />
+    <Compile Include="Dto\DtoPadisControllerAccessLevel.cs" />
+    <Compile Include="Dto\DtoPadisControllerEasyAccess.cs" />
+    <Compile Include="Dto\DtoPadisControllerUserLimitationAttendance.cs" />
+    <Compile Include="Dto\DtoPadisControllerUserLimitationTime.cs" />
+    <Compile Include="Dto\DtoPadisControllerUserAccessData.cs" />
+    <Compile Include="Dto\DtoPadisControllerUserEasyPermission.cs" />
+    <Compile Include="Dto\DtoPadisControllerCalendar.cs" />
+    <Compile Include="Dto\DtoPadisControllerCalendarDetails.cs" />
+    <Compile Include="Dto\DtoPadisControllerDeviceDoor.cs" />
+    <Compile Include="Dto\DtoPadisControllerIoPort.cs" />
+    <Compile Include="Dto\DtoPadisControllerRelay.cs" />
+    <Compile Include="Dto\DtoPadisControllerWiegand.cs" />
+    <Compile Include="Dto\DtoDeviceInvalidAttendanceImage.cs" />
+    <Compile Include="Dto\DtoInvalidAttendance.cs" />
+    <Compile Include="Dto\DtoEmployeeIris.cs" />
+    <Compile Include="Dto\DtoTimyWeekTimezoneGroup.cs" />
+    <Compile Include="Dto\DtoTimyWeekTimezone.cs" />
+    <Compile Include="Dto\DtoTimyDayTimezoneGroup.cs" />
+    <Compile Include="Dto\DtoTimyDayTimezoneInterval.cs" />
+    <Compile Include="Dto\DtoUnsentCommandCountByDeviceNumber.cs" />
+    <Compile Include="Dto\DtoUnsentCommandForFaceDetectionSystem.cs" />
+    <Compile Include="Dto\DtoDeviceCommandProcessingDescription.cs" />
+    <Compile Include="Dto\DtoUnsentCommandCountByDeviceSerialNumber.cs" />
+    <Compile Include="ExtensionsAndUtilities\ImageHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\LinqHelper.cs" />
+    <Compile Include="FaceDetectionCameraUserOperationResultModel.cs" />
+    <Compile Include="CommunicationModels\CameraAccessDataParamsModel.cs" />
+    <Compile Include="CommunicationModels\FaceDetectionCameraUserInfoModel.cs" />
+    <Compile Include="CommunicationModels\VirdiAccessControlDataModel.cs" />
+    <Compile Include="CommunicationModels\VirdiHolidayGroupModel.cs" />
+    <Compile Include="CommunicationModels\VirdiTimeZoneModel.cs" />
+    <Compile Include="CommunicationModels\VirdiAccessTimeModel.cs" />
+    <Compile Include="CommunicationModels\VirdiAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\UserInfoDefinedOnDeviceModel.cs" />
+    <Compile Include="CommunicationModels\ListGuidModel.cs" />
+    <Compile Include="CommunicationModels\SubmitInvalidCameraEventModel.cs" />
+    <Compile Include="CommunicationModels\SubmitValidCameraEventModel.cs" />
+    <Compile Include="CommunicationModels\MatchOnServerDeviceAttendanceModel.cs" />
+    <Compile Include="CommunicationModels\SelfBillFoodInfoModel.cs" />
+    <Compile Include="CommunicationModels\ServerMatchDataModel.cs" />
+    <Compile Include="CommunicationModels\ServerMatchingResultModel.cs" />
+    <Compile Include="CommunicationModels\CameraImageModel.cs" />
+    <Compile Include="CommunicationModels\DeviceUnauthorizedAttendanceImageModel.cs" />
+    <Compile Include="CommunicationModels\DeviceAttendanceImageModel.cs" />
+    <Compile Include="CommunicationModels\CameraModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2DeviceAndDoorModel.cs" />
+    <Compile Include="CommunicationModels\UpdateFirmwareModel.cs" />
+    <Compile Include="CommunicationModels\XRayDeviceScanDataModel.cs" />
+    <Compile Include="CommunicationModels\XRayDeviceModel.cs" />
+    <Compile Include="CommunicationModels\MetalDetectorPersonPassedModel.cs" />
+    <Compile Include="CommunicationModels\MetalDetectorGateModel.cs" />
+    <Compile Include="CommunicationModels\ListSelfBillInfoModel.cs" />
+    <Compile Include="CommunicationModels\AttendanceProcessResultModel.cs" />
+    <Compile Include="CommunicationModels\FunctionTitleModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeEnrolledSettingModel.cs" />
+    <Compile Include="CommunicationModels\DateRangeModel.cs" />
+    <Compile Include="CommunicationModels\SelfBillInfoModel.cs" />
+    <Compile Include="CommunicationModels\Int64Model.cs" />
+    <Compile Include="CommunicationModels\ListInt64Model.cs" />
+    <Compile Include="CommunicationModels\NotHookedAttendancesStatisticsInputModel.cs" />
+    <Compile Include="CommunicationModels\NotHookedAttendancesStatisticsModel.cs" />
+    <Compile Include="CommunicationModels\OtherResourcesAttendanceModel.cs" />
+    <Compile Include="CommunicationModels\DeviceAttendanceModel.cs" />
+    <Compile Include="CommunicationModels\DeviceDoorModel.cs" />
+    <Compile Include="CommunicationModels\DataCountModel.cs" />
+    <Compile Include="CommunicationModels\NewCardEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\DeviceDoorBaseModel.cs" />
+    <Compile Include="CommunicationModels\SelfPrintResultModel.cs" />
+    <Compile Include="CommunicationModels\SubmitSelfEventModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2AccessLevelDoorTimezoneModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1AccessGroupDoorTimezoneModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2AccessLevelModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2AccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1AccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2DeviceDoorModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1DeviceDoorModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2DeviceHolidayGroupModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2DeviceHolidayModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2SendAccessLevelModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2SendAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2SendDoorModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1DeviceAndDoorModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1SendAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2SendHolidaysModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2SendTimezomesModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2AccessScheduleElementModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2AccessScheduleModel.cs" />
+    <Compile Include="CommunicationModels\TimyDayTimezoneIntervalModel.cs" />
+    <Compile Include="CommunicationModels\TimyDayTimezoneGroupModel.cs" />
+    <Compile Include="CommunicationModels\TimyWeekTimezoneModel.cs" />
+    <Compile Include="CommunicationModels\TimyWeekTimezoneGroupModel.cs" />
+    <Compile Include="CommunicationModels\TimyHolidayModel.cs" />
+    <Compile Include="CommunicationModels\TimySetDayTimezoneModel.cs" />
+    <Compile Include="CommunicationModels\TimySetWeekTimezoneModel.cs" />
+    <Compile Include="CommunicationModels\TimySetHolidaysModel.cs" />
+    <Compile Include="CommunicationModels\DeviceEventLogModel.cs" />
+    <Compile Include="CommunicationModels\DeviceMealOrderDataModel.cs" />
+    <Compile Include="Definition\CameraSettingEnumeration.cs" />
+    <Compile Include="Definition\OtherHardwareCommandTypeEnumeration.cs" />
+    <Compile Include="Definition\KarnamaCallLogLevelEnumeration.cs" />
+    <Compile Include="Definition\LogLevelXRayEnumeration.cs" />
+    <Compile Include="Definition\LogLevelVirdiEnumeration.cs" />
+    <Compile Include="Definition\LogLevelTimyEnumeration.cs" />
+    <Compile Include="Definition\LogLevelPwEnumeration.cs" />
+    <Compile Include="Definition\LogLevelSuprema1Enumeration.cs" />
+    <Compile Include="Definition\LogLevelSuprema2Enumeration.cs" />
+    <Compile Include="Definition\LogLevelElmoSanatEnumeration.cs" />
+    <Compile Include="Definition\LogLevelCameraEnumeration.cs" />
+    <Compile Include="Definition\LogLevelZkEnumeration.cs" />
+    <Compile Include="Definition\PlateRecognitionAcceptType.cs" />
+    <Compile Include="Definition\CarPlateTypeEnumeration.cs" />
+    <Compile Include="Definition\CameraTypeEnumeration.cs" />
+    <Compile Include="Definition\CameraTaskEnumeration.cs" />
+    <Compile Include="Definition\AttendanceRegisterIntervalTypeEnumeration.cs" />
+    <Compile Include="Definition\CalendarTypeEnumeration.cs" />
+    <Compile Include="Definition\DeviceUserType.cs" />
+    <Compile Include="Definition\IChecksumEntity.cs" />
+    <Compile Include="Definition\IDynamicApi.cs" />
+    <Compile Include="Definition\LogLevelCodeEnum.cs" />
+    <Compile Include="Dto\DtoPwAutoCollectClearDataResult.cs" />
+    <Compile Include="Dto\OtherHardwareCommandSortEnumeration.cs" />
+    <Compile Include="Dto\DtoSystemConfigCameraCommandSetting.cs" />
+    <Compile Include="Dto\DtoOtherHardwareCommandProcessingDescription.cs" />
+    <Compile Include="Dto\DtoOtherHardwareCommandProcessingResult.cs" />
+    <Compile Include="Dto\DtoOtherHardwareCommand.cs" />
+    <Compile Include="Dto\DtoOtherHardwareCommandWithoutContent.cs" />
+    <Compile Include="Dto\DtoAttendanceSendToKarnamaResult.cs" />
+    <Compile Include="Dto\DtoUserInfoDefinedOnDevice.cs" />
+    <Compile Include="Dto\DtoCameraCommunicationData.cs" />
+    <Compile Include="Dto\DtoNationalPlateSections.cs" />
+    <Compile Include="Dto\DtoApplicationEncodedConfig.cs" />
+    <Compile Include="Dto\DtoCameraImage.cs" />
+    <Compile Include="Dto\DtoCamera.cs" />
+    <Compile Include="Dto\DtoDeviceUnauthorizedAttendanceImage.cs" />
+    <Compile Include="Dto\DtoDeviceAttendanceImage.cs" />
+    <Compile Include="Dto\DtoPlateDetectionCameraCarAttendance.cs" />
+    <Compile Include="Dto\DtoLoggerData.cs" />
+    <Compile Include="Dto\DtoMetalDetectorPersonPassedData.cs" />
+    <Compile Include="Dto\DtoDeviceConnectionStatus.cs" />
+    <Compile Include="Dto\DtoSelfBillFoodInfo.cs" />
+    <Compile Include="Dto\DtoServerMatchResult.cs" />
+    <Compile Include="Dto\DtoAttendanceRegisterIntervalSetting.cs" />
+    <Compile Include="Dto\DtoCarAccessInterval.cs" />
+    <Compile Include="Dto\DtoCarAccessData.cs" />
+    <Compile Include="Dto\DtoVirdiAccessControlData.cs" />
+    <Compile Include="Dto\DtoVirdiAccessGroup.cs" />
+    <Compile Include="Dto\DtoVirdiAccessTime.cs" />
+    <Compile Include="Dto\DtoVirdiHolidayGroup.cs" />
+    <Compile Include="Dto\DtoVirdiTimeZone.cs" />
+    <Compile Include="Dto\DtoXRayDevice.cs" />
+    <Compile Include="Dto\DtoMetalDetectorGate.cs" />
+    <Compile Include="Dto\DtoScheduledApiCallTask.cs" />
+    <Compile Include="Dto\DtoDeviceCommandWithoutContent.cs" />
+    <Compile Include="Dto\DtoSelfPrintResult.cs" />
+    <Compile Include="Dto\DtoDeviceMealOrderData.cs" />
+    <Compile Include="Dto\DtoPadisConfig.cs" />
+    <Compile Include="Dto\DtoEmployeeEnrolledSetting.cs" />
+    <Compile Include="Dto\DtoDeviceEventLog.cs" />
+    <Compile Include="Dto\DtoCommunicationDeviceTimeSettings.cs" />
+    <Compile Include="Dto\DtoSelfBillInfo.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2AccessGroup.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2AccessLevel.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2AccessLevelDoorAccessSchedule.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2DeviceDoor.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1DeviceDoor.cs" />
+    <Compile Include="Dto\DtoDeviceDoorBase.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1AccessGroup.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1AccessGroupDoorTimezone.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1TimezoneElementModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1TimezoneModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1SendTimezomesModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1SendHolidaysModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1DeviceHolidayModel.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk1DeviceHolidayGroupModel.cs" />
+    <Compile Include="CommunicationModels\ZkDeviceDoorModel.cs" />
+    <Compile Include="CommunicationModels\FilterAndSearchModels\CurrentPageInfo.cs" />
+    <Compile Include="CommunicationModels\DeviceNumberListModel.cs" />
+    <Compile Include="CommunicationModels\FailedCommandStatisticsModel.cs" />
+    <Compile Include="CommunicationModels\DeviceStatisticsModel.cs" />
+    <Compile Include="CommunicationModels\DeviceAndEmployeeNumberListModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeAndDeviceResultModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeAndDeviceModel.cs" />
+    <Compile Include="CommunicationModels\FilterAndSearchModels\DeviceCommandSortModel.cs" />
+    <Compile Include="CommunicationModels\FilterAndSearchModels\DeviceCommandFilterModel.cs" />
+    <Compile Include="CommunicationModels\FilterAndSearchModels\DeviceCommandSearchModel.cs" />
+    <Compile Include="CommunicationModels\OpenDoorModel.cs" />
+    <Compile Include="CommunicationModels\SystemConfigModel.cs" />
+    <Compile Include="CommunicationModels\TimeZoneIntervalModel.cs" />
+    <Compile Include="CommunicationModels\TimezoneModel.cs" />
+    <Compile Include="CommunicationModels\NewEmployeeImageEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\ZkOperationLogModel.cs" />
+    <Compile Include="CommunicationModels\DeviceTypeSummaryModel.cs" />
+    <Compile Include="CommunicationModels\DeviceModel.cs" />
+    <Compile Include="CommunicationModels\TokenResponseModel.cs" />
+    <Compile Include="CommunicationModels\ExternalSystemAuthDataModel.cs" />
+    <Compile Include="CommunicationModels\NewImageEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\NewUserEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\CommunicationModelMapper.cs" />
+    <Compile Include="CommunicationModels\DeviceConnectionChangedModel.cs" />
+    <Compile Include="CommunicationModels\DeviceCommunicationModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeImageModel.cs" />
+    <Compile Include="CommunicationModels\NewFaceEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\NewFingerEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\NewPalmModelEnrolled.cs" />
+    <Compile Include="Definition\AuthorizationTypeEnumeration.cs" />
+    <Compile Include="Definition\CommandPriorityEnumeration.cs" />
+    <Compile Include="Definition\DeviceCommandTypeEnumeration.cs" />
+    <Compile Include="Definition\HookDetailTypeEnumeration.cs" />
+    <Compile Include="Definition\ExternalHookSystemType.cs" />
+    <Compile Include="Definition\HttpMethodEnumeration.cs" />
+    <Compile Include="Definition\GeneralLogLevel1Enumeration.cs" />
+    <Compile Include="Definition\ServiceTypeEnumeration.cs" />
+    <Compile Include="Definition\ApplicationTypeEnumeration.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2DeviceHoliday.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2DeviceHolidayGroup.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2AccessSchedule.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1Timezone.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2AccessScheduleElement.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1TimezoneElement.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1DeviceHoliday.cs" />
+    <Compile Include="Dto\DtoSupremaSdk1DeviceHolidayGroup.cs" />
+    <Compile Include="Dto\DtoFailedCommandStatistics.cs" />
+    <Compile Include="Dto\DtoDeviceUnsentCommand.cs" />
+    <Compile Include="Dto\DtoSystemConfigCommandSetting.cs" />
+    <Compile Include="Dto\DtoZkDeviceDoor.cs" />
+    <Compile Include="Dto\DtoEmployeeAndDeviceResult.cs" />
+    <Compile Include="Dto\DtoEmployeeAndDeviceParam.cs" />
+    <Compile Include="Dto\DtoAttendaceSaveResult.cs" />
+    <Compile Include="Dto\DtoOperationLog.cs" />
+    <Compile Include="Dto\DtoDeviceCommunicationData.cs" />
+    <Compile Include="Dto\DtoUnhookedAttendances.cs" />
+    <Compile Include="Dto\DtoAttendanceHookSystem.cs" />
+    <Compile Include="Dto\DtoHookSystemDetail.cs" />
+    <Compile Include="Dto\DtoHookSystem.cs" />
+    <Compile Include="Dto\DtoDeviceCommandProcessingResult.cs" />
+    <Compile Include="Dto\DtoDeviceCommand.cs" />
+    <Compile Include="Dto\DtoEmployeePalm.cs" />
+    <Compile Include="Dto\DtoAttendance.cs" />
+    <Compile Include="Dto\DtoEmployeeImage.cs" />
+    <Compile Include="Dto\DtoEmployeeFace.cs" />
+    <Compile Include="Dto\DtoEmployeeFinger.cs" />
+    <Compile Include="Dto\DtoCommunicationDeviceData.cs" />
+    <Compile Include="Dto\DtoEmployeeDeviceRelatedData.cs" />
+    <Compile Include="Dto\DtoDeviceStatistics.cs" />
+    <Compile Include="Dto\DtoSystemConfig.cs" />
+    <Compile Include="Dto\DtoSystemConfigPure.cs" />
+    <Compile Include="Dto\DtoEndPointUrl.cs" />
+    <Compile Include="CommunicationModels\ErrorModel.cs" />
+    <Compile Include="Dto\DtoServerMatchData.cs" />
+    <Compile Include="Dto\VirdiDayOfWeekEnumeration.cs" />
+    <Compile Include="ExtensionsAndUtilities\PlateHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\FileHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\NetworkHelpers.cs" />
+    <Compile Include="ExtensionsAndUtilities\AsyncHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\ApiCallHelpers.cs" />
+    <Compile Include="ExtensionsAndUtilities\CollectionHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\DateTimeHelper.cs" />
+    <Compile Include="Filter\OtherHardwareCommandFilter.cs" />
+    <Compile Include="Filter\ScheduledApiCallTaskFilter.cs" />
+    <Compile Include="Filter\ScheduledApiCallTaskSortEnumeration.cs" />
+    <Compile Include="Filter\HookSystemDetailFilter.cs" />
+    <Compile Include="Filter\AttendanceHookSystemFilter.cs" />
+    <Compile Include="Filter\HookSystemFilter.cs" />
+    <Compile Include="Filter\HookSystemDetailSortEnumeration.cs" />
+    <Compile Include="Filter\AttendanceHookSystemSortEnumeration.cs" />
+    <Compile Include="Filter\HookSystemSortEnumeration.cs" />
+    <Compile Include="Filter\DeviceCommandFilter.cs" />
+    <Compile Include="Filter\AttendanceFilter.cs" />
+    <Compile Include="Filter\DeviceCommandSortEnumeration.cs" />
+    <Compile Include="Filter\AttendanceSortEnumeration.cs" />
+    <Compile Include="Filter\DeviceNotSentCommandsFilter.cs" />
+    <Compile Include="HardwareDefinition\InvalidAttendanceReasonEnumeration.cs" />
+    <Compile Include="HardwareDefinition\CalendarDayStatusEnumeration.cs" />
+    <Compile Include="HardwareDefinition\DeviceSettingsEnumeration.cs" />
+    <Compile Include="HardwareDefinition\TimeZonesEnumeration.cs" />
+    <Compile Include="HardwareDefinition\DeviceIoTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\AttendanceSourceEnumeration.cs" />
+    <Compile Include="HardwareDefinition\MetalDetectorGateConnectionModeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\DeviceLogTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\IoRetrieveTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\DoorTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\ConnectionTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\MetalDetectorGateProducerEnumeration.cs" />
+    <Compile Include="HardwareDefinition\ProducerEnumeration.cs" />
+    <Compile Include="HardwareDefinition\SdkVersionEnumeration.cs" />
+    <Compile Include="Definition\TimeZoneDayTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\BaudRateEnumeration.cs" />
+    <Compile Include="HardwareDefinition\DeviceConnectionModeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\EnrollStandardEnumeration.cs" />
+    <Compile Include="HardwareDefinition\ServerMatchingTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\TemplateTypeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\ValidSerialNumberCheckTypeEnumeration.cs" />
+    <Compile Include="Definition\ServiceConstants.cs" />
+    <Compile Include="ExtensionsAndUtilities\ConfigurationHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\Cryptography.cs" />
+    <Compile Include="ExtensionsAndUtilities\DatabaseHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\EnumHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\ExceptionHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\NumericHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\ObjectHelper.cs" />
+    <Compile Include="ExtensionsAndUtilities\StringHelper.cs" />
+    <Compile Include="CommunicationSharedResource.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>CommunicationSharedResource.resx</DependentUpon>
+    </Compile>
+    <Compile Include="Dto\DtoDeviceHoliday.cs" />
+    <Compile Include="Dto\DtoTimeZone.cs" />
+    <Compile Include="Dto\DtoTimeZoneInterval.cs" />
+    <Compile Include="Filter\DeviceSearchParams.cs" />
+    <Compile Include="Dto\DtoDevice.cs" />
+    <Compile Include="Dto\DtoDeviceTypeSummary.cs" />
+    <Compile Include="Dto\DtoExternalSystemAuthData.cs" />
+    <Compile Include="Dto\DtoTokenResponse.cs" />
+    <Compile Include="Filter\DeviceFilter.cs" />
+    <Compile Include="Filter\DeviceSortEnumeration.cs" />
+    <Compile Include="CommunicationModels\DeviceAndEmployeeListModel.cs" />
+    <Compile Include="CommunicationModels\DeviceCommandModel.cs" />
+    <Compile Include="CommunicationModels\DeviceHolidayModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeFaceModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeFingerModel.cs" />
+    <Compile Include="CommunicationModels\EmployeePalmModel.cs" />
+    <Compile Include="CommunicationModels\EnrollUserModel.cs" />
+    <Compile Include="CommunicationModels\GetAttendanceImageModel.cs" />
+    <Compile Include="CommunicationModels\GetAttendanceModel.cs" />
+    <Compile Include="CommunicationModels\ListStringModel.cs" />
+    <Compile Include="CommunicationModels\GetUserByIdModel.cs" />
+    <Compile Include="CommunicationModels\ReadoutFromDeviceModel.cs" />
+    <Compile Include="CommunicationModels\ReadoutModel.cs" />
+    <Compile Include="CommunicationModels\ListInt32Model.cs" />
+    <Compile Include="CommunicationModels\ScanFingerModel.cs" />
+    <Compile Include="CommunicationModels\SendHolidaysModel.cs" />
+    <Compile Include="CommunicationModels\SendTimezoneModel.cs" />
+    <Compile Include="CommunicationModels\SendUserTimezonesModel.cs" />
+    <Compile Include="HardwareDefinition\XRayDeviceConnectionModeEnumeration.cs" />
+    <Compile Include="HardwareDefinition\XRayDeviceTypeEnumeration.cs" />
+    <Compile Include="OperationResult\OperationCannotBeDoneException.cs" />
+    <Compile Include="OperationResult\OperationResult.cs" />
+    <Compile Include="OperationResult\OperationResultEnumeration.cs" />
+    <Compile Include="OperationResult\ResultEnumerationResource.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>ResultEnumerationResource.resx</DependentUpon>
+    </Compile>
+    <Compile Include="OperationResult\ResultMessageProvider.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="SearchDataWrapper\CurrentPageInfo.cs" />
+    <Compile Include="SearchDataWrapper\PagingData.cs" />
+    <Compile Include="SearchDataWrapper\SearchTypeEnumeration.cs" />
+    <Compile Include="SearchDataWrapper\SortInfo.cs" />
+    <Compile Include="SearchDataWrapper\SortTypeEnum.cs" />
+    <Compile Include="SharedSettings\ApplicationEmbeddedInfo.cs" />
+    <Compile Include="SharedSettings\AppConfigs.cs" />
+    <Compile Include="SharedSettings\PadisConnectionStringConfig.cs" />
+    <Compile Include="SharedSettings\ConnectionConfiguration.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="CommunicationSharedResource.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>CommunicationSharedResource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+    <EmbeddedResource Include="OperationResult\ResultEnumerationResource.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>ResultEnumerationResource.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="packages.config" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+</Project>

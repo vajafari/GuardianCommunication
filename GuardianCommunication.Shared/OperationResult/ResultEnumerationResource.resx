@@ -1,0 +1,618 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- 
+    Microsoft ResX Schema 
+    
+    Version 2.0
+    
+    The primary goals of this format is to allow a simple XML format 
+    that is mostly human readable. The generation and parsing of the 
+    various data types are done through the TypeConverter classes 
+    associated with the data types.
+    
+    Example:
+    
+    ... ado.net/XML headers & schema ...
+    <resheader name="resmimetype">text/microsoft-resx</resheader>
+    <resheader name="version">2.0</resheader>
+    <resheader name="reader">System.Resources.ResXResourceReader, System.Windows.Forms, ...</resheader>
+    <resheader name="writer">System.Resources.ResXResourceWriter, System.Windows.Forms, ...</resheader>
+    <data name="Name1"><value>this is my long string</value><comment>this is a comment</comment></data>
+    <data name="Color1" type="System.Drawing.Color, System.Drawing">Blue</data>
+    <data name="Bitmap1" mimetype="application/x-microsoft.net.object.binary.base64">
+        <value>[base64 mime encoded serialized .NET Framework object]</value>
+    </data>
+    <data name="Icon1" type="System.Drawing.Icon, System.Drawing" mimetype="application/x-microsoft.net.object.bytearray.base64">
+        <value>[base64 mime encoded string representing a byte array form of the .NET Framework object]</value>
+        <comment>This is a comment</comment>
+    </data>
+                
+    There are any number of "resheader" rows that contain simple 
+    name/value pairs.
+    
+    Each data row contains a name, and value. The row also contains a 
+    type or mimetype. Type corresponds to a .NET class that support 
+    text/value conversion through the TypeConverter architecture. 
+    Classes that don't support this are serialized and stored with the 
+    mimetype set.
+    
+    The mimetype is used for serialized objects, and tells the 
+    ResXResourceReader how to depersist the object. This is currently not 
+    extensible. For a given mimetype the value must be set accordingly:
+    
+    Note - application/x-microsoft.net.object.binary.base64 is the format 
+    that the ResXResourceWriter will generate, however the reader can 
+    read any of the formats listed below.
+    
+    mimetype: application/x-microsoft.net.object.binary.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Binary.BinaryFormatter
+            : and then encoded with base64 encoding.
+    
+    mimetype: application/x-microsoft.net.object.soap.base64
+    value   : The object must be serialized with 
+            : System.Runtime.Serialization.Formatters.Soap.SoapFormatter
+            : and then encoded with base64 encoding.
+
+    mimetype: application/x-microsoft.net.object.bytearray.base64
+    value   : The object must be serialized into a byte array 
+            : using a System.ComponentModel.TypeConverter
+            : and then encoded with base64 encoding.
+    -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AccessLevelStatusAccessLevelNotFoundInDatabase" xml:space="preserve">
+    <value>سطح دسترسی در دیتابیس یافت نشد</value>
+  </data>
+  <data name="AccessLevelStatusAccessLevelTitleIsNotValid" xml:space="preserve">
+    <value>عنوان سطح دسترسی معتبر نمی باشد</value>
+  </data>
+  <data name="AccountingStatusAccessTypeIsNotValid" xml:space="preserve">
+    <value>سطح دسترسی معتبر نمی باشد</value>
+  </data>
+  <data name="AccountingStatusActiveDirectoryUsernameMustBeUnique" xml:space="preserve">
+    <value>نام کاربری در اکتیودایرکتوری می بایست منحصر به فرد باشد</value>
+  </data>
+  <data name="AccountingStatusAtLeastOneSystemAdminMustExistInSystem" xml:space="preserve">
+    <value>حداقل یک کاربر ادمین می بایست در سیستم وجود داشته باشد</value>
+  </data>
+  <data name="AccountingStatusCanNotChangeAnotherUserPassword" xml:space="preserve">
+    <value>امکان تغییر کلمه عبور کاربر دیگری وجود ندارد</value>
+  </data>
+  <data name="AccountingStatusCurrentUserNotFoundInDatabase" xml:space="preserve">
+    <value>کاربر جاری در دیتابیس یافت نشد</value>
+  </data>
+  <data name="AccountingStatusPasswordCannotBeEqualToUsername" xml:space="preserve">
+    <value>کلمه عبور نمی تواند مساوی با نام کاربری باشد</value>
+  </data>
+  <data name="AccountingStatusPasswordIsNotValid" xml:space="preserve">
+    <value>کلمه عبور معتبر نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUserActionActionCodeIsNotValid" xml:space="preserve">
+    <value>کد فعالیت معتبر نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUserEmployeesMustBeEmptyBeacuseOfUserRole" xml:space="preserve">
+    <value>بخش های مجاز کاربر نباید تعیین شوند</value>
+  </data>
+  <data name="AccountingStatusUserEmployeesMustHaveValueBeacuseOfUserRole" xml:space="preserve">
+    <value>پرسنل مجاز کاربر می بایست تعیین شوند</value>
+  </data>
+  <data name="AccountingStatusUserIsNotActive" xml:space="preserve">
+    <value>کاربر در سیستم فعال نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUsernameIsNotValid" xml:space="preserve">
+    <value>نام کاربری معتبر نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUsernameMustBeUnique" xml:space="preserve">
+    <value>نام کاربری می بایست منحصر به فرد باشد</value>
+  </data>
+  <data name="AccountingStatusUserNotFoundInDatabase" xml:space="preserve">
+    <value>کاربر در دیتابیس یافت نشد</value>
+  </data>
+  <data name="AccountingStatusUserNotFoundUserCache" xml:space="preserve">
+    <value>کاربر در حافظه یافت نشد</value>
+  </data>
+  <data name="AccountingStatusUserOldPasswordIsNotValid" xml:space="preserve">
+    <value>کلمه عبور قدیمی معتبر نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUserProfileSettingCodeIsNotValid" xml:space="preserve">
+    <value>برای ذخیره تنظیمات کاربری تعیین کد الزامی است</value>
+  </data>
+  <data name="AccountingStatusUserProfileUserIdIsNotValid" xml:space="preserve">
+    <value>برای ذخیره تنظیمات کاربری می بایست کد کاربر تعیین شود</value>
+  </data>
+  <data name="AccountingStatusUserSectionsMustBeEmptyBeacuseOfUserRole" xml:space="preserve">
+    <value>پرسنل مجاز کاربر نباید تعیین شوند</value>
+  </data>
+  <data name="AccountingStatusUserSectionsMustHaveValueBeacuseOfUserRole" xml:space="preserve">
+    <value>بخش های مجاز کاربر می بایست تعیین شوند</value>
+  </data>
+  <data name="AccountingStatusUserVerificationPasswordIsNotValid" xml:space="preserve">
+    <value>کلمه عبور به درستی وارد نشده است</value>
+  </data>
+  <data name="AccountingStatusUserVerificationUserIsExpired" xml:space="preserve">
+    <value>تاریخ اتمام فعالیت کاربر سپری شده است</value>
+  </data>
+  <data name="AccountingStatusUserVerificationUserIsNotAuthorizedAtThisDate" xml:space="preserve">
+    <value>کاربر در تاریخ و ساعت جاری مجاز به ورود به سیستم نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUserVerificationUserIsNotValidForThisApplication" xml:space="preserve">
+    <value>کاربر مجاز به استفاده از این نرم افزار نمی باشد</value>
+  </data>
+  <data name="AccountingStatusUserVerificationUsernameIsNotValid" xml:space="preserve">
+    <value>نما کاربر به درستی وارد نشده است</value>
+  </data>
+  <data name="AccountingStatusUserVerificationUserRelatedEmployeeIsCuted" xml:space="preserve">
+    <value>پرسنل قطع کار شده است</value>
+  </data>
+  <data name="AreaStatusAreaMustHaveTitle" xml:space="preserve">
+    <value>منطقه دسترسی می بایست دارای عنوان باشد</value>
+  </data>
+  <data name="AreaStatusAreaNotFoundInDatabase" xml:space="preserve">
+    <value>منطقه دسترسی در پایگاه داده یافت نشد</value>
+  </data>
+  <data name="AreaStatusAreaNumberAlreadyExistInDatabase" xml:space="preserve">
+    <value>کد منطقه دسترسی تکراری است</value>
+  </data>
+  <data name="AreaStatusAreaNumberIsNotValid" xml:space="preserve">
+    <value>کد منطقه دسترسی معتبر نمی باشد</value>
+  </data>
+  <data name="AreaStatusParentAreaCanNotBeInNodeHeriarchy" xml:space="preserve">
+    <value>منطقه دسترسی پدر معتبر نمی باشد و نمی تواند از بین فرزندان منطقه دسترسی جاری انتخاب شود</value>
+  </data>
+  <data name="AreaStatusParentIsNotvalid" xml:space="preserve">
+    <value>منطقه دسترسی می بایست دارای پدر معتبر باشد</value>
+  </data>
+  <data name="CalendarStatusDayStatusIsNotValid" xml:space="preserve">
+    <value>نوع روز تقویم معتبر نمی باشد</value>
+  </data>
+  <data name="CommunicationCannotClearDataBecauseAllAllRecordsNotSavedInDatabase" xml:space="preserve">
+    <value>امکان حذف تردد ها از روی ساعت وجود ندارد، زیرا تمامی تردد ها با موفقیت ذخیره نشده اند</value>
+  </data>
+  <data name="CommunicationStatusCannotConnect" xml:space="preserve">
+    <value>امکان برقراری ارتباط با دستگاه وجود ندارد</value>
+  </data>
+  <data name="CommunicationStatusCannotSetUserPicture" xml:space="preserve">
+    <value>امکان ارسال عکس کاربر وجود ندارد</value>
+  </data>
+  <data name="CommunicationStatusConnected" xml:space="preserve">
+    <value>اتصال برقرار شده است</value>
+  </data>
+  <data name="CommunicationStatusConnectTheDeviceFirst" xml:space="preserve">
+    <value>ابتدا می بایست به دستگاه متصل شوید</value>
+  </data>
+  <data name="CommunicationStatusEnrollDataNotFound" xml:space="preserve">
+    <value>داده های احراز هویت معتبر نمی باشد</value>
+  </data>
+  <data name="CommunicationStatusMachineNumberIsNotValid" xml:space="preserve">
+    <value>کد دستگاه معتبر نمی باشد</value>
+  </data>
+  <data name="CommunicationStatusNoTemplateExistForSaveInDatabase" xml:space="preserve">
+    <value>هیچ تمپلیتی برای ذخیره سازی در دیتابیس یافت نشد</value>
+  </data>
+  <data name="CommunicationStatusNoTemplateTypeSelectedForInsertInDatabase" xml:space="preserve">
+    <value>نوع تمپلیت برای ثبت در پایگاه داده باید مشخص شود</value>
+  </data>
+  <data name="CommunicationStatusNotSupport" xml:space="preserve">
+    <value>این عملیات بر روی دستگاه انتخاب شده پشتیبانی نمی شود</value>
+  </data>
+  <data name="CommunicationStatusParametersIsNotValid" xml:space="preserve">
+    <value>پارامتر های اتباطی معتبر نمی باشد</value>
+  </data>
+  <data name="CommunicationStatusProducerIsNotActiveInSystem" xml:space="preserve">
+    <value>تولید کننده معتبر نمی باشد</value>
+  </data>
+  <data name="CommunicationStatusRfCardNumberIdNotValidDueToVerificationStyle" xml:space="preserve">
+    <value>با توجه به نوع </value>
+  </data>
+  <data name="CommunicationStatusVirdiTerminalIdIsRequired" xml:space="preserve">
+    <value>شماره ساعت باید مشخص شود</value>
+  </data>
+  <data name="CommunicationStatusVirdiUserIdIsRequired" xml:space="preserve">
+    <value>کد پرسنل باید مشخص شود</value>
+  </data>
+  <data name="DataFileStatusDataFileAlreadyExist" xml:space="preserve">
+    <value>تردد پیش از این وجود دارد</value>
+  </data>
+  <data name="DataFileStatusEmployeeNumberIsNotValid" xml:space="preserve">
+    <value>شماره کارت پپرسنل معتبر نمی باشد</value>
+  </data>
+  <data name="DataFileStatusEverythingIsOkAboutDataFileButForUnknownReasonSaveIsNotSuccessful" xml:space="preserve">
+    <value>به دلیلی ناشناخته اطلاعات تردد در دیتابیس ثبت نشد</value>
+  </data>
+  <data name="DataFileStatusUserTypeIsNotValid" xml:space="preserve">
+    <value>نوع داده برای ثبت تردد معتبر نمی باشد</value>
+  </data>
+  <data name="DataFileStatusVerificationStyleIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DataFileStatusVisitorIdIsNotValid" xml:space="preserve">
+    <value>شناسه مراجعه کننده معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusAntiPassbackDurationOfEntranceIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DeviceStatusBaudRateIsNotValid" xml:space="preserve">
+    <value>BaudRate معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusComPortIsNotValid" xml:space="preserve">
+    <value>شماره پورت سریال معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusDeviceIpIsNotValid" xml:space="preserve">
+    <value>آدرس IP دستتگاه معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusDeviceNotFoundInDatabaseOrYouAreNotAuthorizedToAccessIt" xml:space="preserve">
+    <value>دستگاه در دیتابیس یافت نشد و یا شما مجاز به دسترسی به آن نیستید</value>
+  </data>
+  <data name="DeviceStatusDeviceNumberIsNotValid" xml:space="preserve">
+    <value>شماره دستگاه معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusDoorMustHaveTitle" xml:space="preserve">
+    <value>عنوان در معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusDoorNotFoundInDatabase" xml:space="preserve">
+    <value>در در دیتابیس یافت نشد</value>
+  </data>
+  <data name="DeviceStatusDoorNumberIsNotValid" xml:space="preserve">
+    <value>سماره در معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusDoorSensorDelayIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DeviceStatusLockOpenDurationIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DeviceStatusMultiPersonOperationIntervalIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DeviceStatusNotTimeZoneDefinedInSystem" xml:space="preserve">
+    <value>هیچ زمان دسترسی در سیستم تعریف نشده است</value>
+  </data>
+  <data name="DeviceStatusOperateIntervalIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DeviceStatusPassageDelayIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DeviceStatusProductNotFoundInDatbase" xml:space="preserve">
+    <value>محصول در سیستم تعریف نشده است</value>
+  </data>
+  <data name="DeviceStatusTcpPortIsNotValid" xml:space="preserve">
+    <value>پورت دستگاه معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusTitleIsNotValid" xml:space="preserve">
+    <value>عنوان دستگاه معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusVerificationStyleIsNotValid" xml:space="preserve">
+    <value>نوع احراز هویت در معتبر نمی باشد</value>
+  </data>
+  <data name="DeviceStatusWiegandFormatIsNotValid" xml:space="preserve">
+    <value />
+  </data>
+  <data name="DoorStatusDoorMustHaveTitle" xml:space="preserve">
+    <value>در باید دارای عنوان باشد</value>
+  </data>
+  <data name="DoorStatusDoorNotFoundInDatabase" xml:space="preserve">
+    <value>در یافت نشد</value>
+  </data>
+  <data name="EmployeeAttachmentStatusAttachmentNotFoundInDatabase" xml:space="preserve">
+    <value>ضمیمه در دیتابیس یافت نشد</value>
+  </data>
+  <data name="EmployeeAttachmentStatusEmployeeAttachmentTypeIsNotValid" xml:space="preserve">
+    <value>نوع ضمیمه معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeLimit" xml:space="preserve">
+    <value>سقف تعداد پرسنل مجاز رعایت نشده است</value>
+  </data>
+  <data name="EmployeeStatusActiveDirectoryEmployeeNumberMustBeUnique" xml:space="preserve">
+    <value>شماره پرسنلی می بایست منحصر به فرد باشد</value>
+  </data>
+  <data name="EmployeeStatusCutEmployeeMustHaveEndDate" xml:space="preserve">
+    <value>پرسنل می بایست دارای تاریخ پایان باشد</value>
+  </data>
+  <data name="EmployeeStatusEmailIsNotValid" xml:space="preserve">
+    <value>ایمیل پرسنل معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmpDateMustBeGreaterThanEndDate" xml:space="preserve">
+    <value>تاریخ پایان استخدام می بایست بزرگتر از تاریخ شروع آن باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeEnrollDataEnrollStandardIsNotValid" xml:space="preserve">
+    <value>استاندارد معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeEnrollDataProducerNumberIsNotValid" xml:space="preserve">
+    <value>تولید کننده معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeEnrollDataVerificationStyleIsNotValid" xml:space="preserve">
+    <value>نوع احراز هویت معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeNotFoundInDatabaseOrYouAreNotAuthorizedToAccessIt" xml:space="preserve">
+    <value>پرسنل در دیتابیس یافت نشد و یا شما مجاز به دسترسی به آن نیستید</value>
+  </data>
+  <data name="EmployeeStatusEmployeeNumberIsNotValid" xml:space="preserve">
+    <value>شماره پرسنلی معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeTemplateBinaryDataIsNotValid" xml:space="preserve">
+    <value>اطلاعات اثر انگشت و یا چهره معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeTemplateEnrollStandardIsNotValid" xml:space="preserve">
+    <value>استاندارد اثر انگشت و یا چهره معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeTemplateEnrollTypeIsNotValid" xml:space="preserve">
+    <value>نوع اثر انگشت و یا چهره معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusEmployeeTemplateProducerNumberIsNotValid" xml:space="preserve">
+    <value>تولید کننده اثر انگشت و یا چهره معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusFirstNameIsNotValid" xml:space="preserve">
+    <value>نام پرسنل معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusLastNameIsNotValid" xml:space="preserve">
+    <value>نام خانوادگی پرسنل معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusNationalIdIsNotValid" xml:space="preserve">
+    <value>شماره ملی معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusRfCardDateExpireIsNotValid" xml:space="preserve">
+    <value>تاریخ اتمام اعتبار کارت معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusRfCardRfCardDataIsNotValid" xml:space="preserve">
+    <value>اطلاعات کارت معتبر نمی باشد</value>
+  </data>
+  <data name="EmployeeStatusRfCardStatusRfCardNotFoundOrYouAreNotAuthorizedToAccessIt" xml:space="preserve">
+    <value>اطلاعات احراز هویت در دیتابیس یافت نشد و یا شما مجاز به دسترسی به آن نمی باشید</value>
+  </data>
+  <data name="EmploymentTypeStatusCanNotAddOrRemoveSystemFixedEmpType" xml:space="preserve">
+    <value>امکان تغییر در انواع استخدام پیش فرض سیستم وجود ندارد</value>
+  </data>
+  <data name="EmploymentTypeStatusEmploymentTypeMustHaveTitle" xml:space="preserve">
+    <value>نوع استخدام می بایست دارای عنوان باشد</value>
+  </data>
+  <data name="EmploymentTypeStatusEmploymentTypeNumberIsNotValid" xml:space="preserve">
+    <value>کد نوع استخدام معتبر نمی باشد</value>
+  </data>
+  <data name="EmploymentTypeStatusEmplTypeNumberAlreadyExistInDatabase" xml:space="preserve">
+    <value>کد نوع استخدام پیش از این در دیتابیس وجود دارد</value>
+  </data>
+  <data name="EmploymentTypeStatusEmpTypeNotFoundInDatabase" xml:space="preserve">
+    <value>نوع استخدام در دیتابیس یافت نشد</value>
+  </data>
+  <data name="GeneralAccessDenied" xml:space="preserve">
+    <value>کاربر مجاز به درسترسی به بخش جاری نمی باشد</value>
+  </data>
+  <data name="GeneralApplicationIsNotValid" xml:space="preserve">
+    <value>اطلاعات نرم افزار درخواست دهنده معتبر نمی باشد</value>
+  </data>
+  <data name="GeneralDatabaseHasForeignKeyConstraint" xml:space="preserve">
+    <value>خطا در رابطه های دیتایس</value>
+  </data>
+  <data name="GeneralDatabaseLogOnFailed" xml:space="preserve">
+    <value>مشکل در اتصال به دیتابیس</value>
+  </data>
+  <data name="GeneralDatabaseNotAvailable" xml:space="preserve">
+    <value>مشکل در اتصال به دیتابیس</value>
+  </data>
+  <data name="GeneralDatabaseRequestTimeout" xml:space="preserve">
+    <value>تخلف از بازه زمانی مجاز برای اتصال به دیتابیس</value>
+  </data>
+  <data name="GeneralDatabaseStringOrBinaryMustBeTruncated" xml:space="preserve">
+    <value>سقف تعداد حرف مجاز رعایت نشده است</value>
+  </data>
+  <data name="GeneralDatabaseUniqueKeyConstraint" xml:space="preserve">
+    <value>داده تکراری</value>
+  </data>
+  <data name="GeneralFaultCausedCacheDataReset" xml:space="preserve">
+    <value>خطایی باعث راه اندازی مجدد سیستم Cache گردید</value>
+  </data>
+  <data name="GeneralNotAuthorized" xml:space="preserve">
+    <value>شما مجاز به انجام این عملیات نیستیتد</value>
+  </data>
+  <data name="GeneralNotSupported" xml:space="preserve">
+    <value>این عملیات پشتیبانی نمی شود</value>
+  </data>
+  <data name="GeneralObjectDatabaseNotAvailable" xml:space="preserve">
+    <value>خطا در ارتباط با پایگاه داده</value>
+  </data>
+  <data name="GeneralObjectHasForeignKeyConstraint" xml:space="preserve">
+    <value>این آیتم دارای وابسیتگی هایی در سیستم است</value>
+  </data>
+  <data name="GeneralObjectIsNull" xml:space="preserve">
+    <value>هیچ مقداری به پارامتر نسبت داده نشده است</value>
+  </data>
+  <data name="GeneralObjectLogOnFailed" xml:space="preserve">
+    <value>خطا در ارتباط با پایگاه داده</value>
+  </data>
+  <data name="GeneralObjectRequestTimeout" xml:space="preserve">
+    <value>تخطی از زمان مجاز برای عملیات</value>
+  </data>
+  <data name="GeneralObjectUniqueKeyConstraint" xml:space="preserve">
+    <value>طول رسته بیش از حد مجاز است</value>
+  </data>
+  <data name="GeneralPropertValueIsNotValid" xml:space="preserve">
+    <value>دقیقه می بایست بین 0 تا 59 باشد</value>
+  </data>
+  <data name="GeneralUserInfoIsNotValid" xml:space="preserve">
+    <value>اطلاعات کاربر جاری معتبر نمی باشد</value>
+  </data>
+  <data name="GradeStatusGradeMustHaveTitle" xml:space="preserve">
+    <value>مدرک تحصیلی می بایست دارای عنوان باشد</value>
+  </data>
+  <data name="GradeStatusGradeNotFoundInDatabase" xml:space="preserve">
+    <value>مدرک تحصیلی در دیتابیس یافت نشد</value>
+  </data>
+  <data name="GradeStatusGradeNumberAlreadyExistInDatabase" xml:space="preserve">
+    <value>کد مدرک تحصیلی قبلا تعریف شده است</value>
+  </data>
+  <data name="GradeStatusGradeNumberIsNotValid" xml:space="preserve">
+    <value>شماره مدرک تحصیلی معتبر نمی باشد</value>
+  </data>
+  <data name="PositionStatusPositionMustHaveTitle" xml:space="preserve">
+    <value>سمت می بایست دارای عنوان باشد</value>
+  </data>
+  <data name="PositionStatusPositionNotFoundInDatabase" xml:space="preserve">
+    <value>سمت در دیتابیس یافت نشد</value>
+  </data>
+  <data name="PositionStatusPositionNumberAlreadyExistInDatabase" xml:space="preserve">
+    <value>کد سمت قبلا تعریف شده است</value>
+  </data>
+  <data name="PositionStatusPositionNumberIsNotValid" xml:space="preserve">
+    <value>شماره سمت معتبر نمی باشد</value>
+  </data>
+  <data name="SectionStatusParentIsNotvalid" xml:space="preserve">
+    <value>کد بخش پدر معتبر نمی باشد</value>
+  </data>
+  <data name="SectionStatusParentIsSameAsSectionCode" xml:space="preserve">
+    <value>کد بخش پدر می بایست متفاوت از کد بخش باشد</value>
+  </data>
+  <data name="SectionStatusParentSectionCanNotBeInNodeHeriarchy" xml:space="preserve">
+    <value>بخش پدر معتبر نمی باشد و نمی تواند از بین فرزندان بخش جاری انتخاب شود</value>
+  </data>
+  <data name="SectionStatusSectionManagerEmployeeNumberIsNotvalid" xml:space="preserve">
+    <value>کد مدیر بخش معتبر نمی باشد</value>
+  </data>
+  <data name="SectionStatusSectionMustHaveTitle" xml:space="preserve">
+    <value>بخش می بایست دارای عنوان باشد</value>
+  </data>
+  <data name="SectionStatusSectionNotFoundInCache" xml:space="preserve">
+    <value>بخش در حافظه سیستم یافت نشد</value>
+  </data>
+  <data name="SectionStatusSectionNotFoundInDatabaseeOrYouAreNotAuthorizedToAccessIt" xml:space="preserve">
+    <value>بخش در دیتابیس یافت نشد و یا شما مجاز به دسترسی به آن نمی باشید</value>
+  </data>
+  <data name="SectionStatusSectionNumberAlreadyExistInDatabase" xml:space="preserve">
+    <value>کد بخش قبلا تعریف شده است</value>
+  </data>
+  <data name="SectionStatusSectionNumberIsNotValid" xml:space="preserve">
+    <value>کد بخش معتبر نمی باشد</value>
+  </data>
+  <data name="Successful" xml:space="preserve">
+    <value>عملیات موفقیت امیز انجام شد</value>
+  </data>
+  <data name="TagStatusNotFoundInDatabase" xml:space="preserve">
+    <value>برچسب در دیتابیس یافت نشد</value>
+  </data>
+  <data name="TagStatusTagNumberIsNotValid" xml:space="preserve">
+    <value>کد برچسب معتبر نمی باشد</value>
+  </data>
+  <data name="TagStatusTagTitleIsNotValid" xml:space="preserve">
+    <value>عنوان برچسب معتبر نمی باشد</value>
+  </data>
+  <data name="TagValueStatusNotFoundInDatabase" xml:space="preserve">
+    <value>مقدار برچسب در دیتابیس یافت نشد</value>
+  </data>
+  <data name="TagValueStatusTagNumberIsNotValid" xml:space="preserve">
+    <value>کد برچسب معتبر نمی باشد</value>
+  </data>
+  <data name="TagValueStatusTagNumberMustBeUnique" xml:space="preserve">
+    <value>مقدار برچسب می بایست منحصر به فرد باشد</value>
+  </data>
+  <data name="TagValueStatusValueOfIsNotValid" xml:space="preserve">
+    <value>مقدار برچسب معتبر نمی باشد</value>
+  </data>
+  <data name="TimeZoneStatusBothIntervalStartAndEndDateOfIntervalMustBeHaveValue" xml:space="preserve">
+    <value>برای یک بازه زمانی می بایست هم ساعت شروع و هم یاعت پایان مشخص شود</value>
+  </data>
+  <data name="TimeZoneStatusIntervalDayTypeIsNotValid" xml:space="preserve">
+    <value>روز بازه دسترسی معتبر نمی باشد</value>
+  </data>
+  <data name="TimeZoneStatusIntervalEndIsNotValid" xml:space="preserve">
+    <value>ساعت پایان بازه دسترسی معتبر نمی باشد</value>
+  </data>
+  <data name="TimeZoneStatusIntervalStartIsNotValid" xml:space="preserve">
+    <value>ساعت شروع بازه دسترسی معتبر نمی باشد</value>
+  </data>
+  <data name="TimeZoneStatusTimeZoneMustHaveAtLeaseOnInterval" xml:space="preserve">
+    <value>بازه زمانی می بایست حداقل دارای یک روز باشد</value>
+  </data>
+  <data name="TimeZoneStatusTimeZoneMustHaveTitle" xml:space="preserve">
+    <value>بازه زمانی می بایست دارای عنوان باشد</value>
+  </data>
+  <data name="TimeZoneStatusTimeZoneNotFoundInDatabase" xml:space="preserve">
+    <value>بازه زمانی در پایگاه داده یافت نشد</value>
+  </data>
+  <data name="TimeZoneStatusZoneMustHaveUniqueDayTypeInterval" xml:space="preserve">
+    <value>برای هر روز در بازه زمانی تنها یک رکورد می تواد وجود داشته باشد</value>
+  </data>
+  <data name="UnknownError" xml:space="preserve">
+    <value>خطای ناشناخته در سیستم رخ داده است</value>
+  </data>
+  <data name="VisitorStatusExitDateMustBeGreaterThanEnteranceDate" xml:space="preserve">
+    <value>تاریخ خروج مراجعه کننده می بایست بزرگتر از تاریخ ورود باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorMustHaveCardNumber" xml:space="preserve">
+    <value>مراجعه کننده می بایست دارای شماره کارت باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorMustHaveExitDate" xml:space="preserve">
+    <value>مراجعه کننده می بایست دارای تاریخ خروج باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorMustHaveFaceData" xml:space="preserve">
+    <value>مراجعه کننده می بایست دارای اطلاعات ارحراز هویت از نوع چهره باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorMustHaveFingerData" xml:space="preserve">
+    <value>مراجعه کننده می بایست دارای اطلاعات احراز هویت از نوع اثرانگشت باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorMustHaveFirstName" xml:space="preserve">
+    <value>مراجعه کننده می بایست دارای نام باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorMustHaveLastName" xml:space="preserve">
+    <value>مراجعه کننده می بایست دارای نام خانوادگی باشد</value>
+  </data>
+  <data name="VisitorStatusVisitorNotFoundInDatabase" xml:space="preserve">
+    <value>مراجعه کننده در دیتابیس یافت نشد</value>
+  </data>
+</root>

@@ -1,0 +1,560 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props" Condition="Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props')" />
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{C366B1F4-D48B-49E1-984E-F7966F51259F}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>GuardianCommunication.Hardware</RootNamespace>
+    <AssemblyName>GuardianCommunication.Hardware</AssemblyName>
+    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
+    <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
+    <GenerateBindingRedirectsOutputType>true</GenerateBindingRedirectsOutputType>
+    <FileAlignment>512</FileAlignment>
+    <Deterministic>true</Deterministic>
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithEventViewerLog|AnyCPU'">
+    <OutputPath>bin\ReleaseWithEventViewerLog\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x86\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
+    <OutputPath>bin\x86\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithEventViewerLog|x86'">
+    <OutputPath>bin\x86\ReleaseWithEventViewerLog\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x86</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
+    <DebugSymbols>true</DebugSymbols>
+    <OutputPath>bin\x64\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <DebugType>full</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
+    <OutputPath>bin\x64\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'ReleaseWithEventViewerLog|x64'">
+    <OutputPath>bin\x64\ReleaseWithEventViewerLog\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <Optimize>true</Optimize>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>x64</PlatformTarget>
+    <LangVersion>7.3</LangVersion>
+    <ErrorReport>prompt</ErrorReport>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="EosClocks, Version=96.0.1.3, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>DLL\ElmOSanat\EosClocks.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Protobuf, Version=3.35.0.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Protobuf.3.35.0\lib\net45\Google.Protobuf.dll</HintPath>
+    </Reference>
+    <Reference Include="Grpc.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
+      <HintPath>..\packages\Grpc.Core.2.46.6\lib\net45\Grpc.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Grpc.Core.Api, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
+      <HintPath>..\packages\Grpc.Core.Api.2.80.0\lib\net462\Grpc.Core.Api.dll</HintPath>
+    </Reference>
+    <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Timy\SuperSocket Dlls\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="MD.PersianDateTime, Version=4.6.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\MD.PersianDateTime.4.6.0\lib\net20\MD.PersianDateTime.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Bcl.AsyncInterfaces, Version=10.0.0.8, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Bcl.AsyncInterfaces.10.0.8\lib\net462\Microsoft.Bcl.AsyncInterfaces.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin, Version=4.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.4.2.3\lib\net45\Microsoft.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Host.HttpListener, Version=4.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Host.HttpListener.4.2.3\lib\net45\Microsoft.Owin.Host.HttpListener.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Owin.Hosting, Version=4.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.Owin.Hosting.4.2.3\lib\net45\Microsoft.Owin.Hosting.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.13.0.4\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json.Bson, Version=1.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\packages\Newtonsoft.Json.Bson.1.0.3\lib\net45\Newtonsoft.Json.Bson.dll</HintPath>
+    </Reference>
+    <Reference Include="Owin, Version=1.0.0.0, Culture=neutral, PublicKeyToken=f0ebd12fd5e55cc5, processorArchitecture=MSIL">
+      <HintPath>..\packages\Owin.1.0\lib\net40\Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="RestSharp, Version=114.0.0.0, Culture=neutral, PublicKeyToken=598062e77f915f75, processorArchitecture=MSIL">
+      <HintPath>..\packages\RestSharp.114.0.0\lib\net471\RestSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="SuperSocket.Common, Version=1.5.3.0, Culture=neutral, PublicKeyToken=6c80000676988ebb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Timy\SuperSocket Dlls\SuperSocket.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="SuperSocket.Facility, Version=1.5.3.0, Culture=neutral, PublicKeyToken=6c80000676988ebb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Timy\SuperSocket Dlls\SuperSocket.Facility.dll</HintPath>
+    </Reference>
+    <Reference Include="SuperSocket.SocketBase, Version=1.5.3.0, Culture=neutral, PublicKeyToken=6c80000676988ebb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Timy\SuperSocket Dlls\SuperSocket.SocketBase.dll</HintPath>
+    </Reference>
+    <Reference Include="SuperSocket.SocketEngine, Version=1.5.3.0, Culture=neutral, PublicKeyToken=6c80000676988ebb, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Timy\SuperSocket Dlls\SuperSocket.SocketEngine.dll</HintPath>
+    </Reference>
+    <Reference Include="SuperWebSocket, Version=0.8.0.0, Culture=neutral, PublicKeyToken=7ba53b9a7cef5d1c, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>Timy\SuperSocket Dlls\SuperWebSocket.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Buffers, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Buffers.4.6.1\lib\net462\System.Buffers.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ComponentModel.Composition" />
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Core" />
+    <Reference Include="Microsoft.CSharp" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Drawing.Common, Version=10.0.0.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Drawing.Common.10.0.8\lib\net462\System.Drawing.Common.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Drawing.Primitives, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Drawing.Primitives.4.3.0\lib\net45\System.Drawing.Primitives.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.IO.Pipelines, Version=10.0.0.8, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.IO.Pipelines.10.0.8\lib\net462\System.IO.Pipelines.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Memory, Version=4.0.5.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Memory.4.6.3\lib\net462\System.Memory.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Net.Http" />
+    <Reference Include="System.Net.Http.Formatting, Version=6.0.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Client.6.0.0\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Numerics" />
+    <Reference Include="System.Numerics.Vectors, Version=4.1.6.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Numerics.Vectors.4.6.1\lib\net462\System.Numerics.Vectors.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime, Version=4.1.1.1, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.4.3.1\lib\net462\System.Runtime.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.Runtime.CompilerServices.Unsafe, Version=6.0.3.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.CompilerServices.Unsafe.6.1.2\lib\net462\System.Runtime.CompilerServices.Unsafe.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation, Version=4.0.1.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Runtime.InteropServices.RuntimeInformation.4.3.0\lib\net45\System.Runtime.InteropServices.RuntimeInformation.dll</HintPath>
+      <Private>True</Private>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="System.ServiceModel" />
+    <Reference Include="System.Text.Encodings.Web, Version=10.0.0.8, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Encodings.Web.10.0.8\lib\net462\System.Text.Encodings.Web.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Text.Json, Version=10.0.0.8, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Text.Json.10.0.8\lib\net462\System.Text.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Threading.Tasks.Extensions, Version=4.2.4.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.Threading.Tasks.Extensions.4.6.3\lib\net462\System.Threading.Tasks.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="System.ValueTuple" />
+    <Reference Include="System.Web" />
+    <Reference Include="System.Web.Http, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Core.5.3.0\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.Owin, Version=5.3.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\packages\Microsoft.AspNet.WebApi.Owin.5.3.0\lib\net45\System.Web.Http.Owin.dll</HintPath>
+    </Reference>
+    <Reference Include="xLink, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>DLL\ProcessingWorld\xLink.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Camera\PouyaFanavaran\ReadAttendanceResponseItemInfoModel.cs" />
+    <Compile Include="Camera\PouyaFanavaran\ReadAttendanceResponseItemModel.cs" />
+    <Compile Include="Camera\PouyaFanavaran\ReadAttendanceResponseModel.cs" />
+    <Compile Include="Camera\PouyaFanavaran\KarabinAgentConfig.cs" />
+    <Compile Include="Camera\PouyaFanavaran\KarabinAgent.cs" />
+    <Compile Include="ElmOSanat\ElmoSanatOnDemandAdapter.cs" />
+    <Compile Include="MetalDetectorGate\Padis\PadisMetalDetectorGateConfig.cs" />
+    <Compile Include="MetalDetectorGate\Padis\PadisMetalDetectorGatesHelper.cs" />
+    <Compile Include="MetalDetectorGate\Padis\Types.cs" />
+    <None Include="PadisController\Protos\padis_service.proto" />
+    <Compile Include="PadisController\Model\PadisControllerMatchOnServerResponseModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerGrpcDeviceCommandModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerGrpcDeviceCommandResultModel.cs" />
+    <Compile Include="PadisController\PadisControllerAgent.cs" />
+    <Compile Include="PadisController\Model\PadisControllerConfigModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerAccessGroupAccessDataCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerAccessGroupCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerAccessLevelCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerConstants.cs" />
+    <Compile Include="PadisController\Model\PadisControllerCommandResponseModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerTestConnectionCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerOperationLogCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerChangeLockStatusCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerUserLimitationAttendanceCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerUserLimitationTimeCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerUserIdCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerDoorIdCommunicationModel.cs" />
+    <Compile Include="PadisController\Definition\PadisControllerContentTypeEnumeration.cs" />
+    <Compile Include="PadisController\Definition\PadisControllerAttendanceStatusEnumeration.cs" />
+    <Compile Include="PadisController\Definition\PadisControllerErrorEnumeration.cs" />
+    <Compile Include="PadisController\Model\PadisControllerEasyAccessCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerIoPortCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerDeviceDoorCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerWiegandCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerRelayCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerCommandModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerServerConfig.cs" />
+    <Compile Include="PadisController\Model\PadisControllerEasyPermissionCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerUserCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerCalendarDetailsCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerCalendarCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerEventCountCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerAttendanceCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerDateIntervalCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerDeviceInfoCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerDateAndTimeCommunicationModel.cs" />
+    <Compile Include="PadisController\Model\PadisControllerErrorCommunicationModel.cs" />
+    <Compile Include="PadisController\PadisControllerOnDemandAdapter.cs" />
+    <Compile Include="PadisController\PadisControllerUtils.cs" />
+    <Compile Include="PadisController\PadisControllerServer.cs" />
+    <Compile Include="PadisController\PadisControllerPushCommands.cs" />
+    <Compile Include="Pw\PwConcepts\PwDeviceConnectResult.cs" />
+    <Compile Include="Shared\Commands\CommandCameraId.cs" />
+    <Compile Include="Shared\Helpers\AttendanceImageHelpers.cs" />
+    <Compile Include="Shared\Helpers\DeviceSharedHelperMethods.cs" />
+    <Compile Include="ElmOSanat\Concepts\ElmOSanatVerificationStyleEnumeration.cs" />
+    <Compile Include="Pw\PwConcepts\PwDevicePrivilegeEnumeration.cs" />
+    <Compile Include="Pw\PwConcepts\PwDeviceTypeEnum.cs" />
+    <Compile Include="Pw\PwConcepts\PwConstants.cs" />
+    <Compile Include="Pw\PwConcepts\PwFileType.cs" />
+    <Compile Include="Pw\PwCommands.cs" />
+    <Compile Include="Shared\Commands\CommandScanFinger.cs" />
+    <Compile Include="Shared\Commands\CommandLastLogId.cs" />
+    <Compile Include="Shared\Commands\CommandUserId.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V1\RequestWorker.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V1\RequestToken.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V1\SupremaSdk1ServerConfig.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\AcSupremaSdk2TimezoneElementCodeEnumeration.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\Sdk2UserFaceExDecoder.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\Sdk2UserExDecoder.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\SupremaSdk2VerificationStyleEnumeration.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\SupremaSdk2EventTypeEnumeration.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\SupremaV2Utility.cs" />
+    <Compile Include="Suprema\SupremaSdk2Commands.cs" />
+    <Compile Include="Suprema\SupremaSdk2OnDemandAdapter.cs" />
+    <Compile Include="Suprema\SupremaSdk1Server.cs" />
+    <Compile Include="Suprema\SupremaSdk2Server.cs" />
+    <Compile Include="Suprema\SupremaSdk1Commands.cs" />
+    <Compile Include="Timy\TimyDeviceAgent.cs" />
+    <Compile Include="Timy\TimyPushConfig.cs" />
+    <Compile Include="Timy\TimyConcepts\SuperLogInfo.cs" />
+    <Compile Include="Timy\TimyConcepts\GeneralLogInfo.cs" />
+    <Compile Include="Timy\TimyConcepts\PasstimeInfo.cs" />
+    <Compile Include="Timy\TimyConcepts\TimeInfo.cs" />
+    <Compile Include="Timy\TimyConcepts\TimyDoorStatus.cs" />
+    <Compile Include="Timy\TimyConcepts\TimyErrorEnum.cs" />
+    <Compile Include="Timy\TimyOnDemandAdapter.cs" />
+    <Compile Include="Timy\TimyConcepts\TimyHelpers.cs" />
+    <Compile Include="Timy\TimyPushCommands.cs" />
+    <Compile Include="Timy\TimyServer.cs" />
+    <Compile Include="Timy\TimyUtils.cs" />
+    <Compile Include="Virdi\VirdiCommands.cs" />
+    <Compile Include="Shared\Commands\CommandDeviceNumberAndUser.cs" />
+    <Compile Include="Shared\Commands\CommandStartAndEndDate.cs" />
+    <Compile Include="Virdi\VirdiConcepts\GetDataCommand.cs" />
+    <Compile Include="Virdi\VirdiConcepts\VirdiDeviceLogTypeEnum.cs" />
+    <Compile Include="Virdi\VirdiConcepts\VirdiErrorEnum.cs" />
+    <Compile Include="XRayDevice\CustomFileSystemWatcher.cs">
+      <SubType>Component</SubType>
+    </Compile>
+    <Compile Include="XRayDevice\XRayDeviceServer.cs" />
+    <Compile Include="XRayDevice\XReaDeviceServerConfig.cs" />
+    <Compile Include="Zk\ZkDevicePrivilegeEnumeration.cs" />
+    <Compile Include="Zk\ZkCommunicationHelpers.cs" />
+    <Compile Include="Zk\WiegandFormatEnumeration.cs" />
+    <Compile Include="Zk\ZkOnDemandCommands.cs" />
+    <Compile Include="Zk\ZkPushVerificationStyleEnumeration.cs" />
+    <Compile Include="MetalDetectorGate\Padis\PadisMetalDetectorGateServer.cs" />
+    <Compile Include="Camera\PouyaFanavaran\PouyaFanavaranServer.cs" />
+    <Compile Include="Zk\ZkServer.cs" />
+    <Compile Include="Zk\ZkUtils.cs" />
+    <Compile Include="Zk\ZkVerificationStyleEnumeration.cs" />
+    <Compile Include="Zk\ZkErrorEnum.cs" />
+    <Compile Include="Pw\PwConcepts\PwErrorEnum.cs" />
+    <Compile Include="Pw\PwOnDemandAdapter.cs" />
+    <Compile Include="Suprema\SupremaSdk1OnDemandAdapter.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V1\BSSDK.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\ApiV2.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\Sdk2UserDecoder.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\SFEnum.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\SFStruct.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Shared\HardwareEventPublisher.cs" />
+    <Compile Include="Virdi\VirdiConcepts\VirdiVerificationStyleEnumeration.cs" />
+    <Compile Include="Virdi\VirdiServer.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V1\SupremaDevicePrivilegeEnumeration.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V1\SupremaVerificationStyleEnumeration.cs" />
+    <Compile Include="Virdi\VirdiServerConfig.cs" />
+    <Compile Include="Zk\ZkPushCommands.cs" />
+    <Compile Include="Zk\ZkOnDemandAdapter.cs" />
+    <Compile Include="Suprema\SupremaConcepts\V2\SupremaSdk2ServerConfig.cs" />
+    <Compile Include="Zk\ZkPushConfig.cs" />
+    <Compile Include="Zk\ZkAgentConfig.cs" />
+    <Compile Include="Zk\ZkDeviceAgent.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="DLL\ElmOSanat\EosClocks.dll" />
+    <Content Include="DLL\JahanGostar\DCL.dll" />
+    <Content Include="DLL\ProcessingWorld\xLink.dll" />
+    <Content Include="DLL\Suprema\sdkv1.8\BS_SDK.dll" />
+    <Content Include="DLL\Suprema\sdkv1.8\libeay32.dll" />
+    <Content Include="DLL\Suprema\sdkv1.8\libssl32.dll" />
+    <Content Include="DLL\Suprema\sdkv1.8\ssleay32.dll" />
+    <Content Include="DLL\Suprema\sdkv2\x64\BS_SDK_V2.dll" />
+    <Content Include="DLL\Suprema\sdkv2\x64\libcrypto-1_1-x64.dll" />
+    <Content Include="DLL\Suprema\sdkv2\x64\libssl-1_1-x64.dll" />
+    <Content Include="DLL\Suprema\sdkv2\x86\BS_SDK_V2.dll" />
+    <Content Include="DLL\Suprema\sdkv2\x86\libcrypto-1_1.dll" />
+    <Content Include="DLL\Suprema\sdkv2\x86\libssl-1_1.dll" />
+    <Content Include="DLL\Timy\FPCLOCK_Svr.ocx" />
+    <Content Include="DLL\Timy\FpMatch.dll" />
+    <Content Include="DLL\Timy\Fpreader.ocx" />
+    <Content Include="DLL\Timy\FP_CLOCK.ocx" />
+    <Content Include="DLL\Timy\TMPCCOMM.dll" />
+    <Content Include="DLL\Virdi\x86\FPLib.dll" />
+    <Content Include="DLL\Virdi\x86\Interop.UCBioBSPCOMLib.dll" />
+    <Content Include="DLL\Virdi\x86\Interop.UCSAPICOMLib.dll" />
+    <Content Include="DLL\Virdi\x86\NSearchMC.dll" />
+    <Content Include="DLL\Virdi\x86\UCBioBSP.dll" />
+    <Content Include="DLL\Virdi\x86\UCBioBSPCOM.dll" />
+    <Content Include="DLL\Virdi\x86\UCSAPI40.dll" />
+    <Content Include="DLL\Virdi\x86\UCSAPICOM.dll" />
+    <Content Include="DLL\Virdi\x86\VHMLib.dll" />
+    <Content Include="DLL\Virdi\x86\VirdiFP.dll" />
+    <Content Include="DLL\Virdi\x86\WSEngine.dll" />
+    <Content Include="DLL\Virdi\x64\FPLib.dll" />
+    <Content Include="DLL\Virdi\x64\Interop.UCBioBSPCOMLib.dll" />
+    <Content Include="DLL\Virdi\x64\Interop.UCSAPICOMLib.dll" />
+    <Content Include="DLL\Virdi\x64\NSearchMC.dll" />
+    <Content Include="DLL\Virdi\x64\UCBioBSP.dll" />
+    <Content Include="DLL\Virdi\x64\UCBioBSPCOM.dll" />
+    <Content Include="DLL\Virdi\x64\UCSAPI40.dll" />
+    <Content Include="DLL\Virdi\x64\UCSAPICOM.dll" />
+    <Content Include="DLL\Virdi\x64\VHMLib.dll" />
+    <Content Include="DLL\Virdi\x64\VirdiFP.dll" />
+    <Content Include="DLL\Virdi\x64\WSEngine.dll" />
+    <Content Include="DLL\zk\x64\commpro.dll" />
+    <Content Include="DLL\zk\x64\comms.dll" />
+    <Content Include="DLL\zk\x64\IOTCAPIs.dll" />
+    <Content Include="DLL\zk\x64\libareacode.dll" />
+    <Content Include="DLL\zk\x64\p4p.dll" />
+    <Content Include="DLL\zk\x64\p4pcomm.dll" />
+    <Content Include="DLL\zk\x64\plcommpro.dll" />
+    <Content Include="DLL\zk\x64\plcomms.dll" />
+    <Content Include="DLL\zk\x64\plcommutils.dll" />
+    <Content Include="DLL\zk\x64\plrscagent.dll" />
+    <Content Include="DLL\zk\x64\plrscomm.dll" />
+    <Content Include="DLL\zk\x64\pltcpcomm.dll" />
+    <Content Include="DLL\zk\x64\plusbcomm.dll" />
+    <Content Include="DLL\zk\x64\RDTAPIs.dll" />
+    <Content Include="DLL\zk\x64\rscagent.dll" />
+    <Content Include="DLL\zk\x64\rscomm.dll" />
+    <Content Include="DLL\zk\x64\tcpcomm.dll" />
+    <Content Include="DLL\zk\x64\usbcomm.dll" />
+    <Content Include="DLL\zk\x64\usbstd.dll" />
+    <Content Include="DLL\zk\x64\ZKCommuCryptoClient.dll" />
+    <Content Include="DLL\zk\x64\ZKEMCrypto.dll" />
+    <Content Include="DLL\zk\x64\zkemkeeper.dll" />
+    <Content Include="DLL\zk\x64\zkemsdk.dll" />
+    <Content Include="DLL\zk\x64\zkemsdkutils.dll" />
+    <Content Include="DLL\zk\x86\commpro.dll" />
+    <Content Include="DLL\zk\x86\comms.dll" />
+    <Content Include="DLL\zk\x86\IOTCAPIs.dll" />
+    <Content Include="DLL\zk\x86\libareacode.dll" />
+    <Content Include="DLL\zk\x86\p4p.dll" />
+    <Content Include="DLL\zk\x86\p4pcomm.dll" />
+    <Content Include="DLL\zk\x86\plcommpro.dll" />
+    <Content Include="DLL\zk\x86\plcomms.dll" />
+    <Content Include="DLL\zk\x86\plcommutils.dll" />
+    <Content Include="DLL\zk\x86\plrscagent.dll" />
+    <Content Include="DLL\zk\x86\plrscomm.dll" />
+    <Content Include="DLL\zk\x86\pltcpcomm.dll" />
+    <Content Include="DLL\zk\x86\plusbcomm.dll" />
+    <Content Include="DLL\zk\x86\RDTAPIs.dll" />
+    <Content Include="DLL\zk\x86\rscagent.dll" />
+    <Content Include="DLL\zk\x86\rscomm.dll" />
+    <Content Include="DLL\zk\x86\tcpcomm.dll" />
+    <Content Include="DLL\zk\x86\usbcomm.dll" />
+    <Content Include="DLL\zk\x86\usbstd.dll" />
+    <Content Include="DLL\zk\x86\ZKCommuCryptoClient.dll" />
+    <Content Include="DLL\zk\x86\ZKEMCrypto.dll" />
+    <Content Include="DLL\zk\x86\zkemkeeper.dll" />
+    <Content Include="DLL\zk\x86\zkemsdk.dll" />
+    <Content Include="DLL\zk\x86\zkemsdkutils.dll" />
+    <Content Include="ThirdPatiesDlls\KarabinEmbeddedLPRLibrary\KarabinEmbeddedLPRLibrary.dll" />
+    <Content Include="ThirdPatiesDlls\SuperSocket Dlls\log4net.dll" />
+    <Content Include="ThirdPatiesDlls\SuperSocket Dlls\SuperSocket.Common.dll" />
+    <Content Include="ThirdPatiesDlls\SuperSocket Dlls\SuperSocket.Facility.dll" />
+    <Content Include="ThirdPatiesDlls\SuperSocket Dlls\SuperSocket.SocketBase.dll" />
+    <Content Include="ThirdPatiesDlls\SuperSocket Dlls\SuperSocket.SocketEngine.dll" />
+    <Content Include="ThirdPatiesDlls\SuperSocket Dlls\SuperWebSocket.dll" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="DLL\Suprema\Certificate\ssl_server.crt" />
+    <None Include="DLL\Suprema\Certificate\ssl_server.pem" />
+    <None Include="DLL\Suprema\Certificate\ssl_server_root.crt" />
+    <None Include="DLL\Suprema\sdkv1.8\BS_SDK.lib" />
+    <None Include="DLL\Suprema\sdkv2\x64\BS_SDK_V2.lib" />
+    <None Include="DLL\Suprema\sdkv2\x86\BS_SDK_V2.lib" />
+    <None Include="DLL\Timy\RegOCX.BAT" />
+    <None Include="DLL\Timy\SDKDelete.bat" />
+    <None Include="DLL\Timy\FP_CLOCK.oca" />
+    <None Include="DLL\Timy\SDKRegister.bat" />
+    <None Include="DLL\Virdi\x64\SDK_Delete.bat" />
+    <None Include="DLL\Virdi\x64\SDK_Register.bat" />
+    <None Include="DLL\Virdi\x86\SDK_Delete.bat" />
+    <None Include="DLL\Virdi\x86\SDK_Register.bat" />
+    <None Include="DLL\zk\x64\SDK_Delete.bat" />
+    <None Include="DLL\zk\x64\SDK_Register.bat" />
+    <None Include="DLL\zk\x86\SDK_Register.bat" />
+    <None Include="DLL\zk\x86\SDK_Delete.bat" />
+    <None Include="packages.config" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GuardianCommunication.Data\GuardianCommunication.Data.csproj">
+      <Project>{fb9a8867-6563-4a3d-9042-28db48f5191c}</Project>
+      <Name>GuardianCommunication.Data</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GuardianCommunication.ExternalServices\GuardianCommunication.ExternalServices.csproj">
+      <Project>{114C3A7E-1DE1-486F-A871-E1518B3555FE}</Project>
+      <Name>GuardianCommunication.ExternalServices</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Communication.Shared\Communication.Shared.csproj">
+      <Project>{d94d085a-d8ab-41be-91f9-a394dc773b20}</Project>
+      <Name>Communication.Shared</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <COMReference Include="FPCLOCK_SVRLib">
+      <Guid>{4903E1B8-A06D-4CF3-8A57-1583409C030D}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="FP_CLOCKLib">
+      <Guid>{FE664F43-CCCB-46A4-ADD4-825303E0ADAD}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </COMReference>
+    <COMReference Include="UCSAPICOMLib">
+      <Guid>{950238B9-9C9B-455E-923E-814B98A0761D}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+      <Private>True</Private>
+    </COMReference>
+    <COMReference Include="zkemkeeper">
+      <Guid>{FE9DED34-E159-408E-8490-B720A5E632C7}</Guid>
+      <VersionMajor>1</VersionMajor>
+      <VersionMinor>0</VersionMinor>
+      <Lcid>0</Lcid>
+      <WrapperTool>tlbimp</WrapperTool>
+      <Isolated>False</Isolated>
+      <EmbedInteropTypes>False</EmbedInteropTypes>
+    </COMReference>
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <Protobuf Include="PadisController\Protos\padis_service.proto" GrpcServices="Server" Link="PadisController\Protos\padis_service.proto" />
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <Import Project="..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets" Condition="Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" />
+  <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
+    <PropertyGroup>
+      <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
+    </PropertyGroup>
+    <Error Condition="!Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets'))" />
+    <Error Condition="!Exists('..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets'))" />
+    <Error Condition="!Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props'))" />
+    <Error Condition="!Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets'))" />
+  </Target>
+  <Import Project="..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets" Condition="Exists('..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets')" />
+  <Import Project="..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets" Condition="Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets')" />
+</Project>
