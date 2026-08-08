@@ -7,28 +7,42 @@ namespace GuardianCommunication.Shared.HardwareDefinition
     /// تولید کنندگان ساعت
     /// </summary>
     [Flags]
-    [DataContract]
     public enum ProducerEnumeration : short
     {
-        [EnumMember]
+        /// <summary>
+        /// زد-کا
+        /// </summary>
         Zk = 1,
-        [EnumMember]
-        ProcessingWorld = 2,
-        [EnumMember]
-        Suprema = 4,
-        [EnumMember]
-        Virdi = 8,
-        [EnumMember]
-        ElmOSanat = 16,
-        [EnumMember]
-        Timy = 32,
-        [EnumMember]
-        JahanGostar = 64,
-        [EnumMember]
-        PouyaFanavaran = 128,
-        [EnumMember]
-        Padis = 256,
-        [EnumMember]
-        Other = 16384,
+
+        /// <summary>
+        /// ساپریما
+        /// </summary>
+        Suprema = 2,
+
+        /// <summary>
+        /// ویردی
+        /// </summary>
+        Virdi = 4,
+
+        /// <summary>
+        /// تیمی
+        /// </summary>
+        Timy = 8,
+
+        /// <summary>
+        /// پویا فناوران
+        /// </summary>
+        PouyaFanavaran = 16,
+
+        /// <summary>
+        /// اساگارد
+        /// </summary>
+        AsaGuard = 32,
+
+        /// <summary>
+        /// تمامی تولید کنندگان
+        /// </summary>
+        All = 32767
     }
+
 }

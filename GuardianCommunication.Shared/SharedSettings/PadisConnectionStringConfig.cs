@@ -2,16 +2,12 @@
 
 namespace GuardianCommunication.Shared.SharedSettings
 {
-    public class PadisConnectionStringConfig
+    public class GuardianConnectionStringConfig
     {
-        public String KarnamaDataBaseName { get; set; }
-        public String SQLUsername { get; set; }
-        public String SQLPassword { get; set; }
-        public String ServerName { get; set; }
-        public String KarnamaLogDataBaseName { get; set; }
-        public String PadisCommunicationDataBaseName { get; set; }
-        public String ResultKarnama { get; set; }
-        public String ResultKarnamaLog { get; set; }
-        public String ResultPadisCommunication { get; set; }
+        public string GuardianDataBaseName { get; set; }
+        public string GuardianLogDataBaseName { get; set; }
+        public string SqlUsername { get; set; }
+        public string SqlPassword { get; set; }
+        public string ServerName { get; set; }
     }
 }

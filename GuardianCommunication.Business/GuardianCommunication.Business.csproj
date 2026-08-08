@@ -192,7 +192,7 @@
       <Project>{c366b1f4-d48b-49e1-984e-f7966f51259f}</Project>
       <Name>GuardianCommunication.Hardware</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Communication.Shared\Communication.Shared.csproj">
+    <ProjectReference Include="..\GuardianCommunication.Shared\GuardianCommunication.Shared.csproj">
       <Project>{d94d085a-d8ab-41be-91f9-a394dc773b20}</Project>
       <Name>Communication.Shared</Name>
     </ProjectReference>

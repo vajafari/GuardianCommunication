@@ -16,7 +16,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
 		public int RelayNumber { get; set; }
         [DataMember]
-		public PadisControllerRelayTypeEnumeration RelayType { get; set; }
+		public GuardianControllerRelayTypeEnumeration RelayType { get; set; }
         [DataMember]
         public bool IsActive { get; set; }
 

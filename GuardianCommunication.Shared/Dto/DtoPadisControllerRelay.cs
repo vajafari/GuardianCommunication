@@ -8,7 +8,7 @@ namespace GuardianCommunication.Shared.Dto
         public int DeviceNumber { get; set; }
         public string Title { get; set; }
         public int RelayNumber { get; set; }
-        public PadisControllerRelayTypeEnumeration RelayType { get; set; }
+        public GuardianControllerRelayTypeEnumeration RelayType { get; set; }
         public bool IsActive { get; set; }
     }
 }

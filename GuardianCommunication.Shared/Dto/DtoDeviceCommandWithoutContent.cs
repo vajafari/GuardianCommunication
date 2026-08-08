@@ -5,11 +5,15 @@ using GuardianCommunication.Shared.HardwareDefinition;
 namespace GuardianCommunication.Shared.Dto
 {
 
-    public class DtoDeviceCommandWithoutContent
+    public class DtoDeviceCommandWithoutContent : DtoDatabaseEntityBase
     {
-        public int Id { get; set; }
+        public Guid DeviceId { get; set; }
+
+        public int DeviceNumber { get; set; }
 
         public string DeviceSerialNumber { get; set; }
+
+        public long? UserId { get; set; }
 
         public DateTime CommitTime { get; set; }
 
@@ -21,23 +25,19 @@ namespace GuardianCommunication.Shared.Dto
 
         public DeviceCommandTypeEnumeration CommandType { get; set; }
 
-        public CommandPriorityEnumeration Priority { get; set; }
-
-        public long? EmployeeNumber { get; set; }
-
         public int RetryCount { get; set; }
 
+        public CommandPriorityEnumeration Priority { get; set; }
+        
         public int MaxRetry { get; set; }
 
-        public int DeviceNumber { get; set; }
-
         public DateTime? Deadline { get; set; }
-
-        public DateTime? VisiblilityTime { get; set; }
 
         public ProducerEnumeration ProducerNumber { get; set; }
 
         public SdkVersionEnumeration SdkVersion { get; set; }
+
+        public DateTime? VisiblilityTime { get; set; }
 
         public string Description { get; set; }
 

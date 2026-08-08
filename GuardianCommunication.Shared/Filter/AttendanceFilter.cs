@@ -5,10 +5,11 @@ namespace GuardianCommunication.Shared.Filter
 {
 	public class AttendanceFilter
 	{
+		public List<Guid> Ids { get; set; }
+        
+        public List<Guid> DeviceIds { get; set; }
 
-		public List<long> Ids { get; set; }
-
-		public List<long> EmployeeNumbers { get; set; }
+        public List<long> PersonNumbersOnDevice { get; set; }
 
 		public DateTime? AttendanceDate { get; set; }
 
@@ -19,9 +20,5 @@ namespace GuardianCommunication.Shared.Filter
 		public bool? IsSent { get; set; }
 
 		public bool? IsHooked { get; set; }
-
-		public List<int> DeviceNumbers { get; set; }
-
-
 	}
 }

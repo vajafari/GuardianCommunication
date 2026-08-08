@@ -12,9 +12,5 @@
         /// </summary>
         Control = 2,
 
-        /// <summary>
-        /// تشخیص چهره
-        /// </summary>
-        FaceDetection = 3,
     }
 }

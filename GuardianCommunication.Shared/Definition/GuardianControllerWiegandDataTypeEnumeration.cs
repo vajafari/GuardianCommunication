@@ -3,7 +3,7 @@
 namespace GuardianCommunication.Shared.Definition
 {
     [DataContract]
-    public enum PadisControllerWiegandDataTypeEnumeration
+    public enum GuardianControllerWiegandDataTypeEnumeration
     {
         [EnumMember]
         CardNumber = 1,

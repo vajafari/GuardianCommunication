@@ -3,7 +3,7 @@
 namespace GuardianCommunication.Shared.Definition
 {
     [DataContract]
-    public enum PadisControllerWiegandFormatEnumeration
+    public enum GuardianControllerWiegandFormatEnumeration
     {
         [EnumMember]
         Auto,

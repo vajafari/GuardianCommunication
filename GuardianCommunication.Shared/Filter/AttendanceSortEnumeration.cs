@@ -3,7 +3,7 @@
 	public enum AttendanceSortEnumeration
 	{
 		Id,
-		EmployeeNumber,
+		PersonNumberOnDevice,
 		AttendanceDate,
 	}
 }

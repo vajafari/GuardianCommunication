@@ -15,9 +15,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
 		public int WiegandNumber { get; set; }
         [DataMember]
-		public PadisControllerWiegandFormatEnumeration WiegandFormat { get; set; }
+		public GuardianControllerWiegandFormatEnumeration WiegandFormat { get; set; }
         [DataMember]
-		public PadisControllerWiegandDataTypeEnumeration WiegandDataType { get; set; }
+		public GuardianControllerWiegandDataTypeEnumeration WiegandDataType { get; set; }
         [DataMember]
         public bool IsActive { get; set; }
 

@@ -9,7 +9,5 @@ namespace GuardianCommunication.Shared.HardwareDefinition
 		OnDemand = 1,
 		[EnumMember]
 		Push = 2,
-		[EnumMember]
-		ZkOnlineMonitoring = 3,
     }
 }

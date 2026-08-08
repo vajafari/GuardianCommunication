@@ -10,7 +10,7 @@ namespace GuardianCommunication.Shared.Dto
 
 		public ApplicationTypeEnumeration ApplicationId { get; set; }
 
-		public HookDetailTypeEnumeration DetailType { get; set; }
+		public HookTypeEnumeration DetailType { get; set; }
 
 		public string EndPointUrl { get; set; }
 

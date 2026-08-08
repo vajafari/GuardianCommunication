@@ -8,8 +8,8 @@ namespace GuardianCommunication.Shared.Dto
         public int DeviceNumber { get; set; }
         public string Title { get; set; }
         public int WiegandNumber { get; set; }
-        public PadisControllerWiegandFormatEnumeration WiegandFormat { get; set; }
-        public PadisControllerWiegandDataTypeEnumeration WiegandDataType { get; set; }
+        public GuardianControllerWiegandFormatEnumeration WiegandFormat { get; set; }
+        public GuardianControllerWiegandDataTypeEnumeration WiegandDataType { get; set; }
         public bool IsActive { get; set; }
     }
 }

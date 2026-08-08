@@ -177,7 +177,7 @@
       <Project>{fb9a8867-6563-4a3d-9042-28db48f5191c}</Project>
       <Name>GuardianCommunication.Data</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Communication.Shared\Communication.Shared.csproj">
+    <ProjectReference Include="..\GuardianCommunication.Shared\GuardianCommunication.Shared.csproj">
       <Project>{d94d085a-d8ab-41be-91f9-a394dc773b20}</Project>
       <Name>Communication.Shared</Name>
     </ProjectReference>

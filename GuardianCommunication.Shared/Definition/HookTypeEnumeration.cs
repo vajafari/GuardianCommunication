@@ -3,11 +3,9 @@
 namespace GuardianCommunication.Shared.Definition
 {
 	[Flags]
-	public enum ExternalHookSystemType
+	public enum HookTypeEnumeration
 	{
-		None = 0,
-		Karnama = 1,
-		HamkaranSystem = 2,
+		Attendance = 1
 	}
 
 }

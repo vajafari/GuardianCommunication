@@ -1494,7 +1494,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 }
                 if (inputItem.Filter.EmployeeNumbers.IsCollectionNotNullOrEmpty())
                 {
-                    result.Filter.EmployeeNumbers = inputItem.Filter.EmployeeNumbers;
+                    result.Filter.EmployeeNumbersOnDevice = inputItem.Filter.EmployeeNumbers;
                 }
                 result.Filter.EmployeeNumberLike = inputItem.Filter.EmployeeNumberLike;
                 result.Filter.CommitTimeFrom = inputItem.Filter.CommitTimeFrom.FromNumericDateTime();

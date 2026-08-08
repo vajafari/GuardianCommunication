@@ -2,9 +2,9 @@
 {
 	public class ConnectionConfiguration
 	{
-		public string ConnectionString { get; set; }
-        public string KarnamaLogConnectionString { get; set; }
-		public int Timeout { get; set; }
-		public int LongTimeout { get; set; }
-	}
+        public string ConnectionString { get; set; }
+        public string LogConnectionString { get; set; }
+        public int CommandTimeout { get; set; }
+        public int LongCommandTimeout { get; set; }
+    }
 }

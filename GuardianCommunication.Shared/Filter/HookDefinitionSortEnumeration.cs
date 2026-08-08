@@ -1,6 +1,6 @@
 ﻿namespace GuardianCommunication.Shared.Filter
 {
-	public enum ScheduledApiCallTaskSortEnumeration
+	public enum HookDefinitionSortEnumeration
     {
 		Id
 	}

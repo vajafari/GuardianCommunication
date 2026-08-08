@@ -6,16 +6,15 @@ namespace GuardianCommunication.Shared.Filter
 {
     public class DeviceCommandFilter
     {
-
-        public List<long> Ids { get; set; }
+        public List<Guid> Ids { get; set; }
 
         public List<Guid> CommandIdentifiers { get; set; }
 
-        public List<long> EmployeeNumbers { get; set; }
-
-        public long? EmployeeNumberLike { get; set; }
+        public List<long> EmployeeNumbersOnDevice { get; set; }
 
         public List<string> DeviceSerialNumbers { get; set; }
+
+        public List<Guid> DeviceIds { get; set; }
 
         public List<int> DeviceNumbers { get; set; }
 

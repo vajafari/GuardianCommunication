@@ -3,13 +3,11 @@
 namespace GuardianCommunication.Shared.Definition
 {
     [DataContract]
-    public enum FaceDetectionCameraDetectionStatusEnumeration
+    public enum GuardianControllerRelayTypeEnumeration
     {
         [EnumMember]
-        Valid = 1,
+        Single = 1,
         [EnumMember]
-        Invalid = 2,
-        [EnumMember]
-        Unknown = 3
+        Double = 2,
     }
 }

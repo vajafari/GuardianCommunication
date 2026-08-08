@@ -3,7 +3,7 @@
 namespace GuardianCommunication.Shared.Definition
 {
     [Flags]
-    public enum LogLevelPadisControllerEnumeration : long
+    public enum LogLevelGuardianControllerEnumeration : long
     {
         None = ((long)1) << 0,
         LogGeneralMethodsCall = ((long)1) << 1,

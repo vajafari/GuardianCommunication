@@ -1,6 +1,8 @@
-﻿using System;
-using GuardianCommunication.Shared.Definition;
+﻿using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using System;
+using System.Collections.Generic;
 
 namespace GuardianCommunication.Shared.SharedSettings
 {
@@ -12,29 +14,35 @@ namespace GuardianCommunication.Shared.SharedSettings
 
         public static DateTime? ExpireDate { get; set; }
 
-        public static ApplicationTypeEnumeration ValidApplication { get; set; }
+        public static ModuleEnumeration Modules { get; set; }
 
-        public static int EmployeeCount { get; set; }
+        public static int PersonCount { get; set; }
 
         public static int DeviceCount { get; set; }
 
         public static int TotalDeviceCount { get; set; }
 
-        public static CalendarTypeEnumeration CalendarType { get; set; }
-
         public static ProducerEnumeration ActiveProducers { get; set; }
 
-        public static SdkVersionEnumeration SupremaProducerVersions { get; set; }
+        public static List<SdkVersionEnumeration> SupremaProducerVersions { get; set; }
 
-        public static bool CheckDeviceSerialNumber { get; set; }
+        public static void CheckProducerValidity(ProducerEnumeration producer, SdkVersionEnumeration sdkVersion)
+        {
+            if (ActiveProducers.HasFlag(producer))
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
 
-        public static string[] ValidDeviceSerialNumbers { get; set; }
+            if (producer == ProducerEnumeration.Suprema)
+            {
+                if (!SupremaProducerVersions.Contains(sdkVersion))
+                {
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                }
+            }
+        }
 
-        public static DateTime? EffectiveDateForValidDeviceSerialNumbers { get; set; }
 
-        public static ValidSerialNumberCheckTypeEnumeration ValidSerialNumberCheckTypes { get; set; }
-
-        public static AcFaceDetectionModuleTypeEnumeration FaceDetectionModuleType { get; set; }
     }
 
 }

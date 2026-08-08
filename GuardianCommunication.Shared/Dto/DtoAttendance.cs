@@ -4,28 +4,24 @@ using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.Dto
 {
-
-    public class DtoAttendance
+    public class DtoAttendance : DtoDatabaseEntityBase
     {
-        public long Id { get; set; }
-        public long EmployeeNumber { get; set; }
-        public string RfCardNumber { get; set; }
-        public DeviceIoTypeEnumeration IoType { get; set; }
-        public int? VerificationStyle { get; set; }
+        public long PersonNumberOnDevice { get; set; }
         public DateTime AttendanceDateTime { get; set; }
-        public DeviceAttendanceIoRetrieveTypeEnumeration? DeviceAttendanceIoRetrieveType { get; set; }
-        public AttendanceSourceEnumeration AttendanceSource { get; set; }
-        public int? DeviceNumber { get; set; }
-        public int? ReaderDeviceNumber { get; set; }
-        public int? DoorId { get; set; }
-        public int? CameraId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public Guid? CameraId { get; set; }
+        public Guid? ReaderDeviceId { get; set; }
+        public int? VerificationStyle { get; set; }
+        public string RfCardNumber { get; set; }
         public int StatusCode { get; set; }
-        public bool IsSent { get; set; }
-        public bool IsInvalid { get; set; }
-        public ApplicationTypeEnumeration ApplicationId { get; set; }
-        public DateTime InsertDateTime { get; set; }
+        public bool IsSentToGuardian { get; set; }
+        public int SentToGuardianRetryCount { get; set; }
+        public ModuleEnumeration ModuleId { get; set; }
+        public DeviceIoTypeEnumeration IoType { get; set; }
+        public AttendanceSourceEnumeration AttendanceSource { get; set; }
+        public DeviceAttendanceIoRetrieveTypeEnumeration? DeviceAttendanceIoRetrieveType { get; set; }
 
-        public int ApplicationIdNumber => (int)ApplicationId;
+        public int ApplicationIdNumber => (int)ModuleId;
         public short IoTypeNumber => (short)IoType;
         public int? DeviceAttendanceIoRetrieveTypeNumber => (int?)DeviceAttendanceIoRetrieveType;
         public int AttendanceSourceNumber => (int)AttendanceSource;

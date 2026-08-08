@@ -9,14 +9,14 @@ namespace GuardianCommunication.Shared.SharedSettings
     public static class AppConfigs
     {
         private const string ConfigKey = "JaNdRgUkXp2s5v8y/B?D(G+KbPeShVmY";
-        private static PadisConnectionStringConfig _connectionString;
-        public static PadisConnectionStringConfig ConnectionString
+        private static GuardianConnectionStringConfig _connectionString;
+        public static GuardianConnectionStringConfig ConnectionString
         {
             get
             {
                 if (_connectionString != null) return _connectionString;
                 var configStringDecrypted = Cryptography.Decrypt(ConfigurationHelper.GetApplicationSettingValue<string>("ConnectionString"), ConfigKey);
-                _connectionString = JsonConvert.DeserializeObject<PadisConnectionStringConfig>(configStringDecrypted);
+                _connectionString = JsonConvert.DeserializeObject<GuardianConnectionStringConfig>(configStringDecrypted);
                 return _connectionString;
             }
         }
@@ -59,12 +59,12 @@ namespace GuardianCommunication.Shared.SharedSettings
 
                 };
 #else 
-                var builderPadisCommunication = new SqlConnectionStringBuilder
+                var builderGuardianCommunication = new SqlConnectionStringBuilder
                 {
-                    ApplicationName = "PadisCommunication",
+                    ApplicationName = "GuardianCommunication",
                     Password = ConnectionString.SQLPassword,
                     UserID = ConnectionString.SQLUsername,
-                    InitialCatalog = ConnectionString.PadisCommunicationDataBaseName,
+                    InitialCatalog = ConnectionString.GuardianCommunicationDataBaseName,
                     DataSource = ConnectionString.ServerName,
                     MultipleActiveResultSets = true,
                     Pooling = true,
@@ -72,7 +72,7 @@ namespace GuardianCommunication.Shared.SharedSettings
 
                 var builderKarnamaLog = new SqlConnectionStringBuilder
                 {
-                    ApplicationName = "PadisCommunication",
+                    ApplicationName = "GuardianCommunication",
                     Password = ConnectionString.SQLPassword,
                     UserID = ConnectionString.SQLUsername,
                     InitialCatalog = ConnectionString.KarnamaLogDataBaseName,
@@ -85,7 +85,7 @@ namespace GuardianCommunication.Shared.SharedSettings
                 {
                     Timeout = SqlCommandTimeout,
                     LongTimeout = SqlCommandTimeoutLong,
-                    ConnectionString = builderPadisCommunication.ConnectionString,
+                    ConnectionString = builderGuardianCommunication.ConnectionString,
                     KarnamaLogConnectionString = builderKarnamaLog.ConnectionString,
                 };
 #endif
@@ -105,33 +105,6 @@ namespace GuardianCommunication.Shared.SharedSettings
             }
         }
 
-        private static List<string> _validIpAddresses;
-        public static List<string> ValidIpAddresses
-        {
-            get
-            {
-                if (_validIpAddresses != null) return _validIpAddresses;
-
-                var validIpAddressesPure = ConfigurationHelper.GetApplicationSettingValue<string>("ValidIpAddresses");
-                _validIpAddresses = validIpAddressesPure.IsCollectionNullOrEmpty()
-                    ? new List<string>()
-                    : validIpAddressesPure.Split(',').ToList();
-                return _validIpAddresses;
-            }
-
-        }
-
-        private static int? _zkOpenDoorDelay;
-        public static int ZkOpenDoorDelay
-        {
-            get
-            {
-                if (_zkOpenDoorDelay.HasValue) return _zkOpenDoorDelay.Value;
-                _zkOpenDoorDelay = ConfigurationHelper.GetApplicationSettingValue<int>("ZkOpenDoorDelay");
-                return _zkOpenDoorDelay.Value;
-            }
-        }
-
         private static int? _simultaneousZkServerThreadsCount;
         public static int SimultaneousZkServerThreadsCount
         {
@@ -140,42 +113,6 @@ namespace GuardianCommunication.Shared.SharedSettings
                 if (_simultaneousZkServerThreadsCount.HasValue) return _simultaneousZkServerThreadsCount.Value;
                 _simultaneousZkServerThreadsCount = ConfigurationHelper.GetApplicationSettingValue<int>("SimultaneousZkServerThreadsCount");
                 return _simultaneousZkServerThreadsCount.Value;
-            }
-        }
-
-        private static bool? _isXRayActive;
-        public static bool IsXRayActive
-        {
-            get
-            {
-                if (_isXRayActive.HasValue) return _isXRayActive.Value;
-                _isXRayActive = ConfigurationHelper.GetApplicationSettingValue<bool>("IsXRayActive");
-                return _isXRayActive.Value;
-            }
-        }
-
-        private static bool? _isMetalDetectorGateActive;
-        public static bool IsMetalDetectorGateActive
-        {
-            get
-            {
-                if (_isMetalDetectorGateActive.HasValue) return _isMetalDetectorGateActive.Value;
-                _isMetalDetectorGateActive = ConfigurationHelper.GetApplicationSettingValue<bool>("IsMetalDetectorGateActive");
-                return _isMetalDetectorGateActive.Value;
-            }
-        }
-
-        private static uint? _supremaSdkAccessGroupCode;
-        public static uint SupremaSdkAccessGroupCode
-        {
-            get
-            {
-                if (_supremaSdkAccessGroupCode.HasValue) return _supremaSdkAccessGroupCode.Value;
-                _supremaSdkAccessGroupCode =
-                    uint.TryParse(ConfigurationHelper.GetApplicationSettingValue<string>("SupremaSdkAccessGroupCode"), out var accessGroupCode)
-                        ? accessGroupCode
-                        : 0;
-                return _supremaSdkAccessGroupCode.Value;
             }
         }
 
@@ -193,13 +130,13 @@ namespace GuardianCommunication.Shared.SharedSettings
             }
         }
 
-        private static KarnamaCallLogLevelEnumeration? _logLevelKarnamaCall1;
-        public static KarnamaCallLogLevelEnumeration LogLevelKarnamaCall
+        private static GuardianCallLogLevelEnumeration? _logLevelKarnamaCall1;
+        public static GuardianCallLogLevelEnumeration LogLevelKarnamaCall
         {
             get
             {
                 if (_logLevelKarnamaCall1.HasValue) return _logLevelKarnamaCall1.Value;
-                _logLevelKarnamaCall1 = (KarnamaCallLogLevelEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelKarnamaCall");
+                _logLevelKarnamaCall1 = (GuardianCallLogLevelEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelKarnamaCall");
                 return _logLevelKarnamaCall1.Value;
             }
         }
@@ -248,28 +185,6 @@ namespace GuardianCommunication.Shared.SharedSettings
             }
         }
 
-        private static LogLevelPwEnumeration? _logLevelPw;
-        public static LogLevelPwEnumeration LogLevelPw
-        {
-            get
-            {
-                if (_logLevelPw.HasValue) return _logLevelPw.Value;
-                _logLevelPw = (LogLevelPwEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelPw");
-                return _logLevelPw.Value;
-            }
-        }
-
-        private static LogLevelElmoSanatEnumeration? _logLevelElmoSanat;
-        public static LogLevelElmoSanatEnumeration LogLevelElmoSanat
-        {
-            get
-            {
-                if (_logLevelElmoSanat.HasValue) return _logLevelElmoSanat.Value;
-                _logLevelElmoSanat = (LogLevelElmoSanatEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelElmoSanat");
-                return _logLevelElmoSanat.Value;
-            }
-        }
-
         private static LogLevelZkEnumeration? _logLevelZk;
         public static LogLevelZkEnumeration LogLevelZk
         {
@@ -281,14 +196,14 @@ namespace GuardianCommunication.Shared.SharedSettings
             }
         }
 
-        private static LogLevelPadisControllerEnumeration? _logLevelPadisController;
-        public static LogLevelPadisControllerEnumeration LogLevelPadisController
+        private static LogLevelGuardianControllerEnumeration? _logLevelGuardianController;
+        public static LogLevelGuardianControllerEnumeration LogLevelGuardianController
         {
             get
             {
-                if (_logLevelPadisController.HasValue) return _logLevelPadisController.Value;
-                _logLevelPadisController = (LogLevelPadisControllerEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelPadisController");
-                return _logLevelPadisController.Value;
+                if (_logLevelGuardianController.HasValue) return _logLevelGuardianController.Value;
+                _logLevelGuardianController = (LogLevelGuardianControllerEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelGuardianController");
+                return _logLevelGuardianController.Value;
             }
         }
 
@@ -302,40 +217,6 @@ namespace GuardianCommunication.Shared.SharedSettings
                 return _logLevelCamera.Value;
             }
         }
-
-        private static LogLevelXRayEnumeration? _logLevelXRay;
-        public static LogLevelXRayEnumeration LogLevelXRay
-        {
-            get
-            {
-                if (_logLevelXRay.HasValue) return _logLevelXRay.Value;
-                _logLevelXRay = (LogLevelXRayEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelXRay");
-                return _logLevelXRay.Value;
-            }
-        }
-
-        private static LogLevelMetalDetectorEnumeration? _logLevelMetalDetector;
-        public static LogLevelMetalDetectorEnumeration LogLevelMetalDetector
-        {
-            get
-            {
-                if (_logLevelMetalDetector.HasValue) return _logLevelMetalDetector.Value;
-                _logLevelMetalDetector = (LogLevelMetalDetectorEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelMetalDetector");
-                return _logLevelMetalDetector.Value;
-            }
-        }
-
-        private static LogLevelPrintServiceEnumeration? _logLevelPrintService;
-        public static LogLevelPrintServiceEnumeration LogLevelPrintService
-        {
-            get
-            {
-                if (_logLevelPrintService.HasValue) return _logLevelPrintService.Value;
-                _logLevelPrintService = (LogLevelPrintServiceEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelPrintService");
-                return _logLevelPrintService.Value;
-            }
-        }
-
 
         #endregion
 
