@@ -46,21 +46,3 @@ namespace GuardianCommunication.Shared.Dto
     }
 }
 
-
-Id uniqueidentifier	Unchecked
-    	bigint	Unchecked
-AttendanceDateTime	datetime2(7)	Unchecked
-    DeviceId	uniqueidentifier	Checked
-CameraId	uniqueidentifier	Checked
-    ReaderDeviceId	uniqueidentifier	Checked
-VerificationStyle	int	Checked
-RfCardNumber	nvarchar(100)	Checked
-    StatusCode	int	Unchecked
-IsSentToGuardian	bit	Unchecked
-    SentToGuardianRetryCount	int	Unchecked
-ModuleId	int	Checked
-IoType	smallint	Unchecked
-    AttendanceSource	smallint	Unchecked
-DeviceAttendanceIoRetrieveType	smallint	Checked
-    InsertedAt	datetime2(7)	Unchecked
-    UpdatedAt	datetime2(7)	Checked

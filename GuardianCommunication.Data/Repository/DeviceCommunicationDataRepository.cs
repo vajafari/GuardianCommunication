@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Data;
 using Dapper;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Data.Repository
 {
-
+	// TODO: Complete this
 	public interface IDeviceCommunicationDataRepository
 	{
 		void Insert(DtoDeviceCommunicationData entity);
@@ -23,19 +26,14 @@ namespace GuardianCommunication.Data.Repository
 		#region Command Strings NewSupremaDevice
 
 		private const string SelectCommand =
-			@"	SELECT        
-					  sd.[DeviceNumber] AS DeviceNumber
-					, sd.[LastLogId] AS LastLogId
-					, sd.[LastAttendanceLogId] AS LastAttendanceLogId
-					, sd.[LastLogDateTime] AS LastLogDateTime
-					, sd.[LastAttendanceLogDateTime] AS LastAttendanceLogDateTime
-				FROM [DeviceCommunicationData] AS sd
+			@"	SELECT sd.*
+				FROM [com].[DeviceCommunicationData] AS sd
      			WHERE  1 = 1            
      				{0}    -- Search";
 
 
 		private const string UpdateCommand =
-			@"	UPDATE [DeviceCommunicationData]
+			@"	UPDATE [com].[DeviceCommunicationData]
    					SET 
    						  [LastLogId] = @LastLogId
    						, [LastAttendanceLogId] = @LastAttendanceLogId
@@ -45,7 +43,7 @@ namespace GuardianCommunication.Data.Repository
 
 
 		private const string InsertCommand =
-			@"	INSERT INTO         [DeviceCommunicationData]
+			@"	INSERT INTO         [com].[DeviceCommunicationData]
 				(
 					  [DeviceNumber]
 					, [LastLogId]
@@ -74,7 +72,7 @@ namespace GuardianCommunication.Data.Repository
 				using (var connection = GetConnection())
 				{
 					connection.Execute(InsertCommand, entity
-						, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
+						, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
 				}
 			}
 			catch (Exception e)
@@ -90,7 +88,7 @@ namespace GuardianCommunication.Data.Repository
 			using (var connection = GetConnection())
 			{
 				connection.Execute(UpdateCommand, entity
-					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
 			}
 		}
 
@@ -106,7 +104,7 @@ namespace GuardianCommunication.Data.Repository
 			{
 				return connection.Query<DtoDeviceCommunicationData>(
                     SelectCommand.FormatInvariantCulture(condition)
-					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).AsList();
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
 			}
 		}
 

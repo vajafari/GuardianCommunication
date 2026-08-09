@@ -130,7 +130,7 @@ namespace GuardianCommunication.Data.Repository
 								, dc.[CommandType] AS CommandType
 								, dc.[DeviceNumber] AS DeviceNumber
 								, dc.[DeviceContent] AS DeviceContent
-				        FROM [DeviceCommand] dc
+				        FROM [com].[DeviceCommand] dc
 						WHERE	dc.[ProducerNumber] = @Producer
 								AND	dc.[SdkVersion] = @SdkVersion
 								AND  {0}
@@ -159,7 +159,7 @@ namespace GuardianCommunication.Data.Repository
             @"[com].[DeviceCommandCountByDeviceSerialNumber]";
 
         private const string UpdateSendDataCommand =
-            @"	UPDATE        [DeviceCommand]
+            @"	UPDATE        [com].[DeviceCommand]
 					SET  
 						  [SendTime] = GETUTCDATE()
 						, [RetryCount] = RetryCount + 1
@@ -167,7 +167,7 @@ namespace GuardianCommunication.Data.Repository
 				WHERE  [Id] IN @Ids";
 
         private const string SetResponseWithModeCommand =
-            @"	UPDATE        [DeviceCommand]
+            @"	UPDATE        [com].[DeviceCommand]
 					SET  
 						  [ResponseTime] = @ResponseTime
 						, [ResponseValue] = @ResponseValue
@@ -175,20 +175,20 @@ namespace GuardianCommunication.Data.Repository
                 WHERE  ([Id] % @Mode) = @Id";
 
         private const string SetResponseCommand =
-            @"	UPDATE        [DeviceCommand]
+            @"	UPDATE        [com].[DeviceCommand]
 					SET  
 						  [ResponseTime] = @ResponseTime
 						, [ResponseValue] = @ResponseValue
 				WHERE  [Id] = @Id";
 
         private const string SetDescriptionCommand =
-            @"	UPDATE        [DeviceCommand]
+            @"	UPDATE        [com].[DeviceCommand]
 					SET  
 						 Description = @Description
 				WHERE  Id = @Id";
 
         private const string SetDescriptionWithModeCommand =
-            @"	UPDATE        [DeviceCommand]
+            @"	UPDATE        [com].[DeviceCommand]
 					SET  
 						 Description = @Description
 				WHERE  (Id % @Mode) = @Id";
@@ -213,7 +213,7 @@ namespace GuardianCommunication.Data.Repository
 					, dc.[VisiblilityTime] AS VisiblilityTime
 					, dc.[Description] AS Description
 					, dc.[CommandIdentifier] AS CommandIdentifier
-				FROM [DeviceCommand] dc
+				FROM [com].[DeviceCommand] dc
 				WHERE  1 = 1                
 						{0}    -- Search            
 				{1}    -- Order By";
@@ -259,7 +259,7 @@ namespace GuardianCommunication.Data.Repository
 								, dc.[VisiblilityTime] AS VisiblilityTime
 								, dc.[Description] AS Description
 								, dc.[CommandIdentifier] AS CommandIdentifier
-							FROM [DeviceCommand] dc
+							FROM [com].[DeviceCommand] dc
 							WHERE  1 = 1         
 									{0}    -- Search            
 				         ) tmp                        
@@ -287,7 +287,7 @@ namespace GuardianCommunication.Data.Repository
 					, dc.[VisiblilityTime] AS VisiblilityTime
 					, dc.[Description] AS Description
 					, dc.[CommandIdentifier] AS CommandIdentifier
-				FROM [DeviceCommand] dc
+				FROM [com].[DeviceCommand] dc
 				WHERE  1 = 1                
 						{0}    -- Search            
 				{1}    -- Order By";
@@ -337,22 +337,22 @@ namespace GuardianCommunication.Data.Repository
 								, dc.[VisiblilityTime] AS VisiblilityTime
 								, dc.[Description] AS Description
 								, dc.[CommandIdentifier] AS CommandIdentifier
-							FROM [DeviceCommand] dc
+							FROM [com].[DeviceCommand] dc
 							WHERE  1 = 1         
 									{0}    -- Search            
 				         ) tmp                        
 				 {2}    -- Paging";
 
         private const string DeleteByCommandIdentifierCommand =
-            @"	DELETE FROM        [DeviceCommand]
+            @"	DELETE FROM        [com].[DeviceCommand]
 				WHERE  CommandIdentifier IN @CommandIdentifiers";
 
         private const string DeleteByIdsWithModeCommand =
-            @"	DELETE FROM        [DeviceCommand]
+            @"	DELETE FROM        [com].[DeviceCommand]
 				WHERE (Id % @Mode) IN @Ids";
 
         private const string DeleteByIdsCommand =
-            @"	DELETE FROM        [DeviceCommand]
+            @"	DELETE FROM        [com].[DeviceCommand]
 				WHERE  Id IN @Ids";
 
 
@@ -430,6 +430,30 @@ namespace GuardianCommunication.Data.Repository
 
         }
 
+        private static DynamicParameters GetInsertParameters(DtoDeviceCommand entity)
+        {
+            var parameters = new DynamicParameters(entity);
+            parameters.Add(nameof(entity.CommitTime), entity.CommitTime.ToUtc());
+            parameters.Add(nameof(entity.SendTime), entity.SendTime.ToUtc());
+            parameters.Add(nameof(entity.ResponseTime), entity.ResponseTime.ToUtc());
+            parameters.Add(nameof(entity.Deadline), entity.Deadline.ToUtc());
+            parameters.Add(nameof(entity.VisiblilityTime), entity.VisiblilityTime.ToUtc());
+            return parameters;
+        }
+
+        private static DynamicParameters GetSearchParameters(DeviceCommandFilter filter)
+        {
+            var parameters = new DynamicParameters(filter);
+            if (filter != null)
+            {
+                parameters.Add(nameof(filter.CommitTimeFrom), filter.CommitTimeFrom.ToUtc());
+                parameters.Add(nameof(filter.CommitTimeTo), filter.CommitTimeTo.ToUtc());
+                parameters.Add(nameof(filter.VisiblilityTimeFrom), filter.VisiblilityTimeFrom.ToUtc());
+                parameters.Add(nameof(filter.VisiblilityTimeTo), filter.VisiblilityTimeTo.ToUtc());
+            }
+            return parameters;
+        }
+
         #endregion
 
 
@@ -449,7 +473,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     if (entity != null)
                     {
-                        connection.ExecuteScalar(InsertCommand, entity
+                        connection.ExecuteScalar(InsertCommand, GetInsertParameters(entity)
                             , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                     }
                 }
@@ -548,7 +572,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     connection.Execute(SetResponseWithModeCommand, new
                     {
-                        ResponseTime = commandResult.CommandResponseTime,
+                        ResponseTime = commandResult.CommandResponseTime.ToUtc(),
                         ResponseValue = commandResult.CommandResponseResult,
                         commandResult.Id,
                         commandResult.Mode,
@@ -558,7 +582,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     connection.Execute(SetResponseCommand, new
                     {
-                        ResponseTime = commandResult.CommandResponseTime,
+                        ResponseTime = commandResult.CommandResponseTime.ToUtc(),
                         ResponseValue = commandResult.CommandResponseResult,
                         commandResult.Id,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
@@ -642,7 +666,7 @@ namespace GuardianCommunication.Data.Repository
                     commandText = searchType == SearchTypeEnumeration.SimpleSearch
                         ? SelectWithoutContentCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithoutContentWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoDeviceCommandWithoutContent>(commandText, searchInfo.Filter
+                    return connection.Query<DtoDeviceCommandWithoutContent>(commandText, GetSearchParameters(searchInfo.Filter)
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
 
@@ -666,7 +690,7 @@ namespace GuardianCommunication.Data.Repository
                     commandText = searchType == SearchTypeEnumeration.SimpleSearch
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoDeviceCommand>(commandText, searchInfo.Filter
+                    return connection.Query<DtoDeviceCommand>(commandText, GetSearchParameters(searchInfo.Filter)
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
 

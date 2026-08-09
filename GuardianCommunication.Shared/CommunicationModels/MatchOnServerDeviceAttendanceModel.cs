@@ -14,6 +14,6 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public int StatusCode { get; set; }
         public string RfCardNumber { get; set; }
         public DeviceIoTypeEnumeration IoType { get; set; }
-        public ApplicationTypeEnumeration ApplicationId { get; set; }
+        public ModuleEnumeration ModuleId { get; set; }
     }
 }

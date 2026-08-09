@@ -3,6 +3,9 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.OperationResult;
 using RestSharp;
 using RestSharp.Authenticators.Digest;
 

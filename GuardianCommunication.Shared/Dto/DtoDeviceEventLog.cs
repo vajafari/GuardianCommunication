@@ -6,7 +6,7 @@ namespace GuardianCommunication.Shared.Dto
 	public class DtoDeviceEventLog
 	{
 		public long Id { get; set; }
-		public long? EmployeeNumber { get; set; }
+		public long? UserIdOnDevice { get; set; }
 		public DateTime EventDateTime { get; set; }
 		public int DeviceNumber { get; set; }
         public ProducerEnumeration Producer { get; set; }

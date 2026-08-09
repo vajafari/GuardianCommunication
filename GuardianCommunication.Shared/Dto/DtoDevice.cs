@@ -39,8 +39,7 @@ namespace GuardianCommunication.Shared.Dto
         public int DaylightStart { get; set; }
         public int DaylightEnd { get; set; }
         public int DaylightChangeTimeInSeconds { get; set; }
-
-
+        public int LocationNumber { get; set; }
 
         private DtoDeviceSettings _deviceSettings;
 

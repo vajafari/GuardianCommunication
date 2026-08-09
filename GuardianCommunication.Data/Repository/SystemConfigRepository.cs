@@ -2,6 +2,9 @@
 using System.Data;
 using System.Linq;
 using Dapper;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Data.Repository
 {
@@ -28,12 +31,12 @@ namespace GuardianCommunication.Data.Repository
 			@"	SELECT        
 				 scfg.[ConfigName] AS ConfigName
 				, scfg.[ConfigValue] AS ConfigValue
-					FROM [SystemConfig] AS scfg
-     		WHERE  1 = 1            
+					FROM [com].[SystemConfig] AS scfg
+     		WHERE  1 = 1
      				{0}    -- Search";
 
 		private const string UpdateCommand =
-			@"	UPDATE [SystemConfig]
+			@"	UPDATE [com].[SystemConfig]
    					SET 
    						[ConfigValue] = @ConfigValue
  				WHERE [ConfigName] =  @ConfigName";
@@ -47,7 +50,7 @@ namespace GuardianCommunication.Data.Repository
 			{
 				return connection.Query<DtoSystemConfigPure>(
                     SelectCommand.FormatInvariantCulture(string.Empty)
-					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).ToList();
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).ToList();
 			}
 		}
 
@@ -63,7 +66,7 @@ namespace GuardianCommunication.Data.Repository
 			{
 				return connection.Query<DtoSystemConfigPure>(
                     SelectCommand.FormatInvariantCulture(searchClause)
-					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).ToList();
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).ToList();
 			}
 		}
 
@@ -72,7 +75,7 @@ namespace GuardianCommunication.Data.Repository
 			using (var connection = GetConnection())
 			{
 				connection.Execute(UpdateCommand, param: entities
-					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
 			}
 		}
 

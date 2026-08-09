@@ -198,7 +198,7 @@ namespace GuardianCommunication.Data.Repository
             @"	
                 IF @CurrentId IS NOT NULL
                 BEGIN
-                    INSERT INTO         [AttendanceHookDefinition]
+                    INSERT INTO         [com].[AttendanceHookDefinition]
 				    (
 					      [AttendanceId]
 					    , [HookDefinitionId]
@@ -322,7 +322,7 @@ namespace GuardianCommunication.Data.Repository
 			";
 
         private const string MarkAsSentCommand =
-            @"	UPDATE        [Attendance]
+            @"	UPDATE        [com].[Attendance]
 					SET IsSent = 1
 				WHERE  Id IN @Ids";
 
@@ -584,7 +584,7 @@ namespace GuardianCommunication.Data.Repository
 
             return $@"NOT EXISTS (
                                         SELECT  *
-                                        FROM [Attendance] att
+                                        FROM [com].[Attendance] att
                                         WHERE   att.[PersonNumberOnDevice] = @PersonNumberOnDevice
                                                 AND att.[AttendanceSource] != {(int)AttendanceSourceEnumeration.Manual}
                                                 AND ({string.Join("\n OR \n", conditions)})

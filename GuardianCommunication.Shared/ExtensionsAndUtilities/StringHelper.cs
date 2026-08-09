@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 
@@ -47,7 +49,15 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 			return sb.ToString();
 		}
 
-		public static string ToNotNullPersianCharacter(this string inputString)
+        public static string JoinTogether<T>(this IEnumerable<T> collection, string separator = ", ")
+        {
+            return string.Join(separator, collection
+                .Where(c => c != null)
+                .Select(x => FormattableString.Invariant($"{x}"))
+                .Where(s => !string.IsNullOrWhiteSpace(s)));
+        }
+
+        public static string ToNotNullPersianCharacter(this string inputString)
 		{
 		    return string.IsNullOrEmpty(inputString) ? string.Empty : ToPersianCharacter(inputString);
 		}

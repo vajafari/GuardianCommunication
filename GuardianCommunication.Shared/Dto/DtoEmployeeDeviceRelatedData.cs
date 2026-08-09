@@ -4,9 +4,11 @@ using GuardianCommunication.Shared.Definition;
 
 namespace GuardianCommunication.Shared.Dto
 {
-    public class DtoEmployeeDeviceRelatedData
+    public class DtoUserDeviceRelatedData
     {
-        public long EmployeeNumber { get; set; }
+        public Guid Id { get; set; }
+
+        public long UserIdOnDevice { get; set; }
 
         public List<string> RfCardNumbers { get; set; } = new List<string>();
 

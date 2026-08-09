@@ -24,7 +24,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public bool IsSent { get; set; }
         [DataMember]
-        public ApplicationTypeEnumeration ApplicationId { get; set; }
+        public ModuleEnumeration ModuleId { get; set; }
         [DataMember]
         public bool CheckDuplicateInterval { get; set; }
         [DataMember]

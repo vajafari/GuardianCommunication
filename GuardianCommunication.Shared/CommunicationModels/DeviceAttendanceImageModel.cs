@@ -10,7 +10,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public int DeviceNumber { get; set; }
         [DataMember]
-        public long EmployeeNumber { get; set; }
+        public long UserId { get; set; }
         [DataMember]
         public string Image { get; set; }
     }

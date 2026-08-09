@@ -218,7 +218,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                     DeviceNumber = item.DeviceNumber,
                     EventDateTime = item.EventDateTime.ToNumericDateTime(),
                     Id = item.Id.ToString(),
-                    EmployeeNumber = item.EmployeeNumber,
+                    EmployeeNumber = item.UserIdOnDevice,
                     EventCode = item.EventCode,
                     SdkVersion = item.SdkVersion,
                     Producer = item.Producer,
@@ -547,7 +547,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             };
         }
 
-        public static EmployeeModel MapDtoEmployeeToEmployeeModel(DtoEmployeeDeviceRelatedData inputItem)
+        public static EmployeeModel MapDtoEmployeeToEmployeeModel(DtoUserDeviceRelatedData inputItem)
         {
             if (inputItem == null)
             {
@@ -555,7 +555,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             }
             var result = new EmployeeModel
             {
-                EmployeeNumber = inputItem.EmployeeNumber,
+                EmployeeNumber = inputItem.UserIdOnDevice,
                 Privilege = inputItem.Privilege,
                 TimeZones = inputItem.TimeZones,
                 SupremaSdk1AccessGroups = inputItem.SupremaSdk1AccessGroups,
@@ -603,9 +603,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<DtoEmployeeDeviceRelatedData> MapEmployeeModelToDtoEmployee(List<EmployeeModel> inputItems)
+        public static List<DtoUserDeviceRelatedData> MapEmployeeModelToDtoEmployee(List<EmployeeModel> inputItems)
         {
-            var result = new List<DtoEmployeeDeviceRelatedData>();
+            var result = new List<DtoUserDeviceRelatedData>();
             if (inputItems.IsCollectionNullOrEmpty())
             {
                 return result;
@@ -613,9 +613,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
 
             foreach (var model in inputItems)
             {
-                result.Add(new DtoEmployeeDeviceRelatedData
+                result.Add(new DtoUserDeviceRelatedData
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    UserIdOnDevice = model.EmployeeNumber,
                     Privilege = model.Privilege,
                     TimeZones = model.TimeZones,
                     SupremaSdk1AccessGroups = model.SupremaSdk1AccessGroups,
@@ -649,7 +649,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static DtoEmployeeDeviceRelatedData MapEmployeeModelToDtoEmployee(EmployeeModel inputItem)
+        public static DtoUserDeviceRelatedData MapEmployeeModelToDtoEmployee(EmployeeModel inputItem)
         {
             return MapEmployeeModelToDtoEmployee(new List<EmployeeModel> { inputItem }).FirstOrDefault();
         }
@@ -1682,7 +1682,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         {
             return new DtoEmployeeAndDeviceParam
             {
-                DeviceInfo = MapDeviceCommunicationModelToDtoDeviceCommunication(inputItem.DeviceInfo),
+                DeviceId = MapDeviceCommunicationModelToDtoDeviceCommunication(inputItem.DeviceInfo),
                 UserInfo = MapEmployeeModelToDtoEmployee(inputItem.EmployeeData),
                 CommandPriority = inputItem.CommandPriority,
                 CommandIdentifier = inputItem.CommandIdentifier,
@@ -1700,7 +1700,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             {
                 result.Add(new DtoEmployeeAndDeviceParam
                 {
-                    DeviceInfo = MapDeviceCommunicationModelToDtoDeviceCommunication(model.DeviceInfo),
+                    DeviceId = MapDeviceCommunicationModelToDtoDeviceCommunication(model.DeviceInfo),
                     UserInfo = MapEmployeeModelToDtoEmployee(model.EmployeeData),
                     CommandPriority = model.CommandPriority,
                     CommandIdentifier = model.CommandIdentifier,
@@ -1721,7 +1721,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 result.Add(new EmployeeAndDeviceResultModel
                 {
                     DeviceNumber = model.DeviceNumber,
-                    EmployeeNumber = model.EmployeeNumber,
+                    EmployeeNumber = model.EmployeeId,
                     Result = model.Result
                 });
             }
@@ -1807,79 +1807,15 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<DtoXRayDevice> MapXRayDeviceModelToDtoXRayDevice(List<XRayDeviceModel> inputItems)
-        {
-            var result = new List<DtoXRayDevice>();
-            if (inputItems.IsCollectionNullOrEmpty())
-            {
-                return result;
-            }
-            foreach (var model in inputItems)
-            {
-                result.Add(new DtoXRayDevice
-                {
-                    DeviceId = model.DeviceId,
-                    AreaNumber = model.AreaNumber,
-                    ConnectionMode = model.ConnectionMode,
-                    DeviceIp = model.DeviceIp,
-                    Id = model.Id,
-                    IsActive = model.IsActive,
-                    DeviceType = model.DeviceType,
-                    TcpPort = model.TcpPort,
-                    Title = model.Title,
-                    FilePath = model.FilePath,
-                });
-            }
-            return result;
-        }
-
-        public static DtoCamera MapCameraModelToDtoCamera(CameraModel inputItem)
-        {
-            return MapCameraModelToDtoCamera(new List<CameraModel>() { inputItem }).FirstOrDefault();
-        }
-
-        public static List<DtoCamera> MapCameraModelToDtoCamera(List<CameraModel> inputItems)
-        {
-            var result = new List<DtoCamera>();
-            if (inputItems.IsCollectionNullOrEmpty())
-            {
-                return result;
-            }
-            foreach (var model in inputItems)
-            {
-                result.Add(new DtoCamera
-                {
-                    Title = model.Title,
-                    CameraType = model.CameraType,
-                    DeviceNumber = model.DeviceNumber,
-                    Id = model.Id,
-                    IPAddress = model.IPAddress,
-                    Password = model.Password,
-                    Port = model.Port,
-                    RtspString = model.RtspString,
-                    UserName = model.UserName,
-                    CameraTask = model.CameraTask,
-                    IsActive = model.IsActive,
-                    ApiBasicAuthPassword = model.ApiBasicAuthPassword,
-                    ApiBasicAuthUsername = model.ApiBasicAuthUsername,
-                    CameraSettings = model.CameraSettings,
-                    CameraTaskSpecificSettingsInJson = model.CameraTaskSpecificSettingsInJson,
-                    ApplicationId = model.ApplicationId,
-                    IoType = model.IoType,
-                    AreaNumber = model.AreaNumber,
-                });
-            }
-            return result;
-        }
 
         public static DeviceAttendanceImageModel MapDtoDeviceAttendanceImageToDeviceAttendanceImageModel(DtoDeviceAttendanceImage inputItem)
         {
             return new DeviceAttendanceImageModel
             {
-                DeviceNumber = inputItem.DeviceNumber,
+                DeviceNumber = inputItem.DeviceId,
                 AttendanceDateTime = inputItem.AttendanceDateTime.ToNumericDateTime(),
                 Image = Convert.ToBase64String(inputItem.Image),
-                EmployeeNumber = inputItem.EmployeeNumber,
+                UserId = inputItem.UserIdOnDevice,
             };
         }
 
@@ -1890,7 +1826,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 DeviceNumber = inputItem.DeviceNumber,
                 AttendanceDateTime = inputItem.AttendanceDateTime.ToNumericDateTime(),
                 Image = Convert.ToBase64String(inputItem.Image),
-                EmployeeNumber = inputItem.EmployeeNumber
+                EmployeeNumber = inputItem.UserIdInDevice
             };
         }
 

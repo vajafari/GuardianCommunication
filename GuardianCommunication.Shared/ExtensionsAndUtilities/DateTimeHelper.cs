@@ -459,6 +459,11 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
             return dateTime.ToUniversalTime();
         }
 
+        public static DateTime? ToUtc(this DateTime? dateTime)
+        {
+            return dateTime?.ToUniversalTime();
+        }
+
         public static string ConvertToTimeZoneString(TimeZonesEnumeration timeZone)
         {
             var timeZoneNumber = (int)timeZone;
