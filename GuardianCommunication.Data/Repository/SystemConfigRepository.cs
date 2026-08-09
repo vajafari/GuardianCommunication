@@ -47,7 +47,7 @@ namespace GuardianCommunication.Data.Repository
 			{
 				return connection.Query<DtoSystemConfigPure>(
                     SelectCommand.FormatInvariantCulture(string.Empty)
-					, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).ToList();
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).ToList();
 			}
 		}
 
@@ -63,7 +63,7 @@ namespace GuardianCommunication.Data.Repository
 			{
 				return connection.Query<DtoSystemConfigPure>(
                     SelectCommand.FormatInvariantCulture(searchClause)
-					, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).ToList();
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).ToList();
 			}
 		}
 
@@ -72,7 +72,7 @@ namespace GuardianCommunication.Data.Repository
 			using (var connection = GetConnection())
 			{
 				connection.Execute(UpdateCommand, param: entities
-					, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
 			}
 		}
 

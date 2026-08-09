@@ -265,7 +265,7 @@ namespace GuardianCommunication.Data.Repository
                 foreach (var entity in entities)
                 {
                     entity.Id = connection.ExecuteScalar<int>(InsertCommand, entity
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
                 }
             }
 
@@ -284,7 +284,7 @@ namespace GuardianCommunication.Data.Repository
                         ObjectId = objectId,
                         HardwareType = hardwareType,
                         CommandTypes = commandTypes.Select(ct => (int)ct).ToList()
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
             }
         }
 
@@ -298,7 +298,7 @@ namespace GuardianCommunication.Data.Repository
                     ResponseValue = commandResult.CommandResponseResult,
                     SendTime = commandResult.CommandSendTime,
                     commandResult.Id,
-                }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
             }
         }
 
@@ -310,7 +310,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     Description = commandResult.Description,
                     commandResult.Id,
-                }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
             }
         }
 
@@ -319,7 +319,7 @@ namespace GuardianCommunication.Data.Repository
             using (var connection = GetConnection())
             {
                 connection.Execute(DeleteByIdCommand.FormatInvariantCulture(ids.JoinWithComma())
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                    , commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
             }
         }
 
@@ -330,7 +330,7 @@ namespace GuardianCommunication.Data.Repository
                 using (var connection = GetConnection())
                 {
                     connection.Execute(UpdateSendDataCommand.FormatInvariantCulture(ids.JoinWithComma())
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
                 }
             }
         }
@@ -343,7 +343,7 @@ namespace GuardianCommunication.Data.Repository
                     SelectUnsentCommandsForFaceDetectionSystemCommand.FormatCurrentCulture(NotSendConditionForOtherHardwareCommand)
                     , new { Count = count }
                     , commandType: CommandType.Text
-                    , commandTimeout: connectionConfig.Timeout).AsList();
+                    , commandTimeout: ConnectionConfig.Timeout).AsList();
             }
         }
 

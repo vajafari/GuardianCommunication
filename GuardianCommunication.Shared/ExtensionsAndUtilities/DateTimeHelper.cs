@@ -454,6 +454,10 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 
         #region Timezone
 
+        public static DateTime ToUtc(this DateTime dateTime)
+        {
+            return dateTime.ToUniversalTime();
+        }
 
         public static string ConvertToTimeZoneString(TimeZonesEnumeration timeZone)
         {

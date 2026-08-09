@@ -1,5 +1,7 @@
 ﻿using System.Threading.Tasks;
 using Dapper;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Data.Repository
 {
@@ -37,7 +39,7 @@ namespace GuardianCommunication.Data.Repository
 
         public async Task LogAsync(DtoLoggerData loggerData)
         {
-            using (var dbConnection = GetKarnamaLogConnection())
+            using (var dbConnection = GetLogConnection())
             {
                 await dbConnection.ExecuteAsync(DataLoggerInsert, new
                 {
@@ -56,7 +58,7 @@ namespace GuardianCommunication.Data.Repository
 
         public void Log(DtoLoggerData loggerData)
         {
-            using (var dbConnection = GetKarnamaLogConnection())
+            using (var dbConnection = GetLogConnection())
             {
                 dbConnection.Execute(DataLoggerInsert, new
                 {

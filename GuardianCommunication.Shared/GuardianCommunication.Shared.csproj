@@ -426,8 +426,9 @@
     <Compile Include="ExtensionsAndUtilities\ApiCallHelpers.cs" />
     <Compile Include="ExtensionsAndUtilities\CollectionHelper.cs" />
     <Compile Include="ExtensionsAndUtilities\DateTimeHelper.cs" />
+    <Compile Include="Filter\DeviceNotSentCommandsFilter.cs" />
     <Compile Include="Filter\HookDefinitionFilter.cs" />
-    <Compile Include="Filter\AttendanceHookSystemFilter.cs" />
+    <Compile Include="Filter\AttendanceHookDefinitionFilter.cs" />
     <Compile Include="Filter\HookDefinitionSortEnumeration.cs" />
     <Compile Include="Filter\AttendanceHookSystemSortEnumeration.cs" />
     <Compile Include="Filter\DeviceCommandFilter.cs" />

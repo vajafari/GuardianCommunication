@@ -1,4 +1,5 @@
 ﻿using System.Data.SqlClient;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Data.Repository
 {
@@ -6,20 +7,20 @@ namespace GuardianCommunication.Data.Repository
 	public class BaseRepository
 	{
 
-		protected readonly ConnectionConfiguration connectionConfig;
+		protected readonly ConnectionConfiguration ConnectionConfig;
 		public BaseRepository(ConnectionConfiguration connectionConfig)
 		{
-			this.connectionConfig = connectionConfig;
+			this.ConnectionConfig = connectionConfig;
 		}
 
 		protected SqlConnection GetConnection()
 		{
-			return new SqlConnection(connectionConfig.ConnectionString);
+			return new SqlConnection(ConnectionConfig.ConnectionString);
 		}
 
-        protected SqlConnection GetKarnamaLogConnection()
+        protected SqlConnection GetLogConnection()
         {
-            return new SqlConnection(connectionConfig.KarnamaLogConnectionString);
+            return new SqlConnection(ConnectionConfig.LogConnectionString);
         }
 
     }

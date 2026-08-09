@@ -1,16 +1,24 @@
-﻿using System;
+﻿using Dapper;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
+using System.Runtime.Remoting.Contexts;
 using System.Text;
-using Dapper;
 
 namespace GuardianCommunication.Data.Repository
 {
     public interface IAttendanceRepository
     {
 
-        long Insert(DtoAttendance entity, List<DtoAttendanceRegisterIntervalSetting> intervalSettings, List<int> hookSystemIds);
+        Guid? Insert(DtoAttendance entity, List<DtoAttendanceRegisterIntervalSetting> intervalSettings, List<int> hookSystemIds);
 
         void MarkAsSent(List<DtoAttendance> entities);
 
@@ -28,10 +36,8 @@ namespace GuardianCommunication.Data.Repository
     {
         private static readonly object LockObject = new object();
 
-
         public AttendanceRepository(ConnectionConfiguration connectionConfig) : base(connectionConfig)
         { }
-
 
         #region Command Strings
 
@@ -40,76 +46,27 @@ namespace GuardianCommunication.Data.Repository
             {
                 { AttendanceSortEnumeration.Id, "att.[Id]" },
                 { AttendanceSortEnumeration.AttendanceDate, "att.[AttendanceDateTime]" },
-                { AttendanceSortEnumeration.EmployeeNumber, "att.[EmployeeNumber]" }
+                { AttendanceSortEnumeration.PersonNumberOnDevice, "att.[PersonNumberOnDevice]" }
             };
 
 
 
         private const string SelectCommand =
             @"	SELECT        
-					  att.[Id] AS Id
-					, att.[EmployeeNumber] AS EmployeeNumber
-					, att.[RfCardNumber] AS RfCardNumber
-					, att.[IoType] AS IoType
-					, att.[VerificationStyle] AS VerificationStyle
-					, att.[DoorId] AS DoorId
-					, att.[AttendanceDateTime] AS AttendanceDateTime
-					, att.[AttendanceSource] AS AttendanceSource
-					, att.[DeviceAttendanceIoRetrieveType] AS DeviceAttendanceIoRetrieveType
-					, att.[DeviceNumber] AS DeviceNumber
-					, att.[ReaderDeviceNumber] AS ReaderDeviceNumber
-					, att.[CameraId] AS CameraId
-					, att.[CameraId] AS CameraId
-					, att.[StatusCode] AS StatusCode
-					, att.[IsSent] AS IsSent
-					, att.[IsInvalid] AS IsInvalid
-					, att.[ApplicationId] AS ApplicationId
-					, att.[InsertDateTime] AS InsertDateTime
-	            FROM [Attendance] att
+					  att.*
+	            FROM [com].[Attendance] att
 				WHERE  1 = 1                
 						{0}    -- Search            
 				{1}    -- Order By";
 
         private const string SelectWithPagingCommand =
             @"	SELECT         
-					   tmp.Id
-					 , tmp.EmployeeNumber
-					 , tmp.RfCardNumber
-					 , tmp.IoType
-					 , tmp.VerificationStyle
-					 , tmp.DoorId
-					 , tmp.AttendanceDateTime
-					 , tmp.AttendanceSource
-					 , tmp.DeviceAttendanceIoRetrieveType
-					 , tmp.DeviceNumber
-					 , tmp.ReaderDeviceNumber
-					 , tmp.CameraId
-					 , tmp.StatusCode
-					 , tmp.IsSent
-					 , tmp.IsInvalid
-					 , tmp.ApplicationId
-					 , tmp.InsertDateTime
+					   tmp.*
 				 FROM            
 				        (            
 				            SELECT    ROW_NUMBER() OVER ({1}) AS  RowNumber  
-								, att.[Id] AS Id
-								, att.[EmployeeNumber] AS EmployeeNumber
-								, att.[RfCardNumber] AS RfCardNumber
-								, att.[IoType] AS IoType
-								, att.[VerificationStyle] AS VerificationStyle
-								, att.[DoorId] AS DoorId
-								, att.[AttendanceDateTime] AS AttendanceDateTime
-								, att.[AttendanceSource] AS AttendanceSource
-								, att.[DeviceAttendanceIoRetrieveType] AS DeviceAttendanceIoRetrieveType
-								, att.[DeviceNumber] AS DeviceNumber
-								, att.[ReaderDeviceNumber] AS ReaderDeviceNumber
-								, att.[CameraId] AS CameraId
-								, att.[StatusCode] AS StatusCode
-								, att.[IsSent] AS IsSent
-								, att.[IsInvalid] AS IsInvalid
-								, att.[ApplicationId] AS ApplicationId
-								, att.[InsertDateTime] AS InsertDateTime
-				            FROM [Attendance] att
+								, att.*
+				            FROM [com].[Attendance] att
 							WHERE  1 = 1         
 									{0}    -- Search            
 				         ) tmp                        
@@ -117,148 +74,141 @@ namespace GuardianCommunication.Data.Repository
 
         private static readonly string CheckExistenceCommand =
             $@"	SELECT  COUNT(att.[Id])   
-				FROM [Attendance] att
-				WHERE  att.[EmployeeNumber] = @EmployeeNumber
+				FROM [com].[Attendance] att
+				WHERE  att.[PersonNumberOnDevice] = @PersonNumberOnDevice
                        AND att.[AttendanceSource] != {(int)AttendanceSourceEnumeration.Manual}
 					   AND ({{0}})";
 
         private const string SelectUnhookedAttendancesCommand =
             @"	SELECT  TOP ({0})       
-					  att.[Id] AS Id
-					, att.[EmployeeNumber] AS EmployeeNumber
-					, att.[RfCardNumber] AS RfCardNumber
-					, att.[IoType] AS IoType
-					, att.[VerificationStyle] AS VerificationStyle
-					, att.[DoorId] AS DoorId
-					, att.[AttendanceDateTime] AS AttendanceDateTime
-					, att.[AttendanceSource] AS AttendanceSource
-					, att.[DeviceAttendanceIoRetrieveType] AS DeviceAttendanceIoRetrieveType
-					, att.[DeviceNumber] AS DeviceNumber
-					, att.[ReaderDeviceNumber] AS ReaderDeviceNumber
-					, att.[CameraId] AS CameraId
-					, att.[StatusCode] AS StatusCode
-					, att.[IsSent] AS IsSent
-					, att.[IsInvalid] AS IsInvalid
-					, att.[ApplicationId] AS ApplicationId
-					, att.[InsertDateTime] AS InsertDateTime
-					, ahs.[HookSystemId] AS  HookSystemId
-				FROM [AttendanceHookSystem] ahs
-						INNER JOIN [Attendance] att ON ahs.[AttendanceId] = att.[Id]
-						INNER JOIN [HookSystemDetail] hsd ON ahs.[HookSystemId] = hsd.[HookSystemId]
+					  att.*
+					, ahd.[HookDefinitionId] AS  HookDefinitionId
+				FROM [com].[AttendanceHookDefinition] ahd
+						INNER JOIN [com].[Attendance] att ON att.[Id] = ahd.[AttendanceId]
+						INNER JOIN [com].[HookDefinition] hd ON hd.[Id] = ahd.[HookDefinitionId]
 				WHERE 
-					hsd.[IsActive] > 0
-					AND ahs.[RetryCount] <= hsd.[RetryCount]
-					AND ahs.[IsSent] = 0
-				ORDER BY ahs.[RetryCount] DESC
+					hd.[IsActive] > 0
+					AND ahd.[RetryCount] <= hd.[RetryCount]
+					AND ahd.[IsSent] = 0
+				ORDER BY ahd.[RetryCount] DESC
 			";
 
         private const string InsertNormalCommand =
             @"	
-                INSERT INTO         [Attendance]
-				(
-					  [EmployeeNumber]
-					, [RfCardNumber]
-					, [IoType]
-					, [VerificationStyle]
-					, [DoorId]
-					, [AttendanceDateTime]
-					, [AttendanceSource]
-					, [DeviceAttendanceIoRetrieveType]
-					, [StatusCode]
-					, [DeviceNumber]
-					, [ReaderDeviceNumber]
-					, [CameraId]
-					, [IsSent]
-					, [IsInvalid]
-					, [ApplicationId]
-					, [InsertDateTime]
-				)
-				VALUES
-				(
-					  @EmployeeNumber
-					, @RfCardNumber
-					, @IoType
-					, @VerificationStyle
-					, @DoorId
-					, @AttendanceDateTime
-					, @AttendanceSource
-					, @DeviceAttendanceIoRetrieveType
-					, @StatusCode
-					, @DeviceNumber
-					, @ReaderDeviceNumber
-					, @CameraId
-					, @IsSent
-					, @IsInvalid
-					, @ApplicationId
-					, @InsertDateTime
-				) ;
-				SELECT SCOPE_IDENTITY();
+                DECLARE @CurrentId UNIQUEIDENTIFIER;
+                SET @CurrentId = NEWID();
+                INSERT INTO [com].[Attendance]
+                (
+                     [Id]
+                   , [PersonNumberOnDevice]
+                   , [AttendanceDateTime]
+                   , [DeviceId]
+                   , [CameraId]
+                   , [ReaderDeviceId]
+                   , [VerificationStyle]
+                   , [RfCardNumber]
+                   , [StatusCode]
+                   , [IsSentToGuardian]
+                   , [SentToGuardianRetryCount]
+                   , [ModuleId]
+                   , [IoType]
+                   , [AttendanceSource]
+                   , [DeviceAttendanceIoRetrieveType]
+                   , [InsertedAt]
+                   , [UpdatedAt]
+                )
+                VALUES
+                (
+                     @CurrentId
+                   , @PersonNumberOnDevice
+                   , @Attendance
+                   , @DeviceId
+                   , @CameraId
+                   , @ReaderDeviceId
+                   , @VerificationStyle
+                   , @RfCardNumber
+                   , @StatusCode
+                   , @IsSentToGuardian
+                   , @SentToGuardianRetryCount
+                   , @ModuleId
+                   , @IoType
+                   , @AttendanceSource
+                   , @DeviceAttendanceIoRetrieveType
+                   , GETUTCDATE()
+                   , NULL
+                );
+                SELECT @CurrentId;
 			";
 
         private const string InsertWithConditionCommand =
             @"	IF {0}
                 BEGIN
-                    INSERT INTO         [Attendance]
-				    (
-					      [EmployeeNumber]
-					    , [RfCardNumber]
-					    , [IoType]
-					    , [VerificationStyle]
-					    , [DoorId]
-					    , [AttendanceDateTime]
-					    , [AttendanceSource]
-					    , [DeviceAttendanceIoRetrieveType]
-					    , [StatusCode]
-					    , [DeviceNumber]
-					    , [ReaderDeviceNumber]
-					    , [CameraId]
-					    , [IsSent]
-					    , [IsInvalid]
-					    , [ApplicationId]
-					    , [InsertDateTime]
-				    )
-				    VALUES
-				    (
-					      @EmployeeNumber
-					    , @RfCardNumber
-					    , @IoType
-					    , @VerificationStyle
-					    , @DoorId
-					    , @AttendanceDateTime
-					    , @AttendanceSource
-					    , @DeviceAttendanceIoRetrieveType
-					    , @StatusCode
-					    , @DeviceNumber
-					    , @ReaderDeviceNumber
-					    , @CameraId
-					    , @IsSent
-					    , @IsInvalid
-					    , @ApplicationId
-					    , @InsertDateTime
-				    ) ;
-				    SELECT SCOPE_IDENTITY();
+                    DECLARE @CurrentId UNIQUEIDENTIFIER;
+                    SET @CurrentId = NEWID();
+                
+                    INSERT INTO [com].[Attendance]
+                    (
+                         [Id]
+                       , [PersonNumberOnDevice]
+                       , [AttendanceDateTime]
+                       , [DeviceId]
+                       , [CameraId]
+                       , [ReaderDeviceId]
+                       , [VerificationStyle]
+                       , [RfCardNumber]
+                       , [StatusCode]
+                       , [IsSentToGuardian]
+                       , [SentToGuardianRetryCount]
+                       , [ModuleId]
+                       , [IoType]
+                       , [AttendanceSource]
+                       , [DeviceAttendanceIoRetrieveType]
+                       , [InsertedAt]
+                       , [UpdatedAt]
+                    )
+                    VALUES
+                    (
+                         @CurrentId
+                       , @PersonNumberOnDevice
+                       , @Attendance
+                       , @DeviceId
+                       , @CameraId
+                       , @ReaderDeviceId
+                       , @VerificationStyle
+                       , @RfCardNumber
+                       , @StatusCode
+                       , @IsSentToGuardian
+                       , @SentToGuardianRetryCount
+                       , @ModuleId
+                       , @IoType
+                       , @AttendanceSource
+                       , @DeviceAttendanceIoRetrieveType
+                       , GETUTCDATE()
+                       , NULL
+                    );
+                    SELECT @CurrentId;
                 END
                 ELSE
                 BEGIN
-                    SELECT -1;
+                    SELECT NULL;
                 END
 			";
 
-        private const string InsertAttendanceHookSystemCommand =
+        private const string InsertAttendanceHookDefinitionCommand =
             @"	
-                IF @LastId > 0
+                IF @CurrentId IS NOT NULL
                 BEGIN
-                    INSERT INTO         [AttendanceHookSystem]
+                    INSERT INTO         [AttendanceHookDefinition]
 				    (
 					      [AttendanceId]
-					    , [HookSystemId]
+					    , [HookDefinitionId]
 					    , [IsSent]
 					    , [RetryCount]
 					    , [SentTime]
 				    )
 				    VALUES
 				    (
-					      @LastId
+					      @CurrentId
 					    , {0}
 					    , 0
 					    , 0
@@ -267,112 +217,117 @@ namespace GuardianCommunication.Data.Repository
                 END
 			";
 
-        private const string InsertNormalWithAttendanceHookSystemsCommand =
+        private const string InsertNormalWithAttendanceHookDefinitionsCommand =
             @"	
-                INSERT INTO         [Attendance]
-				(
-					  [EmployeeNumber]
-					, [RfCardNumber]
-					, [IoType]
-					, [VerificationStyle]
-					, [DoorId]
-					, [AttendanceDateTime]
-					, [AttendanceSource]
-					, [DeviceAttendanceIoRetrieveType]
-					, [StatusCode]
-					, [DeviceNumber]
-					, [ReaderDeviceNumber]
-					, [CameraId]
-					, [IsSent]
-					, [IsInvalid]
-					, [ApplicationId]
-					, [InsertDateTime]
-				)
-				VALUES
-				(
-					  @EmployeeNumber
-					, @RfCardNumber
-					, @IoType
-					, @VerificationStyle
-					, @DoorId
-					, @AttendanceDateTime
-					, @AttendanceSource
-					, @DeviceAttendanceIoRetrieveType
-					, @StatusCode
-					, @DeviceNumber
-					, @ReaderDeviceNumber
-					, @CameraId
-					, @IsSent
-					, @IsInvalid
-					, @ApplicationId
-					, @InsertDateTime
-				) ;
-                DECLARE @LastId BIGINT
-                SET @LastId= SCOPE_IDENTITY();
+                DECLARE @CurrentId UNIQUEIDENTIFIER;
+                SET @CurrentId = NEWID();
+                
+                INSERT INTO [com].[Attendance]
+                (
+                     [Id]
+                   , [PersonNumberOnDevice]
+                   , [AttendanceDateTime]
+                   , [DeviceId]
+                   , [CameraId]
+                   , [ReaderDeviceId]
+                   , [VerificationStyle]
+                   , [RfCardNumber]
+                   , [StatusCode]
+                   , [IsSentToGuardian]
+                   , [SentToGuardianRetryCount]
+                   , [ModuleId]
+                   , [IoType]
+                   , [AttendanceSource]
+                   , [DeviceAttendanceIoRetrieveType]
+                   , [InsertedAt]
+                   , [UpdatedAt]
+                )
+                VALUES
+                (
+                     @CurrentId
+                   , @PersonNumberOnDevice
+                   , @Attendance
+                   , @DeviceId
+                   , @CameraId
+                   , @ReaderDeviceId
+                   , @VerificationStyle
+                   , @RfCardNumber
+                   , @StatusCode
+                   , @IsSentToGuardian
+                   , @SentToGuardianRetryCount
+                   , @ModuleId
+                   , @IoType
+                   , @AttendanceSource
+                   , @DeviceAttendanceIoRetrieveType
+                   , GETUTCDATE()
+                   , NULL
+                );
                 {0}
-                SELECT @LastId;
+                SELECT @CurrentId;
 			";
 
-        private const string InsertWithConditionWithAttendanceHookSystemsCommand =
+        private const string InsertWithConditionWithAttendanceHookDefinitionsCommand =
             @"	IF {0}
                 BEGIN
-                    DECLARE @LastId BIGINT;
-                    INSERT INTO         [Attendance]
-				    (
-					      [EmployeeNumber]
-					    , [RfCardNumber]
-					    , [IoType]
-					    , [VerificationStyle]
-					    , [DoorId]
-					    , [AttendanceDateTime]
-					    , [AttendanceSource]
-					    , [DeviceAttendanceIoRetrieveType]
-					    , [StatusCode]
-					    , [DeviceNumber]
-					    , [ReaderDeviceNumber]
-					    , [CameraId]
-					    , [IsSent]
-					    , [IsInvalid]
-					    , [ApplicationId]
-					    , [InsertDateTime]
-				    )
-				    VALUES
-				    (
-					      @EmployeeNumber
-					    , @RfCardNumber
-					    , @IoType
-					    , @VerificationStyle
-					    , @DoorId
-					    , @AttendanceDateTime
-					    , @AttendanceSource
-					    , @DeviceAttendanceIoRetrieveType
-					    , @StatusCode
-					    , @DeviceNumber
-					    , @ReaderDeviceNumber
-					    , @CameraId
-					    , @IsSent
-					    , @IsInvalid
-					    , @ApplicationId
-					    , @InsertDateTime
-				    ) ;
-                    SELECT @LastId = SCOPE_IDENTITY();
+                    DECLARE @CurrentId UNIQUEIDENTIFIER;
+                    SET @CurrentId = NEWID();
+                    
+                    INSERT INTO [com].[Attendance]
+                    (
+                         [Id]
+                       , [PersonNumberOnDevice]
+                       , [AttendanceDateTime]
+                       , [DeviceId]
+                       , [CameraId]
+                       , [ReaderDeviceId]
+                       , [VerificationStyle]
+                       , [RfCardNumber]
+                       , [StatusCode]
+                       , [IsSentToGuardian]
+                       , [SentToGuardianRetryCount]
+                       , [ModuleId]
+                       , [IoType]
+                       , [AttendanceSource]
+                       , [DeviceAttendanceIoRetrieveType]
+                       , [InsertedAt]
+                       , [UpdatedAt]
+                    )
+                    VALUES
+                    (
+                         @CurrentId
+                       , @PersonNumberOnDevice
+                       , @Attendance
+                       , @DeviceId
+                       , @CameraId
+                       , @ReaderDeviceId
+                       , @VerificationStyle
+                       , @RfCardNumber
+                       , @StatusCode
+                       , @IsSentToGuardian
+                       , @SentToGuardianRetryCount
+                       , @ModuleId
+                       , @IoType
+                       , @AttendanceSource
+                       , @DeviceAttendanceIoRetrieveType
+                       , GETUTCDATE()
+                       , NULL
+                    );
                     {1}
-                    SELECT @LastId;
+                    SELECT @CurrentId;
                 END
                 ELSE
                 BEGIN
-                    SELECT -1;
+                    SELECT NULL;
                 END
 			";
 
         private const string MarkAsSentCommand =
             @"	UPDATE        [Attendance]
 					SET IsSent = 1
-				WHERE  Id IN ({0})";
+				WHERE  Id IN @Ids";
 
 
         #endregion
-
 
         #region Private Methods
 
@@ -384,27 +339,7 @@ namespace GuardianCommunication.Data.Repository
             {
                 if (filter.Ids.IsCollectionNotNullOrEmpty())
                 {
-                    sb.AppendLine($" AND att.[Id] IN ({filter.Ids.JoinWithComma()})");
-                }
-                if (filter.EmployeeNumbers.IsCollectionNotNullOrEmpty())
-                {
-                    sb.AppendLine($" AND att.[EmployeeNumber] IN  ({filter.EmployeeNumbers.JoinWithComma()})");
-                }
-                if (filter.AttendanceDate.HasValue)
-                {
-                    sb.AppendLine($" AND att.[AttendanceDateTime] = @{nameof(filter.AttendanceDate)}");
-                }
-                if (filter.AttendanceDateFrom.HasValue)
-                {
-                    sb.AppendLine($" AND att.[AttendanceDateTime] >= @{nameof(filter.AttendanceDateFrom)}");
-                }
-                if (filter.AttendanceDateTo.HasValue)
-                {
-                    sb.AppendLine($" AND att.[AttendanceDateTime] <= @{nameof(filter.AttendanceDateTo)}");
-                }
-                if (filter.DeviceNumbers.IsCollectionNotNullOrEmpty())
-                {
-                    sb.AppendLine($" AND att.[DeviceNumber] IN @{nameof(filter.DeviceNumbers)}");
+                    sb.AppendLine($" AND att.[Id] IN @{nameof(filter.Ids)}");
                 }
                 if (filter.IsSent.HasValue)
                 {
@@ -420,47 +355,57 @@ namespace GuardianCommunication.Data.Repository
 
         }
 
+        private static DynamicParameters GetInsertParameters(DtoAttendance entity)
+        {
+            var parameters = new DynamicParameters(entity);
+            parameters.Add(nameof(entity.AttendanceDateTime), entity.AttendanceDateTime.ToUtc());
+            return parameters;
+        }
+
 
         #endregion
 
-        public long Insert(DtoAttendance entity, List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings, List<int> hookSystemIds)
+        public Guid? Insert(DtoAttendance entity
+            , List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings
+            , List<int> hookSystemIds)
         {
-            entity.InsertDateTime = DateTime.Now;
             if (hookSystemIds.IsCollectionNotNullOrEmpty())
             {
                 var sb = new StringBuilder();
                 foreach (var hookSystemId in hookSystemIds)
                 {
-                    sb.AppendLine(InsertAttendanceHookSystemCommand.FormatInvariantCulture(hookSystemId));
+                    sb.AppendLine(InsertAttendanceHookDefinitionCommand.FormatInvariantCulture(hookSystemId));
                 }
                 if (registerIntervalSettings.IsCollectionNullOrEmpty())
                 {
                     using (var connection = GetConnection())
                     {
-                        var resultOfInsert = connection.ExecuteScalar<long>(InsertNormalWithAttendanceHookSystemsCommand.FormatInvariantCulture(sb.ToString())
-                            , entity
+                        var resultOfInsert = connection.ExecuteScalar<Guid?>(
+                            InsertNormalWithAttendanceHookDefinitionsCommand.FormatInvariantCulture
+                                (sb.ToString())
+                            , GetInsertParameters(entity)
                             , commandType: CommandType.Text
-                            , commandTimeout: connectionConfig.Timeout);
-                        entity.Id = resultOfInsert;
+                            , commandTimeout: ConnectionConfig.CommandTimeout);
                         return resultOfInsert;
                     }
                 }
 
-                var condition = GetCheckExistenceCondition(registerIntervalSettings, entity);
+                var parameters = GetInsertParameters(entity);
+                var condition = GetCheckExistenceCondition(registerIntervalSettings, entity, parameters);
                 lock (LockObject)
                 {
                     using (var connection = GetConnection())
                     {
-                        var resultOfInsert = connection.ExecuteScalar<long>(
-                            InsertWithConditionWithAttendanceHookSystemsCommand.FormatInvariantCulture(condition, sb.ToString())
-                            , entity
+                        var resultOfInsert = connection.ExecuteScalar<Guid?>(
+                            InsertWithConditionWithAttendanceHookDefinitionsCommand.
+                                FormatInvariantCulture(condition, sb.ToString())
+                            , parameters
                             , commandType: CommandType.Text
-                            , commandTimeout: connectionConfig.Timeout);
-                        if (resultOfInsert > 0)
+                            , commandTimeout: ConnectionConfig.CommandTimeout);
+                        if (resultOfInsert.HasValue)
                         {
-                            entity.Id = resultOfInsert;
+                            entity.Id = resultOfInsert.Value;
                         }
-
                         return resultOfInsert;
                     }
                 }
@@ -471,28 +416,28 @@ namespace GuardianCommunication.Data.Repository
                 {
                     using (var connection = GetConnection())
                     {
-                        var resultOfInsert = connection.ExecuteScalar<long>(InsertNormalCommand
-                            , entity
+                        var resultOfInsert = connection.ExecuteScalar<Guid?>(InsertNormalCommand
+                            , GetInsertParameters(entity)
                             , commandType: CommandType.Text
-                            , commandTimeout: connectionConfig.Timeout);
-                        entity.Id = resultOfInsert;
+                            , commandTimeout: ConnectionConfig.CommandTimeout);
                         return resultOfInsert;
                     }
                 }
 
-                var condition = GetCheckExistenceCondition(registerIntervalSettings, entity);
+                var parameters = GetInsertParameters(entity);
+                var condition = GetCheckExistenceCondition(registerIntervalSettings, entity, parameters);
                 lock (LockObject)
                 {
                     using (var connection = GetConnection())
                     {
-                        var resultOfInsert = connection.ExecuteScalar<long>(
+                        var resultOfInsert = connection.ExecuteScalar<Guid?>(
                             InsertWithConditionCommand.FormatInvariantCulture(condition)
-                            , entity
+                            , parameters
                             , commandType: CommandType.Text
-                            , commandTimeout: connectionConfig.Timeout);
-                        if (resultOfInsert > 0)
+                            , commandTimeout: ConnectionConfig.CommandTimeout);
+                        if (resultOfInsert.HasValue)
                         {
-                            entity.Id = resultOfInsert;
+                            entity.Id = resultOfInsert.Value;
                         }
 
                         return resultOfInsert;
@@ -503,10 +448,29 @@ namespace GuardianCommunication.Data.Repository
 
         public void MarkAsSent(List<DtoAttendance> entities)
         {
+
+            if (entities.IsCollectionNullOrEmpty()) return;
             using (var connection = GetConnection())
             {
-                connection.Execute(MarkAsSentCommand.FormatInvariantCulture(entities.Select(row => row.Id).JoinWithComma())
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        foreach (var batch in entities.Batch(200))
+                        {
+                            connection.Execute(
+                                MarkAsSentCommand
+                                , batch
+                                , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                        }
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
 
@@ -525,43 +489,46 @@ namespace GuardianCommunication.Data.Repository
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
                     return connection.Query<DtoAttendance>(commandText, searchInfo.Filter
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).AsList();
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
 
                 commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
                 return (connection.Query<DtoAttendance>(commandText,
-                    commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout)).AsList();
+                    commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
             }
         }
 
-        // TODO: Parameterize this
         public bool CheckExistence(long employeeNumber, DateTime attendanceDate, List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings)
         {
+            attendanceDate = attendanceDate.ToUtc();
+
             var conditions = new List<string>();
-            foreach (var setting in registerIntervalSettings)
+            var parameters = new DynamicParameters();
+            parameters.Add("PersonNumberOnDevice", employeeNumber);
+
+            for (var i = 0; i < registerIntervalSettings.Count; i++)
             {
+                var setting = registerIntervalSettings[i];
                 var applicationCondition = string.Empty;
                 switch (setting.ApplicationType)
                 {
-                    case AttendanceRegisterIntervalTypeEnumeration.AccessControl:
-                        applicationCondition =
-                            $"AND (att.[ApplicationId] & {(int)ApplicationTypeEnumeration.AccessControl}) > 0";
-                        break;
-                    case AttendanceRegisterIntervalTypeEnumeration.TimeAndAttendance:
-                        applicationCondition =
-                            $"AND (att.[ApplicationId] & {(int)ApplicationTypeEnumeration.TimeAndAttendance}) > 0";
-                        break;
                     case AttendanceRegisterIntervalTypeEnumeration.Parking:
                         applicationCondition =
-                            $"AND (att.[ApplicationId] & {(int)ApplicationTypeEnumeration.Parking}) > 0";
+                            $"AND (att.[ModuleId] & {(int)ModuleEnumeration.Parking}) > 0";
                         break;
                     case AttendanceRegisterIntervalTypeEnumeration.General:
                     default:
                         break;
                 }
+
+                var startDateParameterName = $"StartDate{i}";
+                var endDateParameterName = $"EndDate{i}";
+                parameters.Add(startDateParameterName, attendanceDate.AddMinutes(setting.Interval * -1));
+                parameters.Add(endDateParameterName, attendanceDate.AddMinutes(setting.Interval));
+
                 conditions.Add($@" (
-                                        att.[AttendanceDateTime] >=  {DatabaseHelper.ParameterValueForSql(attendanceDate.AddMinutes(setting.Interval * -1))}
-                                        AND att.[AttendanceDateTime] <=  {DatabaseHelper.ParameterValueForSql(attendanceDate.AddMinutes(setting.Interval))}
+                                        att.[AttendanceDateTime] >=  @{startDateParameterName}
+                                        AND att.[AttendanceDateTime] <=  @{endDateParameterName}
                                         {applicationCondition}
                                     )");
             }
@@ -570,10 +537,7 @@ namespace GuardianCommunication.Data.Repository
             {
                 return connection.ExecuteScalar<int>(
                     CheckExistenceCommand.FormatInvariantCulture(string.Join("\n OR \n", conditions)),
-                    new
-                    {
-                        EmployeeNumber = employeeNumber,
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout) > 0;
+                    parameters, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout) > 0;
             }
         }
 
@@ -583,48 +547,47 @@ namespace GuardianCommunication.Data.Repository
             {
                 return connection.Query<DtoUnhookedAttendances>(
                     SelectUnhookedAttendancesCommand.FormatInvariantCulture(count)
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).ToList();
+                    , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).ToList();
             }
         }
 
-        private string GetCheckExistenceCondition(List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings, DtoAttendance entity)
+        private static string GetCheckExistenceCondition(List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings, DtoAttendance entity, DynamicParameters parameters)
         {
             if (registerIntervalSettings.IsCollectionNullOrEmpty()) return null;
             var conditions = new List<string>();
-            foreach (var setting in registerIntervalSettings)
+            for (var i = 0; i < registerIntervalSettings.Count; i++)
             {
+                var setting = registerIntervalSettings[i];
                 var applicationCondition = string.Empty;
                 switch (setting.ApplicationType)
                 {
-                    case AttendanceRegisterIntervalTypeEnumeration.AccessControl:
-                        applicationCondition =
-                            $"AND (att.[ApplicationId] & {(int)ApplicationTypeEnumeration.AccessControl}) > 0";
-                        break;
-                    case AttendanceRegisterIntervalTypeEnumeration.TimeAndAttendance:
-                        applicationCondition =
-                            $"AND (att.[ApplicationId] & {(int)ApplicationTypeEnumeration.TimeAndAttendance}) > 0";
-                        break;
                     case AttendanceRegisterIntervalTypeEnumeration.Parking:
                         applicationCondition =
-                            $"AND (att.[ApplicationId] & {(int)ApplicationTypeEnumeration.Parking}) > 0";
+                            $"AND (att.[ModuleId] & {(int)ModuleEnumeration.Parking}) > 0";
                         break;
                     case AttendanceRegisterIntervalTypeEnumeration.General:
                     default:
                         break;
                 }
+
+                var startDateParameterName = $"CheckExistenceStartDate{i}";
+                var endDateParameterName = $"CheckExistenceEndDate{i}";
+                parameters.Add(startDateParameterName, entity.AttendanceDateTime.ToUtc().AddMinutes(setting.Interval * -1));
+                parameters.Add(endDateParameterName, entity.AttendanceDateTime.ToUtc().AddMinutes(setting.Interval));
+
                 conditions.Add($@" (
-                                        att.[AttendanceDateTime] >= {DatabaseHelper.ParameterValueForSql(entity.AttendanceDateTime.AddMinutes(setting.Interval * -1))}
-                                        AND att.[AttendanceDateTime] <= {DatabaseHelper.ParameterValueForSql(entity.AttendanceDateTime.AddMinutes(setting.Interval))}
+                                        att.[AttendanceDateTime] >= @{startDateParameterName}
+                                        AND att.[AttendanceDateTime] <= @{endDateParameterName}
                                         {applicationCondition}
                                     )");
             }
 
-            return $@"NOT EXISTS (  
-                                        SELECT  *   
+            return $@"NOT EXISTS (
+                                        SELECT  *
                                         FROM [Attendance] att
-				                        WHERE   att.[EmployeeNumber] = @EmployeeNumber
+                                        WHERE   att.[PersonNumberOnDevice] = @PersonNumberOnDevice
                                                 AND att.[AttendanceSource] != {(int)AttendanceSourceEnumeration.Manual}
-					                            AND ({string.Join("\n OR \n", conditions)}) 
+                                                AND ({string.Join("\n OR \n", conditions)})
                                     )";
         }
 

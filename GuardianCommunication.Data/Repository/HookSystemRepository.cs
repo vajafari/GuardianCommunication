@@ -174,12 +174,12 @@ namespace GuardianCommunication.Data.Repository
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
                     return connection.Query<DtoHookSystem>(commandText, searchInfo.Filter
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).AsList();
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).AsList();
                 }
 
                 commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
                 return (connection.Query<DtoHookSystem>(commandText,
-                    commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout)).AsList();
+                    commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout)).AsList();
             }
         }
 
@@ -188,7 +188,7 @@ namespace GuardianCommunication.Data.Repository
             using (var connection = GetConnection())
             {
                 connection.Execute(InsertCommand, entity
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                    , commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
             }
         }
 
@@ -197,7 +197,7 @@ namespace GuardianCommunication.Data.Repository
             using (var connection = GetConnection())
             {
                 connection.Execute(UpdateCommand, entity
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                    , commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
             }
         }
 

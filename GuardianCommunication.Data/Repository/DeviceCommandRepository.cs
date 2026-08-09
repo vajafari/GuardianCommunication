@@ -4,6 +4,12 @@ using System.Data;
 using System.Linq;
 using System.Text;
 using Dapper;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Data.Repository
 {
@@ -20,37 +26,19 @@ namespace GuardianCommunication.Data.Repository
         List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumberForEachDevice(
             DeviceNotSentCommandsFilter filter);
 
-        void UpdateSendData(List<int> ids);
-
-        void ResetSendData(List<int> ids);
+        void UpdateSendData(List<Guid> ids);
 
         void SetResponse(DtoDeviceCommandProcessingResult commandResult);
 
         void SetDescription(DtoDeviceCommandProcessingDescription commandResult);
 
-        void DeleteByIds(List<int> ids, long? mode);
+        void DeleteByIds(List<Guid> ids, long? mode);
 
         void DeleteByCommandIdentifiers(List<Guid> commandIdentifiers);
-
-        void DeleteNotSendByDeviceNumber(List<int> deviceNumbers);
-
-        void DeleteNotSentByEmployeeDeviceAndCommandTypes(long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes);
-
-        void DeleteNotSentByEmployeeDeviceCommandTypesAndCommandIdentifier
-            (long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes, List<Guid> commandIds);
-
-        void DeleteNotSentByEmployeeDeviceCommandTypesAndCommandDateInterval
-            (long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes, DateTime startDate, DateTime endDate);
-
-        void DeleteFailedBeforeDate(DateTime dateTime, bool justDeleteFailedCommands);
 
         List<DtoDeviceCommandWithoutContent> SearchWithoutContent(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo);
 
         List<DtoDeviceCommand> Search(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo);
-
-        int GetCount(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo);
-
-        List<DtoFailedCommandStatistics> GetNotSendCommandsStatistics(List<int> deviceNumbers);
     }
 
 
@@ -67,61 +55,64 @@ namespace GuardianCommunication.Data.Repository
             new Dictionary<DeviceCommandSortEnumeration, string>
             {
                 { DeviceCommandSortEnumeration.Id, "dc.[Id]" },
-                { DeviceCommandSortEnumeration.DeviceSerialNumber, "dc.[DeviceSerialNumber]" },
-                { DeviceCommandSortEnumeration.CommitTime, "dc.[CommitTime]" },
-                { DeviceCommandSortEnumeration.SendTime, "dc.[SendTime]" },
-                { DeviceCommandSortEnumeration.RetryCount, "dc.[RetryCount]" },
-                { DeviceCommandSortEnumeration.ResponseTime, "dc.[ResponseTime]" },
-                { DeviceCommandSortEnumeration.CommandType, "dc.[CommandType]" },
-                { DeviceCommandSortEnumeration.Priority, "dc.[Priority]" },
-                { DeviceCommandSortEnumeration.EmployeeNumber, "dc.[EmployeeNumber]" },
-                { DeviceCommandSortEnumeration.MaxRetry, "dc.[MaxRetry]" },
-                { DeviceCommandSortEnumeration.DeviceNumber, "dc.[DeviceNumber]" },
-                { DeviceCommandSortEnumeration.Deadline, "dc.[Deadline]" },
-                { DeviceCommandSortEnumeration.ProducerNumber, "dc.[ProducerNumber]" },
-                { DeviceCommandSortEnumeration.SdkVersion, "dc.[SdkVersion]" },
-                { DeviceCommandSortEnumeration.VisiblilityTime, "dc.[VisiblilityTime]" },
-                { DeviceCommandSortEnumeration.Description, "dc.[Description]" },
             };
 
 
-
-        private const string SelectNotSendCommandsStatisticsCommand =
+        private const string InsertCommand =
             @"	
-				SELECT
-					dc.[DeviceNumber],
-					COUNT(
-						CASE 
-							WHEN (dc.[ResponseTime] IS NULL AND dc.[RetryCount] > dc.[MaxRetry]) THEN 1
-							ELSE NULL
-						END) AS MaxAttemptCommandCount,
-					COUNT(
-						CASE 
-							WHEN (dc.[ResponseTime] IS NULL AND dc.[RetryCount] <= dc.[MaxRetry]) THEN 1
-							ELSE NULL
-						END) AS NotSendCommandCounts
-				FROM	[DeviceCommand] dc
-				WHERE	dc.[ResponseTime] IS NULL 
-						AND (
-								dc.[VisiblilityTime] IS NULL
-								OR dc.[VisiblilityTime] <= GETDATE()
-							)
-						AND dc.[DeviceNumber] IN @DeviceNumbers
-				GROUP BY dc.[DeviceNumber]
+            INSERT INTO [com].[DeviceCommand]
+            (
+                  [Id]
+                , [DeviceId]
+                , [DeviceNumber]
+                , [DeviceContent]
+                , [DeviceSerialNumber]
+                , [UserIdOnDevice]
+                , [CommandContent]
+                , [CommitTime]
+                , [SendTime]
+                , [ResponseTime]
+                , [ResponseValue]
+                , [CommandType]
+                , [RetryCount]
+                , [Priority]
+                , [MaxRetry]
+                , [Deadline]
+                , [ProducerNumber]
+                , [SdkVersion]
+                , [VisiblilityTime]
+                , [Description]
+                , [CommandIdentifier]
+                , [InsertedAt]
+                , [UpdatedAt]
+            )
+            VALUES
+            (
+                  @Id
+                , @DeviceId
+                , @DeviceNumber
+                , @DeviceContent
+                , @DeviceSerialNumber
+                , @UserIdOnDevice
+                , @CommandContent
+                , @CommitTime
+                , @SendTime
+                , @ResponseTime
+                , @ResponseValue
+                , @CommandType
+                , @RetryCount
+                , @Priority
+                , @MaxRetry
+                , @Deadline
+                , @ProducerNumber
+                , @SdkVersion
+                , @VisiblilityTime
+                , @Description
+                , @CommandIdentifier
+                , @GETUTCDATE()
+                , NULL
+            )
 			";
-
-        private const string NotSendConditionForDeviceCommand =
-            @"
-						dc.[ResponseTime] IS NULL
-						AND dc.[RetryCount] < dc.[MaxRetry]
-						AND (
-								dc.[VisiblilityTime] IS NULL
-								OR dc.[VisiblilityTime] <= GETDATE()
-							)
-						AND (
-								dc.[Deadline] IS NULL 
-								OR dc.[Deadline] >= GETDATE()
-							)";
 
         private const string SelectUnsentCommandsForEachDeviceCommand =
             @"	
@@ -147,20 +138,60 @@ namespace GuardianCommunication.Data.Repository
 				        ) tmp
 				WHERE   tmp.RowNumber <= @Count
 			";
+        
+        private const string NotSendConditionForDeviceCommand =
+            @"
+						dc.[ResponseTime] IS NULL
+						AND dc.[RetryCount] < dc.[MaxRetry]
+						AND (
+								dc.[VisiblilityTime] IS NULL
+								OR dc.[VisiblilityTime] <= GETDATE()
+							)
+						AND (
+								dc.[Deadline] IS NULL 
+								OR dc.[Deadline] >= GETDATE()
+							)";
 
         private const string SelectUnsentCommandsCountForEachDeviceByDeviceNumberCommand =
-            @"DeviceCommandCountByDeviceNumber";
+            @"[com].[DeviceCommandCountByDeviceNumber]";
 
         private const string SelectUnsentCommandsCountForEachDeviceByDeviceSerialNumberCommand =
-            @"DeviceCommandCountByDeviceSerialNumber";
+            @"[com].[DeviceCommandCountByDeviceSerialNumber]";
 
-        private const string CountCommand =
-            @"	SELECT        
-					  COUNT(dc.[Id])
-				FROM [DeviceCommand] dc
-				WHERE  1 = 1                
-						{0}    -- Search            
-				";
+        private const string UpdateSendDataCommand =
+            @"	UPDATE        [DeviceCommand]
+					SET  
+						  [SendTime] = GETUTCDATE()
+						, [RetryCount] = RetryCount + 1
+                        , [UpdatedAt] = GETUTCDATE()
+				WHERE  [Id] IN @Ids";
+
+        private const string SetResponseWithModeCommand =
+            @"	UPDATE        [DeviceCommand]
+					SET  
+						  [ResponseTime] = @ResponseTime
+						, [ResponseValue] = @ResponseValue
+				        , [UpdatedAt] = GETUTCDATE()
+                WHERE  ([Id] % @Mode) = @Id";
+
+        private const string SetResponseCommand =
+            @"	UPDATE        [DeviceCommand]
+					SET  
+						  [ResponseTime] = @ResponseTime
+						, [ResponseValue] = @ResponseValue
+				WHERE  [Id] = @Id";
+
+        private const string SetDescriptionCommand =
+            @"	UPDATE        [DeviceCommand]
+					SET  
+						 Description = @Description
+				WHERE  Id = @Id";
+
+        private const string SetDescriptionWithModeCommand =
+            @"	UPDATE        [DeviceCommand]
+					SET  
+						 Description = @Description
+				WHERE  (Id % @Mode) = @Id";
 
         private const string SelectWithoutContentCommand =
             @"	SELECT        
@@ -312,96 +343,6 @@ namespace GuardianCommunication.Data.Repository
 				         ) tmp                        
 				 {2}    -- Paging";
 
-        private const string InsertCommand =
-            @"	INSERT INTO         [DeviceCommand]
-				(
-					  [DeviceSerialNumber]
-					, [CommandContent]
-					, [CommitTime]
-					, [SendTime]
-					, [ResponseTime]
-					, [ResponseValue]
-					, [CommandType]
-					, [EmployeeNumber]
-					, [RetryCount]
-					, [MaxRetry]
-					, [Priority]
-					, [DeviceNumber]
-					, [Deadline]
-					, [DeviceContent]
-					, [ProducerNumber]
-					, [SdkVersion]
-					, [VisiblilityTime]
-					, [Description]
-					, [CommandIdentifier]
-				)
-				VALUES
-				(
-					  @DeviceSerialNumber
-					, @CommandContent
-					, @CommitTime
-					, @SendTime
-					, @ResponseTime
-					, @ResponseValue
-					, @CommandType
-					, @EmployeeNumber
-					, @RetryCount
-					, @MaxRetry
-					, @Priority
-					, @DeviceNumber
-					, @Deadline
-					, @DeviceContent
-					, @ProducerNumber
-					, @SdkVersion
-					, @VisiblilityTime
-					, @Description
-					, @CommandIdentifier
-				) ;
-				SELECT SCOPE_IDENTITY();
-			";
-
-        private const string UpdateSendDataCommand =
-            @"	UPDATE        [DeviceCommand]
-					SET  
-						  SendTime = GETDATE()
-						, RetryCount = RetryCount + 1
-				WHERE  Id IN @Ids";
-
-        private const string ResetSendDataCommand =
-            @"	UPDATE        [DeviceCommand]
-					SET  
-						  [SendTime] = NULL
-						, [ResponseTime] = NULL
-						, [ResponseValue] = NULL
-						, [RetryCount] = 0
-				WHERE  Id IN ({0})";
-
-        private const string SetResponseCommand =
-            @"	UPDATE        [DeviceCommand]
-					SET  
-						 ResponseTime = @ResponseTime
-						, ResponseValue = @ResponseValue
-				WHERE  Id = @Id";
-
-        private const string SetDescriptionCommand =
-            @"	UPDATE        [DeviceCommand]
-					SET  
-						 Description = @Description
-				WHERE  Id = @Id";
-
-        private const string SetResponseWithModeCommand =
-            @"	UPDATE        [DeviceCommand]
-					SET  
-						 ResponseTime = @ResponseTime
-						, ResponseValue = @ResponseValue
-				WHERE  (Id % @Mode) = @Id";
-
-        private const string SetDescriptionWithModeCommand =
-            @"	UPDATE        [DeviceCommand]
-					SET  
-						 Description = @Description
-				WHERE  (Id % @Mode) = @Id";
-
         private const string DeleteByCommandIdentifierCommand =
             @"	DELETE FROM        [DeviceCommand]
 				WHERE  CommandIdentifier IN @CommandIdentifiers";
@@ -413,51 +354,6 @@ namespace GuardianCommunication.Data.Repository
         private const string DeleteByIdsCommand =
             @"	DELETE FROM        [DeviceCommand]
 				WHERE  Id IN @Ids";
-
-        private const string DeleteNotSentByEmployeeAndDeviceAndCommandTypesCommand =
-            @"	DELETE FROM        [DeviceCommand]
-				WHERE   [DeviceNumber] = @DeviceNumber
-                        AND [EmployeeNumber] = @EmployeeNumber
-                        AND [CommandType] IN @CommandTypes
-                        AND [ResponseTime] IS NULL
-            ";
-
-        private const string DeleteNotSentByEmployeeAndDeviceCommandTypesAndCommandIdentifierCommand =
-            @"	DELETE FROM        [DeviceCommand]
-				WHERE   [DeviceNumber] = @DeviceNumber
-                        AND [EmployeeNumber] = @EmployeeNumber
-                        AND [CommandType] IN @CommandTypes
-                        AND [ResponseTime] IS NULL
-                        AND [CommandIdentifier] IN @CommandIdentifiers
-            ";
-
-        private const string DeleteNotSentByEmployeeDeviceCommandTypesAndDateIntervalCommand =
-            @"	DELETE FROM        [DeviceCommand]
-				WHERE   [DeviceNumber] = @DeviceNumber
-                        AND [EmployeeNumber] = @EmployeeNumber
-                        AND [CommandType] IN @CommandTypes
-                        AND [ResponseTime] IS NULL
-                        AND (
-                            [VisiblilityTime] IS NULL
-                            OR
-                            (
-                                [VisiblilityTime] >= @StartDate
-                                AND
-                                [VisiblilityTime] <= @EndDate
-                            )
-                        )
-                        AND [ResponseTime] IS NULL
-            ";
-
-        private const string DeleteNotSendByDeviceNumberCommand =
-            @"	DELETE FROM       [DeviceCommand]
-				WHERE  DeviceNumber IN ({0})
-						AND [ResponseTime] IS NULL
-						AND (
-							[VisiblilityTime] IS NULL
-							OR [VisiblilityTime] <= GETDATE()
-						) 
-			";
 
 
         #endregion
@@ -471,14 +367,6 @@ namespace GuardianCommunication.Data.Repository
             var sb = new StringBuilder();
             if (filter != null)
             {
-                if (filter.EmployeeNumbers.IsCollectionNotNullOrEmpty())
-                {
-                    sb.AppendLine($" AND dc.[EmployeeNumber] IN  ({filter.EmployeeNumbers.JoinWithComma()})");
-                }
-                if (filter.EmployeeNumberLike.HasValue)
-                {
-                    sb.AppendLine($" AND dc.[EmployeeNumber] LIKE {DatabaseHelper.GetLikeClause(filter.EmployeeNumberLike.Value)}");
-                }
                 if (filter.Ids.IsCollectionNotNullOrEmpty())
                 {
                     sb.AppendLine(" AND dc.[Id] IN @Ids");
@@ -551,274 +439,23 @@ namespace GuardianCommunication.Data.Repository
             {
                 return entities;
             }
+            foreach (var entity in entities)
+            {
+                entity.Id = Guid.NewGuid();
+            }
             using (var connection = GetConnection())
             {
                 foreach (var entity in entities)
                 {
                     if (entity != null)
                     {
-                        entity.Id = connection.ExecuteScalar<int>(InsertCommand, entity
-                            , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+                        connection.ExecuteScalar(InsertCommand, entity
+                            , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                     }
                 }
             }
 
             return entities;
-        }
-
-
-        public void DeleteByIds(List<int> ids, long? mode)
-        {
-
-            using (var connection = GetConnection())
-            {
-                if (mode.HasValue)
-                {
-                    connection.Execute(DeleteByIdsWithModeCommand,
-                        new
-                        {
-                            Mode = mode.Value,
-                            Ids = ids
-                        }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-                else
-                {
-                    connection.Execute(DeleteByIdsCommand
-                        , new
-                        {
-                            Ids = ids
-                        }
-                        , commandType: CommandType.Text
-                        , commandTimeout: connectionConfig.Timeout);
-                }
-            }
-        }
-
-        public void DeleteByCommandIdentifiers(List<Guid> commandIdentifiers)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Execute(DeleteByCommandIdentifierCommand, new { CommandIdentifiers = commandIdentifiers }
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
-        }
-
-        public void DeleteNotSentByEmployeeDeviceAndCommandTypes(long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Execute(DeleteNotSentByEmployeeAndDeviceAndCommandTypesCommand,
-                    new
-                    {
-                        DeviceNumber = deviceNumber,
-                        EmployeeNumber = employeeNumber,
-                        CommandTypes = commandTypes.Select(ct => (int)ct).ToList()
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
-        }
-
-        public void DeleteNotSentByEmployeeDeviceCommandTypesAndCommandIdentifier(long employeeNumber, int deviceNumber,
-            List<DeviceCommandTypeEnumeration> commandTypes, List<Guid> commandIds)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Execute(DeleteNotSentByEmployeeAndDeviceCommandTypesAndCommandIdentifierCommand,
-                    new
-                    {
-                        DeviceNumber = deviceNumber,
-                        EmployeeNumber = employeeNumber,
-                        CommandTypes = commandTypes.Select(ct => (int)ct).ToList(),
-                        CommandIdentifiers = commandIds
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
-        }
-
-        public void DeleteNotSentByEmployeeDeviceCommandTypesAndCommandDateInterval(long employeeNumber, int deviceNumber,
-            List<DeviceCommandTypeEnumeration> commandTypes, DateTime startDate, DateTime endDate)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Execute(DeleteNotSentByEmployeeDeviceCommandTypesAndDateIntervalCommand,
-                    new
-                    {
-                        DeviceNumber = deviceNumber,
-                        EmployeeNumber = employeeNumber,
-                        CommandTypes = commandTypes.Select(ct => (int)ct).ToList(),
-                        StartDate = startDate,
-                        EndDate = endDate
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
-        }
-
-        public void DeleteFailedBeforeDate(DateTime dateTime, bool justDeleteFailedCommands)
-        {
-
-            var commandText = $@"	DELETE FROM        [DeviceCommand]
-				WHERE   [ResponseTime] IS NULL
-                        AND [CommitTime] <= @EndDateTime
-                        {(justDeleteFailedCommands ? "AND [RetryCount] >= [MaxRetry]" : string.Empty)}
-            ";
-            using (var connection = GetConnection())
-            {
-                connection.Execute(commandText,
-                    new
-                    {
-                        EndDateTime = dateTime,
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
-        }
-
-        public void DeleteNotSendByDeviceNumber(List<int> deviceNumbers)
-        {
-            using (var connection = GetConnection())
-            {
-                connection.Execute(DeleteNotSendByDeviceNumberCommand.FormatInvariantCulture
-                        (deviceNumbers.JoinWithComma())
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
-        }
-
-        public void UpdateSendData(List<int> ids)
-        {
-            if (ids.IsCollectionNotNullOrEmpty())
-            {
-                using (var connection = GetConnection())
-                {
-                    connection.Execute(UpdateSendDataCommand
-                        , new { Ids = ids }
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-            }
-        }
-
-        public void ResetSendData(List<int> ids)
-        {
-            if (ids.IsCollectionNotNullOrEmpty())
-            {
-                using (var connection = GetConnection())
-                {
-                    connection.Execute(ResetSendDataCommand.FormatInvariantCulture(ids.JoinWithComma())
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-            }
-        }
-
-        public void SetResponse(DtoDeviceCommandProcessingResult commandResult)
-        {
-            using (var connection = GetConnection())
-            {
-                if (commandResult.Mode.HasValue)
-                {
-                    connection.Execute(SetResponseWithModeCommand, new
-                    {
-                        ResponseTime = commandResult.CommandResponseTime,
-                        ResponseValue = commandResult.CommandResponseResult,
-                        commandResult.Id,
-                        commandResult.Mode,
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-                else
-                {
-                    connection.Execute(SetResponseCommand, new
-                    {
-                        ResponseTime = commandResult.CommandResponseTime,
-                        ResponseValue = commandResult.CommandResponseResult,
-                        commandResult.Id,
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-
-            }
-        }
-
-        public void SetDescription(DtoDeviceCommandProcessingDescription commandResult)
-        {
-            using (var connection = GetConnection())
-            {
-                if (commandResult.Mode.HasValue)
-                {
-                    connection.Execute(SetDescriptionWithModeCommand, new
-                    {
-                        commandResult.Description,
-                        commandResult.Id,
-                        commandResult.Mode,
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-                else
-                {
-                    connection.Execute(SetDescriptionCommand, new
-                    {
-                        commandResult.Description,
-                        commandResult.Id,
-                    }, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-
-            }
-        }
-
-        public List<DtoDeviceCommandWithoutContent> SearchWithoutContent(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
-        {
-            using (var connection = GetConnection())
-            {
-                string commandText;
-                if (searchInfo != null)
-                {
-                    var whereClause = GetSearchClause(searchInfo.Filter);
-                    var orderByClause = searchInfo.GetNormalSortString(MapSortEnumToFieldName);
-                    var pagingClause = searchInfo.GetRowNumberClause("tmp", ServiceConstants.RowNumberColumnName);
-                    var searchType = searchInfo.GetSearchType();
-                    commandText = searchType == SearchTypeEnumeration.SimpleSearch
-                        ? SelectWithoutContentCommand.FormatInvariantCulture(whereClause, orderByClause)
-                        : SelectWithoutContentWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoDeviceCommandWithoutContent>(commandText, searchInfo.Filter
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).AsList();
-                }
-
-                commandText = SelectWithoutContentCommand.FormatInvariantCulture(string.Empty, string.Empty);
-                return (connection.Query<DtoDeviceCommandWithoutContent>(commandText,
-                    commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout)).AsList();
-            }
-        }
-
-        public List<DtoDeviceCommand> Search(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
-        {
-            using (var connection = GetConnection())
-            {
-                string commandText;
-                if (searchInfo != null)
-                {
-                    var whereClause = GetSearchClause(searchInfo.Filter);
-                    var orderByClause = searchInfo.GetNormalSortString(MapSortEnumToFieldName);
-                    var pagingClause = searchInfo.GetRowNumberClause("tmp", ServiceConstants.RowNumberColumnName);
-                    var searchType = searchInfo.GetSearchType();
-                    commandText = searchType == SearchTypeEnumeration.SimpleSearch
-                        ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
-                        : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoDeviceCommand>(commandText, searchInfo.Filter
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).AsList();
-                }
-
-                commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
-                return (connection.Query<DtoDeviceCommand>(commandText,
-                    commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout)).AsList();
-            }
-        }
-
-        public int GetCount(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
-        {
-            using (var connection = GetConnection())
-            {
-                if (searchInfo != null)
-                {
-                    return connection.ExecuteScalar<int>(
-                            CountCommand.FormatInvariantCulture(GetSearchClause(searchInfo.Filter))
-                        , searchInfo.Filter
-                        , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-                }
-
-                return connection.ExecuteScalar<int>(
-                    CountCommand.FormatInvariantCulture(string.Empty)
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
-            }
         }
 
         public List<DtoDeviceUnsentCommand> GetUnsentCommandsForEachDevice(DeviceNotSentCommandsFilter filter)
@@ -839,7 +476,7 @@ namespace GuardianCommunication.Data.Repository
                     SelectUnsentCommandsForEachDeviceCommand.FormatInvariantCulture(NotSendConditionForDeviceCommand, sb.ToString())
                     , new { filter.Count, filter.Producer, filter.SdkVersion, filter.DeviceNumbers, filter.DeviceSerialNumbers }
                     , commandType: CommandType.Text
-                    , commandTimeout: connectionConfig.Timeout).AsList();
+                    , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
             }
         }
 
@@ -860,7 +497,7 @@ namespace GuardianCommunication.Data.Repository
                         SelectUnsentCommandsCountForEachDeviceByDeviceNumberCommand
                         , parameters
                         , commandType: CommandType.StoredProcedure
-                        , commandTimeout: connectionConfig.Timeout).AsList();
+                        , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
             }
 
@@ -884,25 +521,163 @@ namespace GuardianCommunication.Data.Repository
                         SelectUnsentCommandsCountForEachDeviceByDeviceSerialNumberCommand
                         , parameters
                         , commandType: CommandType.StoredProcedure
-                        , commandTimeout: connectionConfig.Timeout).AsList();
+                        , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
             }
             return new List<DtoUnsentCommandCountByDeviceSerialNumber>();
         }
 
-        public List<DtoFailedCommandStatistics> GetNotSendCommandsStatistics(List<int> deviceNumbers)
+        public void UpdateSendData(List<Guid> ids)
+        {
+            if (ids.IsCollectionNotNullOrEmpty())
+            {
+                using (var connection = GetConnection())
+                {
+                    connection.Execute(UpdateSendDataCommand
+                        , new { Ids = ids }
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+            }
+        }
+        
+        public void SetResponse(DtoDeviceCommandProcessingResult commandResult)
         {
             using (var connection = GetConnection())
             {
-                return connection.Query<DtoFailedCommandStatistics>(
-                    SelectNotSendCommandsStatisticsCommand, new { DeviceNumbers = deviceNumbers }
-                    , commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).AsList();
+                if (commandResult.Mode.HasValue)
+                {
+                    connection.Execute(SetResponseWithModeCommand, new
+                    {
+                        ResponseTime = commandResult.CommandResponseTime,
+                        ResponseValue = commandResult.CommandResponseResult,
+                        commandResult.Id,
+                        commandResult.Mode,
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+                else
+                {
+                    connection.Execute(SetResponseCommand, new
+                    {
+                        ResponseTime = commandResult.CommandResponseTime,
+                        ResponseValue = commandResult.CommandResponseResult,
+                        commandResult.Id,
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+
+            }
+        }
+
+        public void SetDescription(DtoDeviceCommandProcessingDescription commandResult)
+        {
+            using (var connection = GetConnection())
+            {
+                if (commandResult.Mode.HasValue)
+                {
+                    connection.Execute(SetDescriptionWithModeCommand, new
+                    {
+                        commandResult.Description,
+                        commandResult.Id,
+                        commandResult.Mode,
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+                else
+                {
+                    connection.Execute(SetDescriptionCommand, new
+                    {
+                        commandResult.Description,
+                        commandResult.Id,
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+
+            }
+        }
+
+        public void DeleteByIds(List<Guid> ids, long? mode)
+        {
+
+            using (var connection = GetConnection())
+            {
+                if (mode.HasValue)
+                {
+                    connection.Execute(DeleteByIdsWithModeCommand,
+                        new
+                        {
+                            Mode = mode.Value,
+                            Ids = ids
+                        }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+                else
+                {
+                    connection.Execute(DeleteByIdsCommand
+                        , new
+                        {
+                            Ids = ids
+                        }
+                        , commandType: CommandType.Text
+                        , commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+            }
+        }
+
+        public void DeleteByCommandIdentifiers(List<Guid> commandIdentifiers)
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Execute(DeleteByCommandIdentifierCommand, new { CommandIdentifiers = commandIdentifiers }
+                    , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+            }
+        }
+
+        public List<DtoDeviceCommandWithoutContent> SearchWithoutContent(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
+        {
+            using (var connection = GetConnection())
+            {
+                string commandText;
+                if (searchInfo != null)
+                {
+                    var whereClause = GetSearchClause(searchInfo.Filter);
+                    var orderByClause = searchInfo.GetNormalSortString(MapSortEnumToFieldName);
+                    var pagingClause = searchInfo.GetRowNumberClause("tmp", ServiceConstants.RowNumberColumnName);
+                    var searchType = searchInfo.GetSearchType();
+                    commandText = searchType == SearchTypeEnumeration.SimpleSearch
+                        ? SelectWithoutContentCommand.FormatInvariantCulture(whereClause, orderByClause)
+                        : SelectWithoutContentWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
+                    return connection.Query<DtoDeviceCommandWithoutContent>(commandText, searchInfo.Filter
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
+                }
+
+                commandText = SelectWithoutContentCommand.FormatInvariantCulture(string.Empty, string.Empty);
+                return (connection.Query<DtoDeviceCommandWithoutContent>(commandText,
+                    commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
+            }
+        }
+
+        public List<DtoDeviceCommand> Search(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
+        {
+            using (var connection = GetConnection())
+            {
+                string commandText;
+                if (searchInfo != null)
+                {
+                    var whereClause = GetSearchClause(searchInfo.Filter);
+                    var orderByClause = searchInfo.GetNormalSortString(MapSortEnumToFieldName);
+                    var pagingClause = searchInfo.GetRowNumberClause("tmp", ServiceConstants.RowNumberColumnName);
+                    var searchType = searchInfo.GetSearchType();
+                    commandText = searchType == SearchTypeEnumeration.SimpleSearch
+                        ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
+                        : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
+                    return connection.Query<DtoDeviceCommand>(commandText, searchInfo.Filter
+                        , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
+                }
+
+                commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
+                return (connection.Query<DtoDeviceCommand>(commandText,
+                    commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
             }
         }
 
 
-
-
+        #region Helper Methods
 
         private static DataTable CreateDeviceSerialNumberTable(IEnumerable<string> serialNumbers)
         {
@@ -931,6 +706,10 @@ namespace GuardianCommunication.Data.Repository
 
             return table;
         }
+
+        #endregion
+
+
     }
 
 }

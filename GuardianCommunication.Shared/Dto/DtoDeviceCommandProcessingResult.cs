@@ -4,7 +4,7 @@ namespace GuardianCommunication.Shared.Dto
 {
     public class DtoDeviceCommandProcessingResult
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         public DateTime CommandResponseTime { get; set; }
 

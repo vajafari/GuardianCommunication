@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace GuardianCommunication.Shared.Filter
 {
-	public class AttendanceHookSystemFilter
+	public class AttendanceHookDefinitionFilter
 	{
 		public List<Guid> AttendanceIds { get; set; }
 		public List<Guid> HookDefinitionIds { get; set; }

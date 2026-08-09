@@ -1,8 +1,10 @@
-﻿namespace GuardianCommunication.Shared.Dto
+﻿using System;
+
+namespace GuardianCommunication.Shared.Dto
 {
     public class DtoDeviceCommandProcessingDescription
     {
-        public int Id { get; set; }
+        public Guid Id { get; set; }
 
         public string Description { get; set; }
 

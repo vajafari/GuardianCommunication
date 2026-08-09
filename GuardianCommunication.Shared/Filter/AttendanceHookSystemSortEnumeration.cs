@@ -1,9 +1,9 @@
 ﻿namespace GuardianCommunication.Shared.Filter
 {
 	
-	public enum AttendanceHookSystemSortEnumeration
-	{
-		HookSystemId,
+	public enum AttendanceHookDefinitionSortEnumeration
+    {
+        HookDefinitionId,
 		AttendanceId,
 	}
 }

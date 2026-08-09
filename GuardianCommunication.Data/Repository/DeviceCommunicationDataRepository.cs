@@ -74,7 +74,7 @@ namespace GuardianCommunication.Data.Repository
 				using (var connection = GetConnection())
 				{
 					connection.Execute(InsertCommand, entity
-						, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+						, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
 				}
 			}
 			catch (Exception e)
@@ -90,7 +90,7 @@ namespace GuardianCommunication.Data.Repository
 			using (var connection = GetConnection())
 			{
 				connection.Execute(UpdateCommand, entity
-					, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout);
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout);
 			}
 		}
 
@@ -106,7 +106,7 @@ namespace GuardianCommunication.Data.Repository
 			{
 				return connection.Query<DtoDeviceCommunicationData>(
                     SelectCommand.FormatInvariantCulture(condition)
-					, commandType: CommandType.Text, commandTimeout: connectionConfig.Timeout).AsList();
+					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.Timeout).AsList();
 			}
 		}
 
