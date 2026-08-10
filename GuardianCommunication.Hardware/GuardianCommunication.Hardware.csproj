@@ -232,15 +232,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Camera\PouyaFanavaran\ReadAttendanceResponseItemInfoModel.cs" />
-    <Compile Include="Camera\PouyaFanavaran\ReadAttendanceResponseItemModel.cs" />
-    <Compile Include="Camera\PouyaFanavaran\ReadAttendanceResponseModel.cs" />
-    <Compile Include="Camera\PouyaFanavaran\KarabinAgentConfig.cs" />
-    <Compile Include="Camera\PouyaFanavaran\KarabinAgent.cs" />
-    <Compile Include="ElmOSanat\ElmoSanatOnDemandAdapter.cs" />
-    <Compile Include="MetalDetectorGate\Padis\PadisMetalDetectorGateConfig.cs" />
-    <Compile Include="MetalDetectorGate\Padis\PadisMetalDetectorGatesHelper.cs" />
-    <Compile Include="MetalDetectorGate\Padis\Types.cs" />
     <None Include="PadisController\Protos\padis_service.proto" />
     <Compile Include="PadisController\Model\PadisControllerMatchOnServerResponseModel.cs" />
     <Compile Include="PadisController\Model\PadisControllerGrpcDeviceCommandModel.cs" />
@@ -284,16 +275,9 @@
     <Compile Include="PadisController\PadisControllerUtils.cs" />
     <Compile Include="PadisController\PadisControllerServer.cs" />
     <Compile Include="PadisController\PadisControllerPushCommands.cs" />
-    <Compile Include="Pw\PwConcepts\PwDeviceConnectResult.cs" />
     <Compile Include="Shared\Commands\CommandCameraId.cs" />
     <Compile Include="Shared\Helpers\AttendanceImageHelpers.cs" />
     <Compile Include="Shared\Helpers\DeviceSharedHelperMethods.cs" />
-    <Compile Include="ElmOSanat\Concepts\ElmOSanatVerificationStyleEnumeration.cs" />
-    <Compile Include="Pw\PwConcepts\PwDevicePrivilegeEnumeration.cs" />
-    <Compile Include="Pw\PwConcepts\PwDeviceTypeEnum.cs" />
-    <Compile Include="Pw\PwConcepts\PwConstants.cs" />
-    <Compile Include="Pw\PwConcepts\PwFileType.cs" />
-    <Compile Include="Pw\PwCommands.cs" />
     <Compile Include="Shared\Commands\CommandScanFinger.cs" />
     <Compile Include="Shared\Commands\CommandLastLogId.cs" />
     <Compile Include="Shared\Commands\CommandUserId.cs" />
@@ -330,24 +314,15 @@
     <Compile Include="Virdi\VirdiConcepts\GetDataCommand.cs" />
     <Compile Include="Virdi\VirdiConcepts\VirdiDeviceLogTypeEnum.cs" />
     <Compile Include="Virdi\VirdiConcepts\VirdiErrorEnum.cs" />
-    <Compile Include="XRayDevice\CustomFileSystemWatcher.cs">
-      <SubType>Component</SubType>
-    </Compile>
-    <Compile Include="XRayDevice\XRayDeviceServer.cs" />
-    <Compile Include="XRayDevice\XReaDeviceServerConfig.cs" />
     <Compile Include="Zk\ZkDevicePrivilegeEnumeration.cs" />
     <Compile Include="Zk\ZkCommunicationHelpers.cs" />
     <Compile Include="Zk\WiegandFormatEnumeration.cs" />
     <Compile Include="Zk\ZkOnDemandCommands.cs" />
     <Compile Include="Zk\ZkPushVerificationStyleEnumeration.cs" />
-    <Compile Include="MetalDetectorGate\Padis\PadisMetalDetectorGateServer.cs" />
-    <Compile Include="Camera\PouyaFanavaran\PouyaFanavaranServer.cs" />
     <Compile Include="Zk\ZkServer.cs" />
     <Compile Include="Zk\ZkUtils.cs" />
     <Compile Include="Zk\ZkVerificationStyleEnumeration.cs" />
     <Compile Include="Zk\ZkErrorEnum.cs" />
-    <Compile Include="Pw\PwConcepts\PwErrorEnum.cs" />
-    <Compile Include="Pw\PwOnDemandAdapter.cs" />
     <Compile Include="Suprema\SupremaSdk1OnDemandAdapter.cs" />
     <Compile Include="Suprema\SupremaConcepts\V1\BSSDK.cs" />
     <Compile Include="Suprema\SupremaConcepts\V2\ApiV2.cs" />
