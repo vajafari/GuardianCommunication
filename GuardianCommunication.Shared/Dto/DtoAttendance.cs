@@ -14,7 +14,7 @@ namespace GuardianCommunication.Shared.Dto
         public Guid? DoorId { get; set; }
         public int? VerificationStyle { get; set; }
         public string RfCardNumber { get; set; }
-        public int StatusCode { get; set; }
+        public int? StatusCode { get; set; }
         public bool IsSentToGuardian { get; set; }
         public int SentToGuardianRetryCount { get; set; }
         public ModuleEnumeration ModuleId { get; set; }

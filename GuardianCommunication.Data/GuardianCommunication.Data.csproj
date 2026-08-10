@@ -128,6 +128,7 @@
     <Compile Include="Logger\LoggingSystem.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Repository\DeviceRepository.cs" />
+    <Compile Include="Repository\DeviceDoorBaseRepository.cs" />
     <Compile Include="Repository\LogRepository.cs" />
     <Compile Include="Repository\HookDefinitionRepository.cs" />
     <Compile Include="Repository\AttendanceHookDefinitionRepository.cs" />

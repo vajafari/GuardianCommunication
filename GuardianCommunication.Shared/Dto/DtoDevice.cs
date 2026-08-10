@@ -5,9 +5,8 @@ using System;
 
 namespace GuardianCommunication.Shared.Dto
 {
-    public class DtoDevice
+    public class DtoDevice : DtoDatabaseEntityBase
     {
-        public Guid Id { get; set; }
         public int DeviceNumber { get; set; }
         public Guid DeviceTypeId { get; set; }
         public Guid LocationId { get; set; }
@@ -19,7 +18,7 @@ namespace GuardianCommunication.Shared.Dto
         public ConnectionTypeEnumeration ConnectionType { get; set; }
         public string DeviceIp { get; set; }
         public string DeviceSettingInJson { get; set; }
-        public int TcpPort { get; set; }
+        public int? TcpPort { get; set; }
         public int ConnectTimeout { get; set; }
         public ModuleEnumeration ModuleId { get; set; }
         public DeviceIoTypeEnumeration IoType { get; set; }
@@ -40,6 +39,7 @@ namespace GuardianCommunication.Shared.Dto
         public int DaylightEnd { get; set; }
         public int DaylightChangeTimeInSeconds { get; set; }
         public int LocationNumber { get; set; }
+        public string DeviceDescription { get; set; }
 
         private DtoDeviceSettings _deviceSettings;
 

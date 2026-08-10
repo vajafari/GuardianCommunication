@@ -5,7 +5,7 @@ namespace GuardianCommunication.Shared.Dto
 {
 	public class DtoHookDefinition : DtoDatabaseEntityBase
 	{
-		public HookTypeEnumeration DetailType { get; set; }
+		public HookTypeEnumeration HookType { get; set; }
 
 		public string EndPointUrl { get; set; }
 

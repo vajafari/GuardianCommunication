@@ -41,6 +41,11 @@ namespace GuardianCommunication.Data.Repository
             return new HookDefinitionRepository(AppConfigs.ConnectionConfig);
         }
 
+        public IDeviceDoorBaseRepository GetDeviceDoorBaseRepository()
+        {
+            return new DeviceDoorBaseRepository(AppConfigs.ConnectionConfig);
+        }
+
     }
 
 }

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Data;
 using System.Text;
 using Dapper;
@@ -12,72 +12,70 @@ using GuardianCommunication.Shared.SharedSettings;
 namespace GuardianCommunication.Data.Repository
 {
 
-    public interface IHookDefinitionRepository
+    public interface IDeviceDoorBaseRepository
     {
-        List<DtoHookDefinition> Search(PagingData<HookDefinitionFilter, HookDefinitionSortEnumeration> searchInfo);
+        List<DtoDeviceDoorBase> Search(PagingData<DeviceDoorBaseFilter, DeviceDoorBaseSortEnumeration> searchInfo);
     }
 
 
-    public class HookDefinitionRepository : BaseRepository, IHookDefinitionRepository
+    public class DeviceDoorBaseRepository : BaseRepository, IDeviceDoorBaseRepository
     {
 
-        public HookDefinitionRepository(ConnectionConfiguration connectionConfig) : base(connectionConfig)
+        public DeviceDoorBaseRepository(ConnectionConfiguration connectionConfig) : base(connectionConfig)
         { }
 
         #region Command Strings
 
-        private static readonly Dictionary<HookDefinitionSortEnumeration, string> MapSortEnumToFieldName =
-            new Dictionary<HookDefinitionSortEnumeration, string>()
+        private static readonly Dictionary<DeviceDoorBaseSortEnumeration, string> MapSortEnumToFieldName =
+            new Dictionary<DeviceDoorBaseSortEnumeration, string>()
             {
-                {HookDefinitionSortEnumeration.Id, "hd.[Id]"},
+                { DeviceDoorBaseSortEnumeration.Id, "ddb.[Id]" },
+                { DeviceDoorBaseSortEnumeration.DoorNumber, "ddb.[DoorNumber]" },
             };
 
 
         private const string SelectCommand =
-            @"	SELECT        
-					  hd.*
-				FROM [com].[HookDefinition] hd
-				WHERE  1 = 1                
-						{0}    -- Search            
+            @"	SELECT
+					  ddb.*
+				FROM [core].[DeviceDoorBase] ddb
+				WHERE  1 = 1
+						{0}    -- Search
 				{1}    -- Order By";
 
         private const string SelectWithPagingCommand =
-            @"	SELECT         
+            @"	SELECT
 					   tmp.*
-				 FROM            
-				        (            
-				            SELECT    ROW_NUMBER() OVER ({1}) AS  RowNumber      
-								, hd.*
-							FROM [com].[HookDefinition] hd
-							WHERE  1 = 1         
-									{0}    -- Search            
-				         ) tmp                        
+				 FROM
+				        (
+				            SELECT    ROW_NUMBER() OVER ({1}) AS  RowNumber
+								, ddb.*
+				            FROM [core].[DeviceDoorBase] ddb
+							WHERE  1 = 1
+									{0}    -- Search
+				         ) tmp
 				 {2}    -- Paging";
-
-
 
         #endregion
 
 
         #region Private Methods
 
-        private static string GetSearchClause(HookDefinitionFilter filter)
+        private static string GetSearchClause(DeviceDoorBaseFilter filter)
         {
             var sb = new StringBuilder();
             if (filter != null)
             {
                 if (filter.Ids.IsCollectionNotNullOrEmpty())
                 {
-                    sb.AppendLine($" AND hd.[Id] IN ({filter.Ids.JoinWithComma()})");
+                    sb.AppendLine($" AND ddb.[Id] IN @{nameof(filter.Ids)}");
                 }
-               
+                if (filter.DeviceIds.IsCollectionNotNullOrEmpty())
+                {
+                    sb.AppendLine($" AND ddb.[DeviceId] IN @{nameof(filter.DeviceIds)}");
+                }
                 if (filter.IsActive.HasValue)
                 {
-                    sb.AppendLine($" AND hd.[IsActive] = @{nameof(filter.IsActive)}");
-                }
-                if (filter.HookTypes.IsCollectionNotNullOrEmpty())
-                {
-                    sb.AppendLine($" AND hd.[HookType] IN @{nameof(filter.HookTypesValues)} ");
+                    sb.AppendLine($" AND ddb.[IsActive] = @{nameof(filter.IsActive)}");
                 }
             }
 
@@ -88,7 +86,7 @@ namespace GuardianCommunication.Data.Repository
         #endregion
 
 
-        public List<DtoHookDefinition> Search(PagingData<HookDefinitionFilter, HookDefinitionSortEnumeration> searchInfo)
+        public List<DtoDeviceDoorBase> Search(PagingData<DeviceDoorBaseFilter, DeviceDoorBaseSortEnumeration> searchInfo)
         {
             using (var connection = GetConnection())
             {
@@ -102,12 +100,12 @@ namespace GuardianCommunication.Data.Repository
                     commandText = searchType == SearchTypeEnumeration.SimpleSearch
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoHookDefinition>(commandText, searchInfo.Filter
+                    return connection.Query<DtoDeviceDoorBase>(commandText, searchInfo.Filter
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
 
                 commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
-                return (connection.Query<DtoHookDefinition>(commandText,
+                return (connection.Query<DtoDeviceDoorBase>(commandText,
                     commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
             }
         }

@@ -193,6 +193,7 @@
     <Compile Include="Definition\AttendanceVerificationStyleEnumeration.cs" />
     <Compile Include="Definition\LogLevelGuardianControllerEnumeration.cs" />
     <Compile Include="Dto\DtoDeviceDoor.cs" />
+    <Compile Include="Dto\DtoDeviceDoorBase.cs" />
     <Compile Include="Dto\DtoDeviceSettings.cs" />
     <Compile Include="Dto\DtoDatabaseEntityBase.cs" />
     <Compile Include="Dto\DtoDeviceInvalidAttendanceImage.cs" />
@@ -300,6 +301,8 @@
     <Compile Include="ExtensionsAndUtilities\CollectionHelper.cs" />
     <Compile Include="ExtensionsAndUtilities\DateTimeHelper.cs" />
     <Compile Include="Filter\DeviceFilter.cs" />
+    <Compile Include="Filter\DeviceDoorBaseFilter.cs" />
+    <Compile Include="Filter\DeviceDoorBaseSortEnumeration.cs" />
     <Compile Include="Filter\DeviceNotSentCommandsFilter.cs" />
     <Compile Include="Filter\DeviceSortEnumeration.cs" />
     <Compile Include="Filter\HookDefinitionFilter.cs" />

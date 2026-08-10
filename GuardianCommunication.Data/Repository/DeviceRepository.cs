@@ -38,6 +38,7 @@ namespace GuardianCommunication.Data.Repository
         SELECT
               d.*
             , loc.[LocationNumber]    AS LocationNumber
+            , dt.[DeviceTypeNumber]   AS DeviceTypeNumber
             , dt.[ProducerNumber]     AS ProducerNumber
             , dt.[SdkVersion]         AS SdkVersion
             , dt.[DeviceTypeCode]     AS DeviceTypeCode

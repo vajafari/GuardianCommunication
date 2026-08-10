@@ -202,7 +202,7 @@ namespace GuardianCommunication.Data.Repository
 					, dc.[ResponseTime] AS ResponseTime
 					, dc.[ResponseValue] AS ResponseValue
 					, dc.[CommandType] AS CommandType
-					, dc.[EmployeeNumber] AS EmployeeNumber
+					, dc.[UserIdOnDevice] AS UserIdOnDevice
 					, dc.[RetryCount] AS RetryCount
 					, dc.[MaxRetry] AS MaxRetry
 					, dc.[Priority] AS Priority
@@ -227,7 +227,7 @@ namespace GuardianCommunication.Data.Repository
 					 , tmp.ResponseTime
 					 , tmp.ResponseValue
 					 , tmp.CommandType
-					 , tmp.EmployeeNumber
+					 , tmp.UserIdOnDevice
 					 , tmp.RetryCount
 					 , tmp.MaxRetry
 					 , tmp.Priority
@@ -248,7 +248,7 @@ namespace GuardianCommunication.Data.Repository
 								, dc.[ResponseTime] AS ResponseTime
 								, dc.[ResponseValue] AS ResponseValue
 								, dc.[CommandType] AS CommandType
-								, dc.[EmployeeNumber] AS EmployeeNumber
+								, dc.[UserIdOnDevice] AS UserIdOnDevice
 								, dc.[RetryCount] AS RetryCount
 								, dc.[MaxRetry] AS MaxRetry
 								, dc.[Priority] AS Priority
@@ -275,7 +275,7 @@ namespace GuardianCommunication.Data.Repository
 					, dc.[ResponseTime] AS ResponseTime
 					, dc.[ResponseValue] AS ResponseValue
 					, dc.[CommandType] AS CommandType
-					, dc.[EmployeeNumber] AS EmployeeNumber
+					, dc.[UserIdOnDevice] AS UserIdOnDevice
 					, dc.[RetryCount] AS RetryCount
 					, dc.[MaxRetry] AS MaxRetry
 					, dc.[Priority] AS Priority
@@ -302,7 +302,7 @@ namespace GuardianCommunication.Data.Repository
 					 , tmp.ResponseTime
 					 , tmp.ResponseValue
 					 , tmp.CommandType
-					 , tmp.EmployeeNumber
+					 , tmp.UserIdOnDevice
 					 , tmp.RetryCount
 					 , tmp.MaxRetry
 					 , tmp.Priority
@@ -325,7 +325,7 @@ namespace GuardianCommunication.Data.Repository
 								, dc.[ResponseTime] AS ResponseTime
 								, dc.[ResponseValue] AS ResponseValue
 								, dc.[CommandType] AS CommandType
-								, dc.[EmployeeNumber] AS EmployeeNumber
+								, dc.[UserIdOnDevice] AS UserIdOnDevice
 								, dc.[RetryCount] AS RetryCount
 								, dc.[MaxRetry] AS MaxRetry
 								, dc.[Priority] AS Priority

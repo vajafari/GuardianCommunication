@@ -46,7 +46,7 @@ namespace GuardianCommunication.Data.Repository
             {
                 { AttendanceSortEnumeration.Id, "att.[Id]" },
                 { AttendanceSortEnumeration.AttendanceDate, "att.[AttendanceDateTime]" },
-                { AttendanceSortEnumeration.PersonNumberOnDevice, "att.[PersonNumberOnDevice]" }
+                { AttendanceSortEnumeration.UserIdOnDevice, "att.[UserIdOnDevice]" }
             };
 
 
@@ -75,7 +75,7 @@ namespace GuardianCommunication.Data.Repository
         private static readonly string CheckExistenceCommand =
             $@"	SELECT  COUNT(att.[Id])   
 				FROM [com].[Attendance] att
-				WHERE  att.[PersonNumberOnDevice] = @PersonNumberOnDevice
+				WHERE  att.[UserIdOnDevice] = @PersonNumberOnDevice
                        AND att.[AttendanceSource] != {(int)AttendanceSourceEnumeration.Manual}
 					   AND ({{0}})";
 
@@ -100,7 +100,7 @@ namespace GuardianCommunication.Data.Repository
                 INSERT INTO [com].[Attendance]
                 (
                      [Id]
-                   , [PersonNumberOnDevice]
+                   , [UserIdOnDevice]
                    , [AttendanceDateTime]
                    , [DeviceId]
                    , [CameraId]
@@ -120,8 +120,8 @@ namespace GuardianCommunication.Data.Repository
                 VALUES
                 (
                      @CurrentId
-                   , @PersonNumberOnDevice
-                   , @Attendance
+                   , @UserIdOnDevice
+                   , @AttendanceDateTime
                    , @DeviceId
                    , @CameraId
                    , @ReaderDeviceId
@@ -149,7 +149,7 @@ namespace GuardianCommunication.Data.Repository
                     INSERT INTO [com].[Attendance]
                     (
                          [Id]
-                       , [PersonNumberOnDevice]
+                       , [UserIdOnDevice]
                        , [AttendanceDateTime]
                        , [DeviceId]
                        , [CameraId]
@@ -169,8 +169,8 @@ namespace GuardianCommunication.Data.Repository
                     VALUES
                     (
                          @CurrentId
-                       , @PersonNumberOnDevice
-                       , @Attendance
+                       , @UserIdOnDevice
+                       , @AttendanceDateTime
                        , @DeviceId
                        , @CameraId
                        , @ReaderDeviceId
@@ -225,7 +225,7 @@ namespace GuardianCommunication.Data.Repository
                 INSERT INTO [com].[Attendance]
                 (
                      [Id]
-                   , [PersonNumberOnDevice]
+                   , [UserIdOnDevice]
                    , [AttendanceDateTime]
                    , [DeviceId]
                    , [CameraId]
@@ -245,8 +245,8 @@ namespace GuardianCommunication.Data.Repository
                 VALUES
                 (
                      @CurrentId
-                   , @PersonNumberOnDevice
-                   , @Attendance
+                   , @UserIdOnDevice
+                   , @AttendanceDateTime
                    , @DeviceId
                    , @CameraId
                    , @ReaderDeviceId
@@ -275,7 +275,7 @@ namespace GuardianCommunication.Data.Repository
                     INSERT INTO [com].[Attendance]
                     (
                          [Id]
-                       , [PersonNumberOnDevice]
+                       , [UserIdOnDevice]
                        , [AttendanceDateTime]
                        , [DeviceId]
                        , [CameraId]
@@ -295,8 +295,8 @@ namespace GuardianCommunication.Data.Repository
                     VALUES
                     (
                          @CurrentId
-                       , @PersonNumberOnDevice
-                       , @Attendance
+                       , @UserIdOnDevice
+                       , @AttendanceDateTime
                        , @DeviceId
                        , @CameraId
                        , @ReaderDeviceId
@@ -323,7 +323,7 @@ namespace GuardianCommunication.Data.Repository
 
         private const string MarkAsSentCommand =
             @"	UPDATE        [com].[Attendance]
-					SET IsSent = 1
+					SET IsSentToGuardian = 1
 				WHERE  Id IN @Ids";
 
 
@@ -343,11 +343,13 @@ namespace GuardianCommunication.Data.Repository
                 }
                 if (filter.IsSent.HasValue)
                 {
-                    sb.AppendLine($" AND att.[IsSent] = @{nameof(filter.IsSent)}");
+                    sb.AppendLine($" AND att.[IsSentToGuardian] = @{nameof(filter.IsSent)}");
                 }
                 if (filter.IsHooked.HasValue)
                 {
-                    sb.AppendLine($" AND att.[IsHooked] = @{nameof(filter.IsHooked)}");
+                    sb.AppendLine(filter.IsHooked.Value
+                        ? " AND EXISTS (SELECT 1 FROM [com].[AttendanceHookDefinition] ahd WHERE ahd.[AttendanceId] = att.[Id] AND ahd.[IsSent] = 1)"
+                        : " AND NOT EXISTS (SELECT 1 FROM [com].[AttendanceHookDefinition] ahd WHERE ahd.[AttendanceId] = att.[Id] AND ahd.[IsSent] = 1)");
                 }
             }
 
@@ -585,7 +587,7 @@ namespace GuardianCommunication.Data.Repository
             return $@"NOT EXISTS (
                                         SELECT  *
                                         FROM [com].[Attendance] att
-                                        WHERE   att.[PersonNumberOnDevice] = @PersonNumberOnDevice
+                                        WHERE   att.[UserIdOnDevice] = @PersonNumberOnDevice
                                                 AND att.[AttendanceSource] != {(int)AttendanceSourceEnumeration.Manual}
                                                 AND ({string.Join("\n OR \n", conditions)})
                                     )";

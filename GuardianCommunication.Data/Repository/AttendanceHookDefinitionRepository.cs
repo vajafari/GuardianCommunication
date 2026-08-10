@@ -93,15 +93,15 @@ namespace GuardianCommunication.Data.Repository
                 }
                 if (filter.RetryCountFrom.HasValue)
                 {
-                    sb.AppendLine($" AND att.[RetryCount] >= @{nameof(filter.RetryCountFrom)}");
+                    sb.AppendLine($" AND ahd.[RetryCount] >= @{nameof(filter.RetryCountFrom)}");
                 }
                 if (filter.RetryCountTo.HasValue)
                 {
-                    sb.AppendLine($" AND att.[RetryCount] <= @{nameof(filter.RetryCountTo)}");
+                    sb.AppendLine($" AND ahd.[RetryCount] <= @{nameof(filter.RetryCountTo)}");
                 }
                 if (filter.IsSent.HasValue)
                 {
-                    sb.AppendLine($" AND att.[IsSent] = @{nameof(filter.IsSent)}");
+                    sb.AppendLine($" AND ahd.[IsSent] = @{nameof(filter.IsSent)}");
                 }
             }
 
