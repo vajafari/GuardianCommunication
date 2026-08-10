@@ -2,6 +2,9 @@
 using System.Text;
 using System.Text.RegularExpressions;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
 using Newtonsoft.Json;
 
 namespace GuardianCommunication.Data.Logger

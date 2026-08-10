@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
@@ -6,7 +7,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
 	public class UpdateFirmwareModel
 	{
         [DataMember]
-        public DeviceCommunicationModel DeviceInfo { get; set; }
+		public Guid DeviceId { get; set; }
         [DataMember]
         public string FileName { get; set; }
         [DataMember]

@@ -52,10 +52,10 @@ namespace GuardianCommunication.Shared.SharedSettings
 #if DEBUG
                 _connectionConfig = new ConnectionConfiguration()
                 {
-                    Timeout = SqlCommandTimeout,
-                    LongTimeout = SqlCommandTimeoutLong,
+                    CommandTimeout = SqlCommandTimeout,
+                    LongCommandTimeout = SqlCommandTimeoutLong,
                     ConnectionString = ConfigurationHelper.GetApplicationSettingValue<string>("ConnectionStringDevelop"),
-                    KarnamaLogConnectionString = ConfigurationHelper.GetApplicationSettingValue<string>("LogConnectionStringDevelop")
+                    LogConnectionString = ConfigurationHelper.GetApplicationSettingValue<string>("LogConnectionStringDevelop")
 
                 };
 #else 
@@ -204,17 +204,6 @@ namespace GuardianCommunication.Shared.SharedSettings
                 if (_logLevelGuardianController.HasValue) return _logLevelGuardianController.Value;
                 _logLevelGuardianController = (LogLevelGuardianControllerEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelGuardianController");
                 return _logLevelGuardianController.Value;
-            }
-        }
-
-        private static LogLevelCameraEnumeration? _logLevelCamera;
-        public static LogLevelCameraEnumeration LogLevelCamera
-        {
-            get
-            {
-                if (_logLevelCamera.HasValue) return _logLevelCamera.Value;
-                _logLevelCamera = (LogLevelCameraEnumeration)ConfigurationHelper.GetApplicationSettingValue<long>("LogLevelCamera");
-                return _logLevelCamera.Value;
             }
         }
 
