@@ -30,18 +30,6 @@ namespace GuardianCommunication.Shared.Dto
 
         public List<DtoUserIris> IrisDataList { get; set; }
 
-        public DtoPadisControllerUserAccessData PadisControllerUserAccessData { get; set; }
-
-        public List<int> TimeZones { get; set; } = new List<int>();
-
-        public List<int> SupremaSdk1AccessGroups { get; set; } = new List<int>();
-
-        public List<int> SupremaSdk2AccessGroups { get; set; } = new List<int>();
-
-        public string VirdiAccessGroupCode { get; set; }
-        
-        public int? TimyWeekTimezoneDeviceIndex { get; set; }
-        
         public string ElevatorInfoInJsonFormat { get; set; }
 
         public string CabinetInfoInJsonFormat { get; set; }

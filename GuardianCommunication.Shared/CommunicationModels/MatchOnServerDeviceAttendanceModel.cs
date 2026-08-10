@@ -6,7 +6,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
     public class MatchOnServerDeviceAttendanceModel
     {
         public long Id { get; set; }
-        public long UserId { get; set; }
+        public long UserIdOnDevice { get; set; }
         public int VerificationStyle { get; set; }
         public double AttendanceDateTime { get; set; }
         public AttendanceSourceEnumeration AttendanceSource { get; set; }

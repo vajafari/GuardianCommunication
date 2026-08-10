@@ -4,11 +4,11 @@ using System.Runtime.Serialization;
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-    public class DeviceConnectionChangedModel
+    public class FingerEnrolledModel
     {
 	    [DataMember]
-	    public bool IsConnected { get; set; }
+	    public UserFingerModel FingerInfo { get; set; }
 	    [DataMember]
-	    public Guid DeviceId { get; set; }
+	    public Guid UserId { get; set; }
     }
 }

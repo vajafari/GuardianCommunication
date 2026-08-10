@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
@@ -6,6 +7,6 @@ namespace GuardianCommunication.Shared.CommunicationModels
 	public class DataCountModel
 	{
 		public int Count { get; set; }
-		public int DeviceNumber { get; set; }
+		public Guid DeviceId { get; set; }
 	}
 }

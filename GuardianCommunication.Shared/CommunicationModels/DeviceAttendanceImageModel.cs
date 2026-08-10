@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
@@ -8,9 +9,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public double AttendanceDateTime { get; set; }
         [DataMember]
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
         [DataMember]
-        public long UserId { get; set; }
+        public long UserIdOnDevice { get; set; }
         [DataMember]
         public string Image { get; set; }
     }

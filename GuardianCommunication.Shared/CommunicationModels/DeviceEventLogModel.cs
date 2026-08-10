@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.CommunicationModels
@@ -9,7 +10,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public string Id { get; set; }
         [DataMember]
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
         [DataMember]
         public ProducerEnumeration Producer { get; set; }
         [DataMember]
@@ -19,6 +20,6 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public int EventCode { get; set; }
         [DataMember]
-        public long? EmployeeNumber { get; set; }
+        public long? UserIdOnDevice { get; set; }
     }
 }

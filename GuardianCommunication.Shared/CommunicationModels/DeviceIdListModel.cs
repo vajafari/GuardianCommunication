@@ -1,17 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-	public class GetAttendanceModel
+	public class DeviceIdListModel
 	{
 		[DataMember]
-		public Guid DeviceId { get; set; }
-
-		[DataMember]
-		public bool DeleteAttendance { get; set; }
-
-
+		public List<Guid> DeviceIds { get; set; }
 	}
 }

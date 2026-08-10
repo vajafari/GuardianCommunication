@@ -11,6 +11,7 @@ namespace GuardianCommunication.Shared.Dto
         public Guid? DeviceId { get; set; }
         public Guid? CameraId { get; set; }
         public Guid? ReaderDeviceId { get; set; }
+        public Guid? DoorId { get; set; }
         public int? VerificationStyle { get; set; }
         public string RfCardNumber { get; set; }
         public int StatusCode { get; set; }

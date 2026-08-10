@@ -1,10 +1,11 @@
-﻿using GuardianCommunication.Shared.HardwareDefinition;
+﻿using System;
+using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
     public class ServerMatchDataModel
     {
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
 
         public double EventDateTime { get; set; }
 
@@ -16,7 +17,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
 
         public string RfCardNumber { get; set; }
 
-        public long? UserId { get; set; }
+        public long? UserIdOnDevice { get; set; }
 
         public string Password { get; set; }
 

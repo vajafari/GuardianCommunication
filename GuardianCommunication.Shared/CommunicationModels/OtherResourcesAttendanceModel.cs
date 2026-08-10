@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.HardwareDefinition;
 
@@ -8,13 +9,13 @@ namespace GuardianCommunication.Shared.CommunicationModels
     public class OtherResourcesAttendanceModel
     {
         [DataMember]
-        public long Id { get; set; }
+        public Guid Id { get; set; }
         [DataMember]
-        public int? DeviceNumber { get; set; }
+        public Guid? DeviceId { get; set; }
         [DataMember]
-        public int? ReaderDeviceNumber { get; set; }
+        public Guid? ReaderDeviceId { get; set; }
         [DataMember]
-        public long EmployeeNumber { get; set; }
+        public long UserIdOnDevice { get; set; }
         [DataMember]
         public double AttendanceDateTime { get; set; }
         [DataMember]
@@ -22,7 +23,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public AttendanceSourceEnumeration AttendanceSource { get; set; }
         [DataMember]
-        public bool IsSent { get; set; }
+        public bool IsSentToGuardian { get; set; }
         [DataMember]
         public ModuleEnumeration ModuleId { get; set; }
         [DataMember]
@@ -30,12 +31,12 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public DeviceIoTypeEnumeration IoType { get; set; }
         [DataMember]
-        public int? CameraId { get; set; }
+        public Guid? CameraId { get; set; }
         [DataMember]
         public string RfCardNumber { get; set; }
         [DataMember]
         public int? VerificationStyle { get; set; }
         [DataMember]
-        public int? DoorId { get; set; }
+        public Guid? DoorId { get; set; }
     }
 }

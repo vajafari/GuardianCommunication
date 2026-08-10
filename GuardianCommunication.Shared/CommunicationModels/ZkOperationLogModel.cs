@@ -1,4 +1,5 @@
 ﻿
+using System;
 using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
@@ -9,7 +10,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
 		[DataMember]
 		public int Id { get; set; }
 		[DataMember]
-		public int DeviceNumber { get; set; }
+		public Guid DeviceId { get; set; }
 		[DataMember]
 		public double OperationTime { get; set; }
 		[DataMember]

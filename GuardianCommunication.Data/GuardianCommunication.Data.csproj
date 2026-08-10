@@ -140,14 +140,9 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
-    <Content Include="DatabaseFile\Persist-Session..sql" />
-    <Content Include="DatabaseFile\Scheduled-Call-API-Data-For-Visitor.sql">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-    </Content>
     <Content Include="DatabaseFile\Communication-Database-Script.sql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
-    <None Include="Data Generator\Device command generator.sqlgen" />
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

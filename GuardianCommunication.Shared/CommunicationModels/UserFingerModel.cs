@@ -3,13 +3,16 @@
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-	public class ScanFingerModel
+	public class UserFingerModel
 	{
 		[DataMember]
-		public DeviceCommunicationModel DeviceInfo { get; set; }
+		public long UserIdOnDevice { get; set; }
 		[DataMember]
-        public UserModel EmployeeData { get; set; }
-        [DataMember]
+		public string TemplateData { get; set; }
+		[DataMember]
 		public int FingerIndex { get; set; }
+		[DataMember]
+		public uint CheckSum { get; set; }
+
 	}
 }

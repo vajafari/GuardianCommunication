@@ -1,18 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
-using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-	public class GetUserByIdModel
+	public class DeviceAndUserListModel
 	{
 		[DataMember]
 		public Guid DeviceId { get; set; }
 		[DataMember]
-		public long UserIdOnDevice { get; set; }
-		[DataMember]
-		public TemplateTypeEnumeration TemplateType { get; set; }
-
+		public List<UserModel> EmployeeInfos { get; set; }
 	}
 }

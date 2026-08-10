@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.CommunicationModels
@@ -9,7 +10,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public long Id { get; set; }
         [DataMember]
-        public long? EmployeeNumber { get; set; }
+        public long? UserIdOnDevice { get; set; }
         [DataMember]
         public int VerificationStyle { get; set; }
         [DataMember]
@@ -17,7 +18,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public AttendanceSourceEnumeration AttendanceSource { get; set; }
         [DataMember]
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
         [DataMember]
         public int StatusCode { get; set; }
         [DataMember]
@@ -27,6 +28,6 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public string Image { get; set; }
         [DataMember]
-        public int? DoorId { get; set; }
+        public Guid? DoorId { get; set; }
     }
 }

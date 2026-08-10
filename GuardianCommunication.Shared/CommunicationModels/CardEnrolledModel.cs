@@ -4,11 +4,13 @@ using System.Runtime.Serialization;
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-    public class DeviceConnectionChangedModel
+    public class CardEnrolledModel
     {
-	    [DataMember]
-	    public bool IsConnected { get; set; }
-	    [DataMember]
+		[DataMember]
+	    public string Card { get; set; }
+		[DataMember]
 	    public Guid DeviceId { get; set; }
+        [DataMember]
+        public long UserIdOnDevice { get; set; }
     }
 }

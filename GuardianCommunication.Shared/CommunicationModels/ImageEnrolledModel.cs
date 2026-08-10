@@ -4,14 +4,12 @@ using System.Runtime.Serialization;
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-	public class GetAttendanceModel
-	{
+    public class ImageEnrolledModel
+    {
 		[DataMember]
-		public Guid DeviceId { get; set; }
+	    public UserFaceModel FaceInfo { get; set; }
 
 		[DataMember]
-		public bool DeleteAttendance { get; set; }
-
-
-	}
+	    public Guid DeviceId { get; set; }
+    }
 }

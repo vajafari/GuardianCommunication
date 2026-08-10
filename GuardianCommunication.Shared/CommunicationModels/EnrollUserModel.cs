@@ -7,7 +7,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
 	public class EmployeeAndDeviceParamsModel
 	{
 		[DataMember]
-		public List<EmployeeAndDeviceModel> Records { get; set; }
+		public List<UserAndDeviceModel> Records { get; set; }
 
 	}
 }

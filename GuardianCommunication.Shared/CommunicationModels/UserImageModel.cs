@@ -3,12 +3,12 @@
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-    public class NewEmployeeImageEnrolledModel
+    public class UserImageModel
     {
 	    [DataMember]
-		public UserImageModel EmployeeImage { get; set; }
+		public string EmployeeImage { get; set; }
 		[DataMember]
-		public int DeviceNumber { get; set; }
+		public long UserIdOnDevice { get; set; }
 
     }
 }
