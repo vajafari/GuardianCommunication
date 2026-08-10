@@ -6,7 +6,7 @@ namespace GuardianCommunication.Shared.Dto
     {
         public DateTime AttendanceDateTime { get; set; }
         public long UserIdInDevice { get; set; }
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
         public byte[] Image { get; set; }
     }
 }

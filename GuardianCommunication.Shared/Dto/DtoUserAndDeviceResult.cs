@@ -4,10 +4,10 @@ using GuardianCommunication.Shared.OperationResult;
 namespace GuardianCommunication.Shared.Dto
 {
 
-	public class DtoEmployeeAndDeviceResult
+	public class DtoUserAndDeviceResult
 	{
 		public Guid DeviceId { get; set; }
-		public Guid EmployeeId { get; set; }
+		public long UserIdOnDevice { get; set; }
 		public OperationResultEnumeration Result { get; set; }
 	}
 

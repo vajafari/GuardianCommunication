@@ -2,6 +2,7 @@
 
 namespace GuardianCommunication.Shared.Dto
 {
+	// TODO: Change this
 	public class DtoDeviceCommunicationData
 	{
 		public int DeviceNumber { get; set; }

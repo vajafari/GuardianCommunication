@@ -1,4 +1,5 @@
-﻿using GuardianCommunication.Shared.Definition;
+﻿using System;
+using GuardianCommunication.Shared.Definition;
 
 namespace GuardianCommunication.Shared.Dto
 {
@@ -13,7 +14,7 @@ namespace GuardianCommunication.Shared.Dto
 
 		public DeviceCommandTypeEnumeration CommandType { get; set; }
 
-		public int DeviceNumber { get; set; }
+		public Guid DeviceId { get; set; }
 
 		public string DeviceContent { get; set; }
 		

@@ -1,8 +1,8 @@
 ﻿namespace GuardianCommunication.Shared.Dto
 {
-	public class DtoEmployeeFace
-	{
-		public long EmployeeNumber { get; set; }
+	public class DtoUserFace
+    {
+		public long UserIdOnDevice { get; set; }
 		public byte[] TemplateData { get; set; }
 		public int FaceIndex { get; set; }
 		public uint CheckSum { get; set; }

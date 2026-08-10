@@ -5,7 +5,7 @@ namespace GuardianCommunication.Shared.Dto
 {
     public class DtoServerMatchData
     {
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
 
         public DateTime EventDateTime { get; set; }
 
@@ -17,7 +17,7 @@ namespace GuardianCommunication.Shared.Dto
 
         public string RfCardNumber { get; set; }
 
-        public long? UserId { get; set; }
+        public long? UserIdOnDevice { get; set; }
 
         public string Password { get; set; }
 

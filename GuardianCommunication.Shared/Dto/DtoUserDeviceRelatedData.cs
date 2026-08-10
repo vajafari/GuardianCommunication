@@ -22,13 +22,13 @@ namespace GuardianCommunication.Shared.Dto
 
         public bool IsEnable { get; set; }
 
-        public List<DtoEmployeeFinger> FingerDataList { get; set; } = new List<DtoEmployeeFinger>();
+        public List<DtoUserFinger> FingerDataList { get; set; } = new List<DtoUserFinger>();
 
-        public List<DtoEmployeeFace> FaceDataList { get; set; } = new List<DtoEmployeeFace>();
+        public List<DtoUserFace> FaceDataList { get; set; } = new List<DtoUserFace>();
 
-        public List<DtoEmployeePalm> PalmDataList { get; set; }
+        public List<DtoUserPalm> PalmDataList { get; set; }
 
-        public List<DtoEmployeeIris> IrisDataList { get; set; }
+        public List<DtoUserIris> IrisDataList { get; set; }
 
         public DtoPadisControllerUserAccessData PadisControllerUserAccessData { get; set; }
 
@@ -58,10 +58,10 @@ namespace GuardianCommunication.Shared.Dto
 
         public void ClearTemplateData()
         {
-            FingerDataList = new List<DtoEmployeeFinger>();
-            FaceDataList = new List<DtoEmployeeFace>();
-            PalmDataList = new List<DtoEmployeePalm>();
-            IrisDataList = new List<DtoEmployeeIris>();
+            FingerDataList = new List<DtoUserFinger>();
+            FaceDataList = new List<DtoUserFace>();
+            PalmDataList = new List<DtoUserPalm>();
+            IrisDataList = new List<DtoUserIris>();
             VisibleLightImage = null;
         }
 

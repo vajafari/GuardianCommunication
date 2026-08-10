@@ -4,7 +4,7 @@ using GuardianCommunication.Shared.Definition;
 namespace GuardianCommunication.Shared.Dto
 {
 
-    public class DtoEmployeeAndDeviceParam
+    public class DtoUserAndDeviceParam
     {
         public Guid DeviceId { get; set; }
         public DtoUserDeviceRelatedData UserInfo { get; set; }

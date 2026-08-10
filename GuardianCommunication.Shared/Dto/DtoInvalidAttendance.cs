@@ -7,7 +7,7 @@ namespace GuardianCommunication.Shared.Dto
     public class DtoInvalidAttendance
     {
         public long Id { get; set; }
-        public long? EmployeeNumber { get; set; }
+        public long? UserIdOnDevice { get; set; }
         public string RfCardNumber { get; set; }
         public int? VerificationStyle { get; set; }
         public DateTime AttendanceDateTime { get; set; }

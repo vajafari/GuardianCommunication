@@ -3,7 +3,7 @@
 
     namespace Communication.Shared.CommunicationModels
     {
-        public class DtoEmployeeEnrolledSetting
+        public class DtoUserEnrolledSetting
         {
             public bool OverwriteRfCardNumber { get; set; }
             public bool OverwriteDevicePassword { get; set; }
@@ -11,9 +11,9 @@
             public bool OverwriteVerificationStyle { get; set; }
             public bool OverwriteIsEnabled { get; set; }
 
-            public static DtoEmployeeEnrolledSetting GetAllSettingInstance()
+            public static DtoUserEnrolledSetting GetAllSettingInstance()
             {
-                return new DtoEmployeeEnrolledSetting
+                return new DtoUserEnrolledSetting
                 {
                     OverwriteRfCardNumber = true,
                     OverwriteDevicePassword = true,

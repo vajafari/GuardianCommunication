@@ -4,7 +4,7 @@
     {
         public bool IsSuccessfullyProcessed { get; set; }
 
-        public long UserId { get; set; }
+        public long UserIdOnDevice { get; set; }
 
     }
 }

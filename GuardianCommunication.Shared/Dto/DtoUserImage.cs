@@ -1,8 +1,8 @@
 ﻿namespace GuardianCommunication.Shared.Dto
 {
-	public class DtoEmployeeImage
+	public class DtoUserImage
 	{
-		public long EmployeeNumber { get; set; }
+		public long UserIdOnDevice { get; set; }
 		public byte[] PhotoData { get; set; }
 
 	}

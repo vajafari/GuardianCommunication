@@ -133,7 +133,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 result.Add(new DeviceInvalidAttendanceModel
                 {
                     DeviceNumber = attendance.DeviceNumber ?? 0,
-                    EmployeeNumber = attendance.EmployeeNumber,
+                    EmployeeNumber = attendance.UserIdOnDevice,
                     VerificationStyle = attendance.VerificationStyle ?? 0,
                     AttendanceDateTime = attendance.AttendanceDateTime.ToNumericDateTime(),
                     AttendanceSource = attendance.AttendanceSource,
@@ -160,11 +160,11 @@ namespace GuardianCommunication.Shared.CommunicationModels
             {
                 Password = inputItem.Password,
                 RfCardNumber = inputItem.RfCardNumber,
-                DeviceNumber = inputItem.DeviceNumber,
+                DeviceNumber = inputItem.DeviceId,
                 MatchType = inputItem.MatchType,
                 EventDateTime = inputItem.EventDateTime.ToNumericDateTime(),
                 TemplateData = inputItem.TemplateData != null ? Convert.ToBase64String(inputItem.TemplateData) : null,
-                UserId = inputItem.UserId,
+                UserId = inputItem.UserIdOnDevice,
                 TemplateType = inputItem.TemplateType,
                 DoorId = inputItem.DoorId,
             };
@@ -215,7 +215,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             {
                 result.Add(new DeviceEventLogModel
                 {
-                    DeviceNumber = item.DeviceNumber,
+                    DeviceNumber = item.DeviceId,
                     EventDateTime = item.EventDateTime.ToNumericDateTime(),
                     Id = item.Id.ToString(),
                     EmployeeNumber = item.UserIdOnDevice,
@@ -233,7 +233,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return MapDtoDeviceEventLogToDeviceEventLogModel(new List<DtoDeviceEventLog> { inputItem }).FirstOrDefault();
         }
 
-        public static List<EmployeeFingerModel> MapDtoEmployeeFingerToEmployeeFingerModel(List<DtoEmployeeFinger> inputItems)
+        public static List<EmployeeFingerModel> MapDtoEmployeeFingerToEmployeeFingerModel(List<DtoUserFinger> inputItems)
         {
             var result = new List<EmployeeFingerModel>();
             if (inputItems.IsCollectionNullOrEmpty())
@@ -245,7 +245,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             {
                 result.Add(new EmployeeFingerModel
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    EmployeeNumber = model.UserIdOnDevice,
                     CheckSum = model.CheckSum,
                     FingerIndex = model.FingerIndex,
                     TemplateData = Convert.ToBase64String(model.TemplateData)
@@ -255,18 +255,18 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static EmployeeFingerModel MapDtoEmployeeFingerToEmployeeFingerModel(DtoEmployeeFinger inputItem)
+        public static EmployeeFingerModel MapDtoEmployeeFingerToEmployeeFingerModel(DtoUserFinger inputItem)
         {
             if (inputItem != null)
             {
-                return MapDtoEmployeeFingerToEmployeeFingerModel(new List<DtoEmployeeFinger> { inputItem }).FirstOrDefault();
+                return MapDtoEmployeeFingerToEmployeeFingerModel(new List<DtoUserFinger> { inputItem }).FirstOrDefault();
             }
             return null;
         }
 
-        public static List<DtoEmployeeFinger> MapToEmployeeFingerModelDtoEmployeeFinger(List<EmployeeFingerModel> inputItems)
+        public static List<DtoUserFinger> MapToEmployeeFingerModelDtoEmployeeFinger(List<EmployeeFingerModel> inputItems)
         {
-            var result = new List<DtoEmployeeFinger>();
+            var result = new List<DtoUserFinger>();
             if (inputItems.IsCollectionNullOrEmpty())
             {
                 return result;
@@ -274,9 +274,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
 
             foreach (var model in inputItems)
             {
-                result.Add(new DtoEmployeeFinger
+                result.Add(new DtoUserFinger
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    UserIdOnDevice = model.EmployeeNumber,
                     CheckSum = model.CheckSum,
                     FingerIndex = model.FingerIndex,
                     TemplateData = Convert.FromBase64String(model.TemplateData)
@@ -286,7 +286,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<EmployeeFaceModel> MapDtoEmployeeFaceToEmployeeFaceModel(List<DtoEmployeeFace> inputItems)
+        public static List<EmployeeFaceModel> MapDtoEmployeeFaceToEmployeeFaceModel(List<DtoUserFace> inputItems)
         {
             var result = new List<EmployeeFaceModel>();
             if (inputItems.IsCollectionNullOrEmpty())
@@ -298,7 +298,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             {
                 result.Add(new EmployeeFaceModel
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    EmployeeNumber = model.UserIdOnDevice,
                     CheckSum = model.CheckSum,
                     FaceIndex = model.FaceIndex,
                     TemplateData = Convert.ToBase64String(model.TemplateData),
@@ -315,9 +315,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<DtoEmployeeFace> MapToEmployeeFaceModelDtoEmployeeFace(List<EmployeeFaceModel> inputItems)
+        public static List<DtoUserFace> MapToEmployeeFaceModelDtoEmployeeFace(List<EmployeeFaceModel> inputItems)
         {
-            var result = new List<DtoEmployeeFace>();
+            var result = new List<DtoUserFace>();
             if (inputItems.IsCollectionNullOrEmpty())
             {
                 return result;
@@ -325,9 +325,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
 
             foreach (var model in inputItems)
             {
-                result.Add(new DtoEmployeeFace
+                result.Add(new DtoUserFace
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    UserIdOnDevice = model.EmployeeNumber,
                     CheckSum = model.CheckSum,
                     FaceIndex = model.FaceIndex,
                     TemplateData = Convert.FromBase64String(model.TemplateData),
@@ -344,18 +344,18 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static EmployeeFaceModel MapDtoEmployeeFaceToEmployeeFaceModel(DtoEmployeeFace inputItem)
+        public static EmployeeFaceModel MapDtoEmployeeFaceToEmployeeFaceModel(DtoUserFace inputItem)
         {
             if (inputItem != null)
             {
-                return MapDtoEmployeeFaceToEmployeeFaceModel(new List<DtoEmployeeFace> { inputItem }).FirstOrDefault();
+                return MapDtoEmployeeFaceToEmployeeFaceModel(new List<DtoUserFace> { inputItem }).FirstOrDefault();
             }
             return null;
         }
 
-        public static List<DtoEmployeePalm> MapToEmployeePalmModelDtoEmployeePalm(List<EmployeePalmModel> inputItems)
+        public static List<DtoUserPalm> MapToEmployeePalmModelDtoEmployeePalm(List<EmployeePalmModel> inputItems)
         {
-            var result = new List<DtoEmployeePalm>();
+            var result = new List<DtoUserPalm>();
             if (inputItems.IsCollectionNullOrEmpty())
             {
                 return result;
@@ -363,9 +363,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
 
             foreach (var model in inputItems)
             {
-                result.Add(new DtoEmployeePalm
+                result.Add(new DtoUserPalm
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    UserIdOnDevice = model.EmployeeNumber,
                     CheckSum = model.CheckSum,
                     Index = model.Index,
                     TemplateData = Convert.FromBase64String(model.TemplateData),
@@ -376,9 +376,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<DtoEmployeeIris> MapToEmployeeIrisModelDtoEmployeeIris(List<EmployeeIrisModel> inputItems)
+        public static List<DtoUserIris> MapToEmployeeIrisModelDtoEmployeeIris(List<EmployeeIrisModel> inputItems)
         {
-            var result = new List<DtoEmployeeIris>();
+            var result = new List<DtoUserIris>();
             if (inputItems.IsCollectionNullOrEmpty())
             {
                 return result;
@@ -386,9 +386,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
 
             foreach (var model in inputItems)
             {
-                result.Add(new DtoEmployeeIris
+                result.Add(new DtoUserIris
                 {
-                    EmployeeNumber = model.EmployeeNumber,
+                    UserIdOnDevice = model.EmployeeNumber,
                     TemplateData = Convert.FromBase64String(model.TemplateData),
                 });
             }
@@ -479,7 +479,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<EmployeePalmModel> MapDtoEmployeePalmToEmployeePalmModel(List<DtoEmployeePalm> inputItems)
+        public static List<EmployeePalmModel> MapDtoEmployeePalmToEmployeePalmModel(List<DtoUserPalm> inputItems)
         {
             var result = new List<EmployeePalmModel>();
             if (inputItems.IsCollectionNullOrEmpty())
@@ -495,14 +495,14 @@ namespace GuardianCommunication.Shared.CommunicationModels
                     Index = model.Index,
                     TemplateData = Convert.ToBase64String(model.TemplateData),
                     Length = model.Length,
-                    EmployeeNumber = model.EmployeeNumber,
+                    EmployeeNumber = model.UserIdOnDevice,
                 });
             }
 
             return result;
         }
 
-        public static List<EmployeeIrisModel> MapDtoEmployeeIrisToEmployeeIrisModel(List<DtoEmployeeIris> inputItems)
+        public static List<EmployeeIrisModel> MapDtoEmployeeIrisToEmployeeIrisModel(List<DtoUserIris> inputItems)
         {
             var result = new List<EmployeeIrisModel>();
             if (inputItems.IsCollectionNullOrEmpty())
@@ -515,32 +515,32 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 result.Add(new EmployeeIrisModel
                 {
                     TemplateData = Convert.ToBase64String(model.TemplateData),
-                    EmployeeNumber = model.EmployeeNumber,
+                    EmployeeNumber = model.UserIdOnDevice,
                 });
             }
 
             return result;
         }
 
-        public static EmployeeIrisModel MapDtoEmployeeIrisToEmployeeIrisModel(DtoEmployeeIris inputItem)
+        public static EmployeeIrisModel MapDtoEmployeeIrisToEmployeeIrisModel(DtoUserIris inputItem)
         {
             if (inputItem != null)
             {
-                return MapDtoEmployeeIrisToEmployeeIrisModel(new List<DtoEmployeeIris>() { inputItem }).FirstOrDefault();
+                return MapDtoEmployeeIrisToEmployeeIrisModel(new List<DtoUserIris>() { inputItem }).FirstOrDefault();
             }
             return null;
         }
 
-        public static EmployeePalmModel MapDtoEmployeePalmToEmployeePalmModel(DtoEmployeePalm inputItem)
+        public static EmployeePalmModel MapDtoEmployeePalmToEmployeePalmModel(DtoUserPalm inputItem)
         {
-            return MapDtoEmployeePalmToEmployeePalmModel(new List<DtoEmployeePalm> { inputItem }).FirstOrDefault();
+            return MapDtoEmployeePalmToEmployeePalmModel(new List<DtoUserPalm> { inputItem }).FirstOrDefault();
         }
 
-        public static EmployeeImageModel MapDtoEmployeeImageToEmployeeImageModel(DtoEmployeeImage inputItem)
+        public static EmployeeImageModel MapDtoEmployeeImageToEmployeeImageModel(DtoUserImage inputItem)
         {
             return new EmployeeImageModel
             {
-                EmployeeNumber = inputItem.EmployeeNumber,
+                EmployeeNumber = inputItem.UserIdOnDevice,
                 EmployeeImage = inputItem.PhotoData != null
                     ? Convert.ToBase64String(inputItem.PhotoData)
                     : null
@@ -586,7 +586,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static EmployeeEnrolledSettingModel MapDtoEmployeeEnrolledSettingToEmployeeEnrolledSettingModel(DtoEmployeeEnrolledSetting inputItem)
+        public static EmployeeEnrolledSettingModel MapDtoEmployeeEnrolledSettingToEmployeeEnrolledSettingModel(DtoUserEnrolledSetting inputItem)
         {
             if (inputItem == null)
             {
@@ -1678,9 +1678,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
             };
         }
 
-        public static DtoEmployeeAndDeviceParam MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(EmployeeAndDeviceModel inputItem)
+        public static DtoUserAndDeviceParam MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(EmployeeAndDeviceModel inputItem)
         {
-            return new DtoEmployeeAndDeviceParam
+            return new DtoUserAndDeviceParam
             {
                 DeviceId = MapDeviceCommunicationModelToDtoDeviceCommunication(inputItem.DeviceInfo),
                 UserInfo = MapEmployeeModelToDtoEmployee(inputItem.EmployeeData),
@@ -1689,16 +1689,16 @@ namespace GuardianCommunication.Shared.CommunicationModels
             };
         }
 
-        public static List<DtoEmployeeAndDeviceParam> MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(List<EmployeeAndDeviceModel> inputItems)
+        public static List<DtoUserAndDeviceParam> MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(List<EmployeeAndDeviceModel> inputItems)
         {
-            var result = new List<DtoEmployeeAndDeviceParam>();
+            var result = new List<DtoUserAndDeviceParam>();
             if (inputItems.IsCollectionNullOrEmpty())
             {
                 return result;
             }
             foreach (var model in inputItems)
             {
-                result.Add(new DtoEmployeeAndDeviceParam
+                result.Add(new DtoUserAndDeviceParam
                 {
                     DeviceId = MapDeviceCommunicationModelToDtoDeviceCommunication(model.DeviceInfo),
                     UserInfo = MapEmployeeModelToDtoEmployee(model.EmployeeData),
@@ -1709,7 +1709,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             return result;
         }
 
-        public static List<EmployeeAndDeviceResultModel> MapDtoEmployeeAndDeviceResultToEmployeeAndDeviceResultModel(List<DtoEmployeeAndDeviceResult> inputItems)
+        public static List<EmployeeAndDeviceResultModel> MapDtoEmployeeAndDeviceResultToEmployeeAndDeviceResultModel(List<DtoUserAndDeviceResult> inputItems)
         {
             var result = new List<EmployeeAndDeviceResultModel>();
             if (inputItems.IsCollectionNullOrEmpty())
@@ -1823,7 +1823,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         {
             return new DeviceUnauthorizedAttendanceImageModel
             {
-                DeviceNumber = inputItem.DeviceNumber,
+                DeviceNumber = inputItem.DeviceId,
                 AttendanceDateTime = inputItem.AttendanceDateTime.ToNumericDateTime(),
                 Image = Convert.ToBase64String(inputItem.Image),
                 EmployeeNumber = inputItem.UserIdInDevice
