@@ -26,13 +26,15 @@ namespace GuardianCommunication.Data.Repository
         List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumberForEachDevice(
             DeviceNotSentCommandsFilter filter);
 
-        void UpdateSendData(List<Guid> ids);
+        void UpdateSendData(List<long> numericIds);
 
         void SetResponse(DtoDeviceCommandProcessingResult commandResult);
 
         void SetDescription(DtoDeviceCommandProcessingDescription commandResult);
 
         void DeleteByIds(List<Guid> ids, long? mode);
+
+        void DeleteByNumericIds(List<long> numericIds, long? mode);
 
         void DeleteByCommandIdentifiers(List<Guid> commandIdentifiers);
 
@@ -109,9 +111,10 @@ namespace GuardianCommunication.Data.Repository
                 , @VisiblilityTime
                 , @Description
                 , @CommandIdentifier
-                , @GETUTCDATE()
+                , GETUTCDATE()
                 , NULL
-            )
+            );
+            SELECT CAST(SCOPE_IDENTITY() AS BIGINT);
 			";
 
         private const string SelectUnsentCommandsForEachDeviceCommand =
@@ -164,7 +167,7 @@ namespace GuardianCommunication.Data.Repository
 						  [SendTime] = GETUTCDATE()
 						, [RetryCount] = RetryCount + 1
                         , [UpdatedAt] = GETUTCDATE()
-				WHERE  [Id] IN @Ids";
+				WHERE  [NumericId] IN @NumericIds";
 
         private const string SetResponseWithModeCommand =
             @"	UPDATE        [com].[DeviceCommand]
@@ -172,14 +175,14 @@ namespace GuardianCommunication.Data.Repository
 						  [ResponseTime] = @ResponseTime
 						, [ResponseValue] = @ResponseValue
 				        , [UpdatedAt] = GETUTCDATE()
-                WHERE  ([Id] % @Mode) = @Id";
+                WHERE  ([NumericId] % @Mode) = @NumericId";
 
         private const string SetResponseCommand =
             @"	UPDATE        [com].[DeviceCommand]
 					SET  
 						  [ResponseTime] = @ResponseTime
 						, [ResponseValue] = @ResponseValue
-				WHERE  [Id] = @Id";
+				WHERE  [NumericId] = @NumericId";
 
         private const string SetDescriptionCommand =
             @"	UPDATE        [com].[DeviceCommand]
@@ -196,6 +199,7 @@ namespace GuardianCommunication.Data.Repository
         private const string SelectWithoutContentCommand =
             @"	SELECT        
 					  dc.[Id] AS Id
+					, dc.[NumericId] AS NumericId
 					, dc.[DeviceSerialNumber] AS DeviceSerialNumber
 					, dc.[CommitTime] AS CommitTime
 					, dc.[SendTime] AS SendTime
@@ -221,6 +225,7 @@ namespace GuardianCommunication.Data.Repository
         private const string SelectWithoutContentWithPagingCommand =
             @"	SELECT         
 					   tmp.Id
+					 , tmp.NumericId
 					 , tmp.DeviceSerialNumber
 					 , tmp.CommitTime
 					 , tmp.SendTime
@@ -242,6 +247,7 @@ namespace GuardianCommunication.Data.Repository
 				        (            
 				            SELECT    ROW_NUMBER() OVER ({1}) AS  RowNumber  
 								, dc.[Id] AS Id
+								, dc.[NumericId] AS NumericId
 								, dc.[DeviceSerialNumber] AS DeviceSerialNumber
 								, dc.[CommitTime] AS CommitTime
 								, dc.[SendTime] AS SendTime
@@ -268,6 +274,7 @@ namespace GuardianCommunication.Data.Repository
         private const string SelectCommand =
             @"	SELECT        
 					  dc.[Id] AS Id
+					, dc.[NumericId] AS NumericId
 					, dc.[DeviceSerialNumber] AS DeviceSerialNumber
 					, dc.[CommandContent] AS CommandContent
 					, dc.[CommitTime] AS CommitTime
@@ -295,6 +302,7 @@ namespace GuardianCommunication.Data.Repository
         private const string SelectWithPagingCommand =
             @"	SELECT         
 					   tmp.Id
+					 , tmp.NumericId
 					 , tmp.DeviceSerialNumber
 					 , tmp.CommandContent
 					 , tmp.CommitTime
@@ -318,6 +326,7 @@ namespace GuardianCommunication.Data.Repository
 				        (            
 				            SELECT    ROW_NUMBER() OVER ({1}) AS  RowNumber  
 								, dc.[Id] AS Id
+								, dc.[NumericId] AS NumericId
 								, dc.[DeviceSerialNumber] AS DeviceSerialNumber
 								, dc.[CommandContent] AS CommandContent
 								, dc.[CommitTime] AS CommitTime
@@ -354,6 +363,14 @@ namespace GuardianCommunication.Data.Repository
         private const string DeleteByIdsCommand =
             @"	DELETE FROM        [com].[DeviceCommand]
 				WHERE  Id IN @Ids";
+
+        private const string DeleteByNumericIdsWithModeCommand =
+            @"	DELETE FROM        [com].[DeviceCommand]
+				WHERE (NumericId % @Mode) IN @NumericIds";
+
+        private const string DeleteByNumericIdsCommand =
+            @"	DELETE FROM        [com].[DeviceCommand]
+				WHERE  NumericId IN @NumericIds";
 
 
         #endregion
@@ -473,7 +490,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     if (entity != null)
                     {
-                        connection.ExecuteScalar(InsertCommand, GetInsertParameters(entity)
+                        entity.NumericId = connection.ExecuteScalar<long>(InsertCommand, GetInsertParameters(entity)
                             , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                     }
                 }
@@ -551,14 +568,14 @@ namespace GuardianCommunication.Data.Repository
             return new List<DtoUnsentCommandCountByDeviceSerialNumber>();
         }
 
-        public void UpdateSendData(List<Guid> ids)
+        public void UpdateSendData(List<long> numericIds)
         {
-            if (ids.IsCollectionNotNullOrEmpty())
+            if (numericIds.IsCollectionNotNullOrEmpty())
             {
                 using (var connection = GetConnection())
                 {
                     connection.Execute(UpdateSendDataCommand
-                        , new { Ids = ids }
+                        , new { NumericIds = numericIds }
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                 }
             }
@@ -574,7 +591,7 @@ namespace GuardianCommunication.Data.Repository
                     {
                         ResponseTime = commandResult.CommandResponseTime.ToUtc(),
                         ResponseValue = commandResult.CommandResponseResult,
-                        commandResult.Id,
+                        commandResult.NumericId,
                         commandResult.Mode,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                 }
@@ -584,7 +601,7 @@ namespace GuardianCommunication.Data.Repository
                     {
                         ResponseTime = commandResult.CommandResponseTime.ToUtc(),
                         ResponseValue = commandResult.CommandResponseResult,
-                        commandResult.Id,
+                        commandResult.NumericId,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                 }
 
@@ -600,7 +617,7 @@ namespace GuardianCommunication.Data.Repository
                     connection.Execute(SetDescriptionWithModeCommand, new
                     {
                         commandResult.Description,
-                        commandResult.Id,
+                        Id = commandResult.NumericId,
                         commandResult.Mode,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                 }
@@ -608,8 +625,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     connection.Execute(SetDescriptionCommand, new
                     {
-                        commandResult.Description,
-                        commandResult.Id,
+                        commandResult.Description, Id = commandResult.NumericId,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                 }
 
@@ -636,6 +652,33 @@ namespace GuardianCommunication.Data.Repository
                         , new
                         {
                             Ids = ids
+                        }
+                        , commandType: CommandType.Text
+                        , commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+            }
+        }
+
+        public void DeleteByNumericIds(List<long> numericIds, long? mode)
+        {
+
+            using (var connection = GetConnection())
+            {
+                if (mode.HasValue)
+                {
+                    connection.Execute(DeleteByIdsWithModeCommand,
+                        new
+                        {
+                            Mode = mode.Value,
+                            NumericIds = numericIds
+                        }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                }
+                else
+                {
+                    connection.Execute(DeleteByIdsCommand
+                        , new
+                        {
+                            NumericIds = numericIds
                         }
                         , commandType: CommandType.Text
                         , commandTimeout: ConnectionConfig.CommandTimeout);

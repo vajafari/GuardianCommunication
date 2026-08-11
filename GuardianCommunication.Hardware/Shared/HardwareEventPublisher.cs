@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
 
 namespace GuardianCommunication.Hardware.Shared
 {
@@ -7,33 +9,28 @@ namespace GuardianCommunication.Hardware.Shared
     {
         public event Action<DtoAttendance> AttendanceReceived;
         public event Action<DtoInvalidAttendance> InvalidAttendanceReceived;
-        public event Action<DtoPlateDetectionCameraCarAttendance> NotLivePlateDetectionCameraCarAttendanceReceived;
-        public event Action<DtoPlateDetectionCameraCarAttendance> LivePlateDetectionCameraCarAttendanceReceived;
         public event Action<DtoDeviceAttendanceImage> AttendanceImageReceived;
         public event Action<DtoDeviceUnauthorizedAttendanceImage> UnauthorizedAttendanceImageReceived;
-        public event Action<DtoMetalDetectorPersonPassedData> MetalDetectorPersonPassed;
         public event Action<string, DateTime, byte[]> XRayDeviceDataReceived;
         public event Action<List<DtoDeviceConnectionStatus>> DeviceConnectionStatusChanged;
-        public event Action<DtoEmployeeDeviceRelatedData, int, DtoEmployeeEnrolledSetting> NewUserEnrolled;
-        public event Action<DtoEmployeeFace, int> NewFaceEnrolled;
+        public event Action<DtoUserDeviceRelatedData, int, DtoUserEnrolledSetting> NewUserEnrolled;
+        public event Action<DtoUserFace, int> NewFaceEnrolled;
         public event Action<string, int, long> NewCardEnrolled;
         public event Action<DtoZkOperationLog> ZkOperationLogDataReceived;
         public event Action<DtoDeviceEventLog> DeviceEventLogDataReceived;
-        public event Action<DtoEmployeePalm, int> NewPalmEnrolled;
-        public event Action<DtoEmployeeIris, int> NewIrisEnrolled;
-        public event Action<DtoEmployeeFinger, int> NewFingerEnrolled;
+        public event Action<DtoUserPalm, int> NewPalmEnrolled;
+        public event Action<DtoUserIris, int> NewIrisEnrolled;
+        public event Action<DtoUserFinger, int> NewFingerEnrolled;
         public event Action<List<int>> CommandSentToDevice;
         public event Action<DtoDeviceCommandProcessingResult> CommandResponseReceived;
         public event Action<DtoDeviceCommandProcessingDescription> CommandDescriptionReceived;
-        public event Action<DtoEmployeeImage, int> UserProfileImageReceived;
+        public event Action<DtoUserImage, int> UserProfileImageReceived;
         public event Action<int, int> UserCountReceived;
         public event Action<int, int> FaceCountReceived;
         public event Action<int, int> FingerCountReceived;
         public event Action<int, int> AccessLogCountReceived;
         public event Action<int, long> UserChanged;
         public event Action<List<int>> FaceDetectionCameraCommandSent;
-        public event Action<DtoOtherHardwareCommandProcessingResult> FaceDetectionCameraCommandResponseReceived;
-        public event Action<DtoOtherHardwareCommandProcessingDescription> FaceDetectionCameraCommandSetDescription;
 
         #region Singleton
 
@@ -57,15 +54,6 @@ namespace GuardianCommunication.Hardware.Shared
             FaceDetectionCameraCommandSent?.Invoke(ids);
         }
 
-        public void PublishFaceDetectionCameraCommandResponseReceived(DtoOtherHardwareCommandProcessingResult param)
-        {
-            FaceDetectionCameraCommandResponseReceived?.Invoke(param);
-        }
-
-        public void PublishFaceDetectionCameraCommandSetDescription(DtoOtherHardwareCommandProcessingDescription param)
-        {
-            FaceDetectionCameraCommandSetDescription?.Invoke(param);
-        }
 
         public void PublishInvalidAttendance(DtoInvalidAttendance attendance)
         {
@@ -75,16 +63,6 @@ namespace GuardianCommunication.Hardware.Shared
         public void PublishAttendance(DtoAttendance attendance)
         {
             AttendanceReceived?.Invoke(attendance);
-        }
-
-        public void PublishNotLivePlateDetectionCameraCarAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-            NotLivePlateDetectionCameraCarAttendanceReceived?.Invoke(attendance);
-        }
-
-        public void LivePublishPlateDetectionCameraCarAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-            LivePlateDetectionCameraCarAttendanceReceived?.Invoke(attendance);
         }
 
         public void PublishAttendanceImage(DtoDeviceAttendanceImage image)
@@ -97,11 +75,6 @@ namespace GuardianCommunication.Hardware.Shared
             UnauthorizedAttendanceImageReceived?.Invoke(image);
         }
 
-        public void PublishMetalDetectorPersonPassed(DtoMetalDetectorPersonPassedData passData)
-        {
-            MetalDetectorPersonPassed?.Invoke(passData);
-        }
-
         public void PublishXRayDeviceDataReceived(string deviceId, DateTime date, byte[] scanData)
         {
             XRayDeviceDataReceived?.Invoke(deviceId, date, scanData);
@@ -112,12 +85,12 @@ namespace GuardianCommunication.Hardware.Shared
             DeviceConnectionStatusChanged?.Invoke(deviceConnectionStatuses);
         }
 
-        public void PublishNewUserEnrolled(DtoEmployeeDeviceRelatedData userInfo, int deviceNumber, DtoEmployeeEnrolledSetting setting)
+        public void PublishNewUserEnrolled(DtoUserDeviceRelatedData userInfo, int deviceNumber, DtoUserEnrolledSetting setting)
         {
             NewUserEnrolled?.Invoke(userInfo, deviceNumber, setting);
         }
 
-        public void PublishNewFaceEnrolled(DtoEmployeeFace face, int deviceNumber)
+        public void PublishNewFaceEnrolled(DtoUserFace face, int deviceNumber)
         {
             NewFaceEnrolled?.Invoke(face, deviceNumber);
         }
@@ -132,17 +105,17 @@ namespace GuardianCommunication.Hardware.Shared
             DeviceEventLogDataReceived?.Invoke(eventLog);
         }
 
-        public void PublishNewPalmEnrolled(DtoEmployeePalm palm, int deviceNumber)
+        public void PublishNewPalmEnrolled(DtoUserPalm palm, int deviceNumber)
         {
             NewPalmEnrolled?.Invoke(palm, deviceNumber);
         }
 
-        public void PublishNewIrisEnrolled(DtoEmployeeIris palm, int deviceNumber)
+        public void PublishNewIrisEnrolled(DtoUserIris palm, int deviceNumber)
         {
             NewIrisEnrolled?.Invoke(palm, deviceNumber);
         }
 
-        public void PublishNewFingerEnrolled(DtoEmployeeFinger finger, int deviceNumber)
+        public void PublishNewFingerEnrolled(DtoUserFinger finger, int deviceNumber)
         {
             NewFingerEnrolled?.Invoke(finger, deviceNumber);
         }
@@ -157,7 +130,7 @@ namespace GuardianCommunication.Hardware.Shared
             CommandSentToDevice?.Invoke(commandIds);
         }
 
-        public void PublishUserProfileImageReceived(DtoEmployeeImage employeeImage, int deviceNumber)
+        public void PublishUserProfileImageReceived(DtoUserImage employeeImage, int deviceNumber)
         {
             UserProfileImageReceived?.Invoke(employeeImage, deviceNumber);
         }

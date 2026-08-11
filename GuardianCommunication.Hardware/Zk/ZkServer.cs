@@ -14,6 +14,14 @@ using System.Threading;
 using System.Timers;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared;
+using GuardianCommunication.Hardware.Zk.ZkConcepts;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SharedSettings;
 using Timer = System.Timers.Timer;
 
 namespace GuardianCommunication.Hardware.Zk
@@ -27,7 +35,6 @@ namespace GuardianCommunication.Hardware.Zk
         private Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> _actionToGetCommands;
         private Func<DeviceNotSentCommandsFilter, List<DtoUnsentCommandCountByDeviceSerialNumber>> _actionToGetCommandsCountByDeviceSerialNumber;
         private int _maxCommandCount = ServiceConstants.HardwareServiceMaxZkCommands;
-        private ZkAgentConfig _onlineMonitoringAgentConfig;
         private ZkPushConfig _pushConfig;
         private readonly Semaphore _threadControlSemaphore = new Semaphore
             (AppConfigs.SimultaneousZkServerThreadsCount, AppConfigs.SimultaneousZkServerThreadsCount);
@@ -51,22 +58,19 @@ namespace GuardianCommunication.Hardware.Zk
 
 
         public void StartZkServer(
-            ZkAgentConfig onlineMonitoringAgentConfig
-            , ZkPushConfig pushConfig
+              ZkPushConfig pushConfig
             , Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> actionToGetCommands
             , Func<DeviceNotSentCommandsFilter, List<DtoUnsentCommandCountByDeviceSerialNumber>> actionToGetCommandsCountByDeviceSerialNumber
-            , List<DtoCommunicationDeviceData> deviceInfos)
+            , List<DtoDevice> deviceInfos)
         {
             _actionToGetCommands = actionToGetCommands;
             _actionToGetCommandsCountByDeviceSerialNumber = actionToGetCommandsCountByDeviceSerialNumber;
 
             LoggingSystem.LogInfo("ZKServer Starting", new
             {
-                OnlineMonitoringAgentConfig = onlineMonitoringAgentConfig,
                 PushConfig = pushConfig
             });
             _pushConfig = pushConfig;
-            _onlineMonitoringAgentConfig = onlineMonitoringAgentConfig;
             _maxCommandCount = NumericHelper.Min(_pushConfig.MaxZkCommandCount, ServiceConstants.HardwareServiceMaxZkCommands);
             _getCommandTimers = new Timer(pushConfig.GetCommandTimerIntervalInMillisecond);
             _getCommandTimers.Elapsed += GetCommandTimersOnElapsed;
@@ -75,10 +79,9 @@ namespace GuardianCommunication.Hardware.Zk
             thread.Start();
         }
 
-        private void DoStartServerProcess(List<DtoCommunicationDeviceData> deviceInfos)
+        private void DoStartServerProcess(List<DtoDevice> deviceInfos)
         {
             SetDeviceOnPushModeList(deviceInfos);
-            SetOnlineMonitoringDeviceModeList(deviceInfos);
             var thread = new Thread(StartPushListening) { IsBackground = true };
             thread.Start();
         }
@@ -88,137 +91,15 @@ namespace GuardianCommunication.Hardware.Zk
             Dispose(true);
         }
 
-        public ZkDeviceAgent GetOnlineMonitoringAgent(int deviceNumber)
-        {
-            lock (_onlineMonitoringAgents)
-            {
-                return _onlineMonitoringAgents.FirstOrDefault(r => r.DeviceInfo.DeviceNumber == deviceNumber);
-            }
-        }
-
         public List<int> GetConnectedDeviceNumbers()
         {
             var deviceNumbers = new List<int>();
-            lock (_onlineMonitoringAgents)
-            {
-                deviceNumbers.AddRange(_onlineMonitoringAgents.Where(row => row.IsDeviceConnected)
-                    .Select(row => row.DeviceInfo.DeviceNumber).ToList());
-            }
             deviceNumbers.AddRange(_pushDevicesConnectionInfo.Values
                 .Where(d => Math.Abs(d.ConnectionDateTime.Subtract(DateTime.Now).TotalSeconds) <=
                             _pushConfig.IntervalForConsiderDeviceOnlineInSecond)
                 .Select(d => d.DeviceNumber));
             return deviceNumbers;
         }
-
-
-        #region Online Monitoring Devices
-
-        private readonly List<ZkDeviceAgent> _onlineMonitoringAgents = new List<ZkDeviceAgent>();
-
-        public void SetOnlineMonitoringDeviceModeList(List<DtoCommunicationDeviceData> deviceInfos)
-        {
-            if (deviceInfos.IsCollectionNullOrEmpty())
-            {
-                return;
-            }
-
-            var onlineMonitoringDeviceInfos = deviceInfos.Where
-                (row => row.ProducerEnum == ProducerEnumeration.Zk
-                        && row.OnlineMonitoringMode).ToList();
-            if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.ServerSetDeviceList))
-            {
-                LoggingSystem.LogInfo("ZkServer Valid OnlineMonitoring device list set", onlineMonitoringDeviceInfos);
-            }
-            var setOnlineMonitoringMode = new Thread
-                (() => SetOnlineMonitoringModeDeviceList(onlineMonitoringDeviceInfos))
-            { IsBackground = true };
-            setOnlineMonitoringMode.Start();
-
-        }
-
-        private void SetOnlineMonitoringModeDeviceList(IReadOnlyCollection<DtoCommunicationDeviceData> onlineMonitoringDeviceInfos)
-        {
-            lock (_onlineMonitoringAgents)
-            {
-                try
-                {
-                    var agentsForRemove = new List<ZkDeviceAgent>();
-                    foreach (var agent in _onlineMonitoringAgents)
-                    {
-                        if (onlineMonitoringDeviceInfos.All(row => row.DeviceNumber != agent.DeviceInfo.DeviceNumber))
-                        {
-                            agentsForRemove.Add(agent);
-                        }
-                    }
-
-                    if (agentsForRemove.Any())
-                    {
-                        foreach (var agent in agentsForRemove)
-                        {
-                            try
-                            {
-                                agent.Dispose();
-                                _onlineMonitoringAgents.Remove(agent);
-
-                            }
-                            catch (Exception exp)
-                            {
-                                LoggingSystem.LogError(exp
-                                    , "ZkServer Error on removing device from OnlineMonitoring device list"
-                                    , ObjectHelper.SerializeAsJson(agent.DeviceInfo));
-                            }
-                        }
-                    }
-
-
-                    foreach (var deviceInfo in onlineMonitoringDeviceInfos)
-                    {
-                        try
-                        {
-                            var currentAgent = _onlineMonitoringAgents.FirstOrDefault(row =>
-                                row.DeviceInfo.DeviceNumber == deviceInfo.DeviceNumber);
-                            if (currentAgent == null)
-                            {
-                                _onlineMonitoringAgents.Add(new ZkDeviceAgent(deviceInfo, _onlineMonitoringAgentConfig));
-                            }
-                            else
-                            {
-                                currentAgent.DeviceInfo = deviceInfo;
-                            }
-                        }
-                        catch (Exception exp)
-                        {
-                            LoggingSystem.LogError(exp
-                                , "ZkServer Error on Setting device on OnlineMonitoring mode"
-                                , ObjectHelper.SerializeAsJson(deviceInfo));
-                        }
-                    }
-
-                }
-                catch (Exception exp)
-                {
-                    LoggingSystem.LogError(exp
-                        , "ZkServer Error on SetOnlineMonitoringModeDeviceList");
-                }
-
-            }
-
-        }
-
-        public void ReconnectOnlineMonitoringDevice(int deviceNumbers)
-        {
-            var agent = GetOnlineMonitoringAgent(deviceNumbers);
-            if (agent == null)
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationNotFoundOnlineMonitoringDevice);
-            }
-            agent.ResetOnlineMonitoring("ZK server ReconnectOnlineMonitoringDevice");
-
-        }
-
-
-        #endregion
 
 
         #region PUSH
@@ -231,10 +112,10 @@ namespace GuardianCommunication.Hardware.Zk
 
         private TcpListener _tcpListener;
         private bool _listening;
-        private readonly List<DtoCommunicationDeviceData> _pushDevices = new List<DtoCommunicationDeviceData>();
+        private readonly List<DtoDevice> _pushDevices = new List<DtoDevice>();
         private readonly ConcurrentDictionary<int, DeviceConnectionInfo> _pushDevicesConnectionInfo = new ConcurrentDictionary<int, DeviceConnectionInfo>();
 
-        public void SetDeviceOnPushModeList(List<DtoCommunicationDeviceData> deviceInfos)
+        public void SetDeviceOnPushModeList(List<DtoDevice> deviceInfos)
         {
             if (deviceInfos.IsCollectionNullOrEmpty())
             {
@@ -242,7 +123,7 @@ namespace GuardianCommunication.Hardware.Zk
             }
 
             var pushDeviceInfos = deviceInfos.Where
-                (row => row.ProducerEnum == ProducerEnumeration.Zk
+                (row => row.ProducerNumber == ProducerEnumeration.Zk
                         && row.ConnectionMode == DeviceConnectionModeEnumeration.Push).ToList();
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.ServerSetDeviceList))
             {
@@ -485,20 +366,23 @@ namespace GuardianCommunication.Hardware.Zk
                     var attendanceIndex = bufferString.IndexOfEx("\r\n\r\n", 1);
                     var attendanceString = bufferString.Substring(attendanceIndex + 4);
                     var deviceInList = GetDeviceBySerialNumber(deviceSerialNumber);
-                    if (deviceInList != null && !deviceInList.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                    if (deviceInList == null
+                        || deviceInList.DeviceSettings.DontSaveAttendance)
                     {
-                        var allAttendancesString = attendanceString.Split('\n');
-                        foreach (var currentAttendanceString in allAttendancesString)
+                        return;
+                    }
+                    
+                    var allAttendancesString = attendanceString.Split('\n');
+                    foreach (var currentAttendanceString in allAttendancesString)
+                    {
+                        if (currentAttendanceString.IsNullOrEmpty())
                         {
-                            if (currentAttendanceString.IsNullOrEmpty())
-                            {
-                                continue;
-                            }
-                            var result = ParsAttendanceLog(deviceInList, currentAttendanceString);
-                            if (result != null)
-                            {
-                                HardwareEventPublisher.Instance.PublishAttendance(result);
-                            }
+                            continue;
+                        }
+                        var result = ParsAttendanceLog(deviceInList, currentAttendanceString);
+                        if (result != null)
+                        {
+                            HardwareEventPublisher.Instance.PublishAttendance(result);
                         }
                     }
                 }
@@ -596,13 +480,13 @@ namespace GuardianCommunication.Hardware.Zk
                         for (var i = 0; i < _maxCommandCount && i < currentDeviceCommands.Count; i++)
                         {
                             var cmd = currentDeviceCommands[i];
-                            var currentCommand = $"C:{cmd.Id}:{cmd.CommandContent}\n";
+                            var currentCommand = $"C:{cmd.NumericId}:{cmd.CommandContent}\n";
                             if (commandBuilder.Length + currentCommand.Length > MaxBufferSize)
                             {
                                 break;
                             }
                             commandBuilder.Append(currentCommand);
-                            ids.Add(cmd.Id);
+                            ids.Add(cmd.NumericId);
                         }
                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(ids);
                         SendDataToDevice("200 OK", $"{commandBuilder}\r\n", deviceSocket);
@@ -710,7 +594,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     {
                                         var commandResult = new DtoDeviceCommandProcessingResult
                                         {
-                                            Id = commandIdResponseParts[1].ToInt32(),
+                                            NumericId = commandIdResponseParts[1].ToInt32(),
                                             CommandResponseTime = DateTime.Now,
                                             CommandResponseResult = content,
                                             Mode = null,
@@ -722,7 +606,7 @@ namespace GuardianCommunication.Hardware.Zk
                                         // دستگاه اعلام کرده است که عملیات ناموفق بوده پس باشد در توضیخات کامند ذکر شود
                                         HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription
                                         {
-                                            Id = commandIdResponseParts[1].ToInt32(),
+                                            NumericId = commandIdResponseParts[1].ToInt32(),
                                             Description = content,
                                             Mode = null,
                                         });
@@ -758,7 +642,7 @@ namespace GuardianCommunication.Hardware.Zk
             ProcessUserPic(userInString, deviceData);
         }
 
-        public void ProcessUserPic(string sBuffer, DtoCommunicationDeviceData deviceData)
+        public void ProcessUserPic(string sBuffer, DtoDevice deviceData)
         {
             try
             {
@@ -786,7 +670,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         }
 
-        public void SaveUserProfileImage(string useLog, DtoCommunicationDeviceData deviceData)
+        public void SaveUserProfileImage(string useLog, DtoDevice deviceData)
         {
             if (useLog.IndexOfEx("PIN", 0) > 0 && useLog.IndexOfEx("FileName", 0) > 0)
             {
@@ -804,9 +688,9 @@ namespace GuardianCommunication.Hardware.Zk
                 var imageData = Convert.FromBase64String(stillusin4);
                 var name = usinnum1.Replace("FileName=", "");
                 var name1 = name.Substring(0, name.Length - 4);
-                HardwareEventPublisher.Instance.PublishUserProfileImageReceived(new DtoEmployeeImage
+                HardwareEventPublisher.Instance.PublishUserProfileImageReceived(new DtoUserImage
                 {
-                    EmployeeNumber = name1.ToInt64(),
+                    UserIdOnDevice = name1.ToInt64(),
                     PhotoData = imageData
                 }, deviceData.DeviceNumber);
                 // ReSharper restore InconsistentNaming
@@ -818,7 +702,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         private void ProcessAttPhoto(string bufferString, byte[] receivedBytes)
         {
-            DtoCommunicationDeviceData deviceData = null;
+            DtoDevice deviceData = null;
             string[] nameParts = null;
             byte[] imgReceive = null;
             try
@@ -868,15 +752,15 @@ namespace GuardianCommunication.Hardware.Zk
                         var data = new DtoDeviceAttendanceImage
                         {
 
-                            DeviceNumber = deviceData.DeviceNumber,
+                            DeviceId = deviceData.Id,
                             AttendanceDateTime = DateTime.ParseExact(nameParts[0], "yyyyMMddHHmmss",
                                 CultureInfo.InvariantCulture,
                                 DateTimeStyles.None),
                             Image = imgReceive
                         };
-                        if (long.TryParse(nameParts[1], out var employeeNumber))
+                        if (long.TryParse(nameParts[1], out var userIdOnDevice))
                         {
-                            data.EmployeeNumber = employeeNumber;
+                            data.UserIdOnDevice = userIdOnDevice;
                         }
 
                         HardwareEventPublisher.Instance.PublishAttendanceImage(data);
@@ -884,8 +768,8 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             LoggingSystem.LogInfo("ZkServer PublishAttendanceImage successfully", new
                             {
-                                data.DeviceNumber,
-                                data.EmployeeNumber,
+                                data.DeviceId,
+                                data.UserIdOnDevice,
                                 data.AttendanceDateTime,
                                 data.Image.Length,
 
@@ -898,8 +782,8 @@ namespace GuardianCommunication.Hardware.Zk
                         // Unauthorized attendance image
                         var data = new DtoDeviceUnauthorizedAttendanceImage
                         {
-                            EmployeeNumber = null,
-                            DeviceNumber = deviceData.DeviceNumber,
+                            UserIdInDevice = null,
+                            DeviceId = deviceData.Id,
                             AttendanceDateTime = DateTime.ParseExact(nameParts[0], "yyyyMMddHHmmss",
                                 CultureInfo.InvariantCulture,
                                 DateTimeStyles.None),
@@ -910,7 +794,7 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             LoggingSystem.LogInfo("ZkServer PublishUnauthorizedAttendanceImage successfully", new
                             {
-                                data.DeviceNumber,
+                                data.DeviceId,
                                 data.AttendanceDateTime,
                                 data.Image.Length
                             });
@@ -955,11 +839,11 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             if (bioData.IndexOfEx("PIN") >= 0)
                             {
-                                var finger = new DtoEmployeeFinger();
+                                var finger = new DtoUserFinger();
                                 var template = Replace(bioData, "BIODATA", "");
                                 var dic = GetKeyValues(template);
 
-                                finger.EmployeeNumber = GetValueFromDic(dic, "PIN").ToInt64();
+                                finger.UserIdOnDevice = GetValueFromDic(dic, "PIN").ToInt64();
                                 finger.FingerIndex = GetValueFromDic(dic, "No").ToInt32();
                                 finger.TemplateData = Encoding.UTF8.GetBytes(GetValueFromDic(dic, "TMP"));
                                 HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceData.DeviceNumber);
@@ -973,9 +857,9 @@ namespace GuardianCommunication.Hardware.Zk
                             var template = Replace(bioData, "BIODATA", "");
                             var dic = GetKeyValues(template);
 
-                            var face = new DtoEmployeeFace
+                            var face = new DtoUserFace
                             {
-                                EmployeeNumber = GetValueFromDic(dic, "PIN").ToInt64(),
+                                UserIdOnDevice = GetValueFromDic(dic, "PIN").ToInt64(),
                                 FaceIndex = GetValueFromDic(dic, "No").ToInt32(),
                                 TemplateData = Convert.FromBase64String(GetValueFromDic(dic, "TMP"))
                             };
@@ -988,9 +872,9 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             var template = Replace(bioData, "BIODATA", "");
                             var dic = GetKeyValues(template);
-                            var palm = new DtoEmployeePalm
+                            var palm = new DtoUserPalm
                             {
-                                EmployeeNumber = GetValueFromDic(dic, "PIN").ToInt64(),
+                                UserIdOnDevice = GetValueFromDic(dic, "PIN").ToInt64(),
                                 Index = GetValueFromDic(dic, "Index").ToInt32(),
                                 TemplateData = Convert.FromBase64String(GetValueFromDic(dic, "TMP"))
                             };
@@ -1025,21 +909,21 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             if (record.IndexOfEx("PIN") >= 0)
                             {
-                                var userInfo = new DtoEmployeeDeviceRelatedData();
+                                var userInfo = new DtoUserDeviceRelatedData();
                                 var userInfoString = Replace(record, "USER", "");
                                 var dic = GetKeyValues(userInfoString);
                                 if (long.TryParse(GetValueFromDic(dic, "PIN"), out var employeeNumber)
                                     && short.TryParse(GetValueFromDic(dic, "Pri"), out var privilege))
                                 {
                                     var rfCardNumberString = GetValueFromDic(dic, "Card");
-                                    userInfo.EmployeeNumber = employeeNumber;
+                                    userInfo.UserIdOnDevice = employeeNumber;
                                     userInfo.UserName = GetValueFromDic(dic, "Name");
                                     userInfo.Password = GetValueFromDic(dic, "Passwd");
                                     userInfo.Privilege = privilege;
                                     userInfo.RfCardNumbers = rfCardNumberString.IsNotNullOrEmpty()
                                         ? new List<string> { rfCardNumberString } : new List<string>();
                                     userInfo.IsEnable = true;
-                                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, deviceData.DeviceNumber, DtoEmployeeEnrolledSetting.GetAllSettingInstance());
+                                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, deviceData.DeviceNumber, DtoUserEnrolledSetting.GetAllSettingInstance());
                                 }
                                 else
                                 {
@@ -1048,7 +932,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     {
                                         LoggingSystem.LogInfo("Device sent invalid user data", new
                                         {
-                                            DeviceNumber = deviceData.DeviceNumber,
+                                            deviceData.DeviceNumber,
                                             Message = bufferString,
                                         });
                                     }
@@ -1061,13 +945,13 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             if (record.IndexOfEx("PIN") >= 0)
                             {
-                                var finger = new DtoEmployeeFinger();
+                                var finger = new DtoUserFinger();
                                 var template = Replace(record, "FP", "");
                                 var dic = GetKeyValues(template);
                                 if (long.TryParse(GetValueFromDic(dic, "PIN"), out var employeeNumber)
                                     && int.TryParse(GetValueFromDic(dic, "FID"), out var fingerIndex))
                                 {
-                                    finger.EmployeeNumber = employeeNumber;
+                                    finger.UserIdOnDevice = employeeNumber;
                                     finger.FingerIndex = fingerIndex;
                                     finger.TemplateData = Encoding.UTF8.GetBytes(GetValueFromDic(dic, "TMP"));
                                     HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceData.DeviceNumber);
@@ -1079,7 +963,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     {
                                         LoggingSystem.LogInfo("Device sent invalid finger print", new
                                         {
-                                            DeviceNumber = deviceData.DeviceNumber,
+                                            deviceData.DeviceNumber,
                                             Message = bufferString,
                                         });
                                     }
@@ -1092,12 +976,12 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             if (record.IndexOfEx("PIN") >= 0)
                             {
-                                var face = new DtoEmployeeFace();
+                                var face = new DtoUserFace();
                                 var template = Replace(record, "FACE", "");
                                 var dic = GetKeyValues(template);
                                 if (long.TryParse(GetValueFromDic(dic, "PIN"), out var employeeNumber))
                                 {
-                                    face.EmployeeNumber = employeeNumber;
+                                    face.UserIdOnDevice = employeeNumber;
                                     face.FaceIndex = 50;
                                     face.TemplateData = Encoding.UTF8.GetBytes(GetValueFromDic(dic, "TMP"));
                                     face.Length = face.TemplateData.Length;
@@ -1110,7 +994,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     {
                                         LoggingSystem.LogInfo("Device sent invalid face", new
                                         {
-                                            DeviceNumber = deviceData.DeviceNumber,
+                                            deviceData.DeviceNumber,
                                             Message = bufferString,
                                         });
                                     }
@@ -1138,9 +1022,9 @@ namespace GuardianCommunication.Hardware.Zk
                                 }
                                 if (templateData.IsCollectionNotNullOrEmpty())
                                 {
-                                    var faceVisibleLight = new DtoEmployeeFace
+                                    var faceVisibleLight = new DtoUserFace()
                                     {
-                                        EmployeeNumber = GetValueFromDic(dic, "PIN").ToInt64(),
+                                        UserIdOnDevice = GetValueFromDic(dic, "PIN").ToInt64(),
                                         TemplateData = templateData,
                                         Length = 50,
                                     };
@@ -1168,7 +1052,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     Object3 = opLogString[5],
                                     Object4 = opLogString[6],
                                     User = "0",
-                                    DeviceNumber = deviceData.DeviceNumber,
+                                    DeviceId = deviceData.Id,
                                 });
                             }
                             catch (Exception exp)
@@ -1187,7 +1071,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         }
 
-        private void SendDeviceConfig(DtoCommunicationDeviceData deviceInfo, Socket deviceSocket)
+        private void SendDeviceConfig(DtoDevice deviceInfo, Socket deviceSocket)
         {
             if (deviceInfo != null)
             {
@@ -1195,7 +1079,7 @@ namespace GuardianCommunication.Hardware.Zk
                 try
                 {
 
-                    var timezone = DateTimeHelper.ConvertToTimeZoneString(deviceInfo.TimeSetting.TimeZone);
+                    var timezone = DateTimeHelper.ConvertToTimeZoneString(deviceInfo.TimeZone);
                     string[] splittedString;
                     if ('-' == timezone[0])
                     {
@@ -1236,9 +1120,7 @@ namespace GuardianCommunication.Hardware.Zk
                 sb.Append($"Stamp={_pushConfig.Stamp}\n");
                 sb.Append($"OpStamp={_pushConfig.OpStamp}\n");
                 sb.Append($"PhotoStamp={_pushConfig.PhotoStamp}\n");
-                sb.Append(deviceInfo.OnlineMonitoringMode
-                    ? "TransFlag=TransData OpLog\tAttPhoto\tEnrollUser\tChgUser\tEnrollFP\tChgFP\tFPImag\tFACE\tUserPic\tWORKCODE\tBioPhoto\n"
-                    : "TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollUser\tChgUser\tEnrollFP\tChgFP\tFPImag\tFACE\tUserPic\tWORKCODE\tBioPhoto\n");
+                sb.Append("TransFlag=TransData AttLog\tOpLog\tAttPhoto\tEnrollUser\tChgUser\tEnrollFP\tChgFP\tFPImag\tFACE\tUserPic\tWORKCODE\tBioPhoto\n");
                 sb.Append($"ErrorDelay={_pushConfig.ErrorDelay}\n");
                 sb.Append($"Delay={_pushConfig.Delay}\n");
                 sb.Append($"TimeZone={time}\n");
@@ -1302,33 +1184,27 @@ namespace GuardianCommunication.Hardware.Zk
             }
         }
 
-        private static DtoAttendance ParsAttendanceLog(DtoCommunicationDeviceData deviceInfo, string attendanceString)
+        private static DtoAttendance ParsAttendanceLog(DtoDevice deviceInfo, string attendanceString)
         {
             var attendanceStringSplitted = attendanceString.Split('\t');
             var status = Convert.ToInt32(attendanceStringSplitted[2]);
-            var isInvalidValue = deviceInfo.HasAttendanceValidationCheck;
-            if (deviceInfo.HasAttendanceValidationCheck && status != 255)
-            {
-                isInvalidValue = (status & 0x80) >> 7 == 0;//isInvaid :1 :0
-            }
+           
             var attStatus = (short)(status & 0x7F);
             try
             {
                 return new DtoAttendance
                 {
-                    EmployeeNumber = long.Parse(attendanceStringSplitted[0]),
+                    UserIdOnDevice = long.Parse(attendanceStringSplitted[0]),
                     AttendanceDateTime = Convert.ToDateTime(attendanceStringSplitted[1], new CultureInfo("en-US")),
                     VerificationStyle = (int)ZkUtils.GetVerificationStyle(Convert.ToInt16(attendanceStringSplitted[3])),
                     DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
                     AttendanceSource = AttendanceSourceEnumeration.Device,
-                    DeviceNumber = deviceInfo.DeviceNumber,
+                    DeviceId = deviceInfo.Id,
                     CameraId = null,
                     StatusCode = attStatus,
-                    IsSent = false,
+                    IsSentToGuardian = false,
                     // به صورت پیش فرض برای دستگاه های کنترل تردد آنلاین در صورتی که ذکر شده بود برای دستگاه صحت
                     // تردد بر اساس رویداد گذر باید چک شود، می بایست تردد به صورت پچیش فرض غیر مجاز فرض گردد
-                    IsInvalid = isInvalidValue,
-                    Id = 0,
                     RfCardNumber = null,
                 };
             }
@@ -1336,7 +1212,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogError(exp, "Error On ZkServer.ParsAttendanceLog", new
                 {
-                    DeviceNumber = deviceInfo.DeviceNumber,
+                    deviceInfo.DeviceNumber,
                     AttendanceString = attendanceString
                 });
             }
@@ -1344,9 +1220,9 @@ namespace GuardianCommunication.Hardware.Zk
             return null;
         }
 
-        private DtoCommunicationDeviceData GetDeviceBySerialNumber(string deviceSerialNumber)
+        private DtoDevice GetDeviceBySerialNumber(string deviceSerialNumber)
         {
-            DtoCommunicationDeviceData result;
+            DtoDevice result;
             lock (_pushDevices)
             {
                 result = _pushDevices.FirstOrDefault(row => row.SerialNumber == deviceSerialNumber);
@@ -1508,13 +1384,6 @@ namespace GuardianCommunication.Hardware.Zk
             if (disposing)
             {
                 // Managed teardown only on explicit Dispose — never on the finalizer thread.
-                lock (_onlineMonitoringAgents)
-                {
-                    foreach (var agent in _onlineMonitoringAgents)
-                    {
-                        agent.Dispose();
-                    }
-                }
                 StopPushListening();
             }
 

@@ -7,6 +7,8 @@ namespace GuardianCommunication.Shared.Dto
     public class DtoDeviceCommandWithoutContent : DtoDatabaseEntityBase
     {
 
+        public long NumericId { get; set; }
+
         public Guid DeviceId { get; set; }
 
         public int DeviceNumber { get; set; }

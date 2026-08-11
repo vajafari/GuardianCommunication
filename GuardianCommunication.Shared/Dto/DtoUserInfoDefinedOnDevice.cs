@@ -2,7 +2,7 @@
 {
     public class DtoUserInfoDefinedOnDevice
     {
-        public long EmployeeNumber { get; set; }
+        public long UserIdOnDevice { get; set; }
 
         public string Name { get; set; }
 

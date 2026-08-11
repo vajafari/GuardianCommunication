@@ -6,7 +6,9 @@ namespace GuardianCommunication.Shared.Dto
 {
     public class DtoAttendance : DtoDatabaseEntityBase
     {
+
         public long UserIdOnDevice { get; set; }
+        public long? LogIdOnDevice { get; set; }
         public DateTime AttendanceDateTime { get; set; }
         public Guid? DeviceId { get; set; }
         public Guid? CameraId { get; set; }

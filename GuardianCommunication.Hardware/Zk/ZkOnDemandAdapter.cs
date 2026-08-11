@@ -8,6 +8,13 @@ using System.Threading;
 using System.Threading.Tasks;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared.Helpers;
+using GuardianCommunication.Hardware.Zk.ZkConcepts;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Hardware.Zk
 {
@@ -16,15 +23,15 @@ namespace GuardianCommunication.Hardware.Zk
         private bool _isDeviceConnected;
         private bool _isDeviceEnable;
         private readonly zkemkeeper.CZKEMClass _communicationOcx;
-        public DtoCommunicationDeviceData DeviceInfo { get; set; }
+        public DtoDevice DeviceInfo { get; set; }
 
-        public ZkOnDemandAdapter(DtoCommunicationDeviceData deviceInfo)
+        public ZkOnDemandAdapter(DtoDevice deviceInfo)
         {
             DeviceInfo = deviceInfo;
             _communicationOcx = new zkemkeeper.CZKEMClass();
-            if (!string.IsNullOrEmpty(DeviceInfo.CommunicationPassword) && DeviceInfo.CommunicationPassword.CanConvertToInt32() && DeviceInfo.CommunicationPassword.ToInt32() > 0)
+            if (!string.IsNullOrEmpty(DeviceInfo.DevicePassword) && DeviceInfo.DevicePassword.CanConvertToInt32() && DeviceInfo.DevicePassword.ToInt32() > 0)
             {
-                _communicationOcx.SetCommPassword(DeviceInfo.CommunicationPassword.ToInt32());
+                _communicationOcx.SetCommPassword(DeviceInfo.DevicePassword.ToInt32());
             }
 
             if (DeviceInfo.DeviceNumber <= 0)
@@ -311,7 +318,7 @@ namespace GuardianCommunication.Hardware.Zk
         public void Connect()
         {
             if (_isDeviceConnected) return;
-            if (string.IsNullOrEmpty(DeviceInfo.Ip))
+            if (string.IsNullOrEmpty(DeviceInfo.DeviceIp))
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusSupremaSdk1ErrorIpIsNotValid);
             if (!DeviceInfo.TcpPort.HasValue || DeviceInfo.TcpPort.Value <= 0)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusSupremaSdk1ErrorTcpPortIsNotValid);
@@ -319,7 +326,7 @@ namespace GuardianCommunication.Hardware.Zk
             // Connect_Net on a task and wait up to the timeout. The result is committed to
             // _isDeviceConnected only if the task finished in time, so a late-completing connect
             // can never flip the field after we've already reported failure.
-            var connectTask = Task.Run(() => _communicationOcx.Connect_Net(DeviceInfo.Ip, DeviceInfo.TcpPort.Value));
+            var connectTask = Task.Run(() => _communicationOcx.Connect_Net(DeviceInfo.DeviceIp, DeviceInfo.TcpPort.Value));
             var connected = false;
             try
             {
@@ -382,7 +389,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand Readout is calling", DeviceInfo);
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+            if (DeviceInfo.DeviceSettings.DontSaveAttendance)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
@@ -416,25 +423,18 @@ namespace GuardianCommunication.Hardware.Zk
                     {
                         iGlCount++;
                         var status = idwInOutMode & 0x7F;
-                        var isInvalidValue = DeviceInfo.HasAttendanceValidationCheck;
-                        if (DeviceInfo.HasAttendanceValidationCheck && status != 255)
-                        {
-                            isInvalidValue = (idwInOutMode & 0x80) >> 7 == 0;//isInvaid :1 :0
-                        }
+                        
                         attRecords.Add(new DtoAttendance
                         {
-                            Id = iGlCount,
-                            EmployeeNumber = enrollNumber.ToInt64(),
+                            LogIdOnDevice = iGlCount,
+                            UserIdOnDevice = enrollNumber.ToInt64(),
                             VerificationStyle = (int)ZkUtils.GetVerificationStyle(idwVerifyMode),
                             StatusCode = status,
-                            DeviceNumber = DeviceInfo.DeviceNumber,
+                            DeviceId = DeviceInfo.Id,
                             CameraId = null,
                             AttendanceDateTime = new DateTime(idwYear, idwMonth, idwDay, idwHour, idwMinute, idwSecond),
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
-                            // به صورت پیش فرض برای دستگاه های کنترل تردد آنلاین در ثورتی که ذکر شده بود برای دستگاه صحت
-                            // تردد بر اساس رویداد گذر باید چک شود، می بایست تردد به صورت پچیش فرض غیر مجاز فرض گردد
-                            IsInvalid = isInvalidValue,
                             RfCardNumber = null,
                         });
                     }
@@ -475,7 +475,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetDataOldVersion is calling", DeviceInfo);
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+            if (DeviceInfo.DeviceSettings.DontSaveAttendance)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
@@ -496,16 +496,15 @@ namespace GuardianCommunication.Hardware.Zk
                     iGlCount++;
                     var att = new DtoAttendance
                     {
-                        Id = iGlCount,
-                        EmployeeNumber = enrollNumber.ToInt64(),
+                        LogIdOnDevice = iGlCount,
+                        UserIdOnDevice = enrollNumber.ToInt64(),
                         VerificationStyle = (int)ZkUtils.GetVerificationStyle(idwVerifyMode),
                         StatusCode = idwInOutMode,
-                        DeviceNumber = DeviceInfo.DeviceNumber,
+                        DeviceId = DeviceInfo.Id,
                         CameraId = null,
                         AttendanceDateTime = new DateTime(idwYear, idwMonth, idwDay, idwHour, idwMinute, idwSecond),
                         AttendanceSource = AttendanceSourceEnumeration.Device,
                         DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
-                        IsInvalid = false,
                         RfCardNumber = null,
                     };
                     attRecords.Add(att);
@@ -627,7 +626,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         }
 
-        public DtoEmployeeDeviceRelatedData GetUserInfoByUserId(long userId, TemplateTypeEnumeration enrollType)
+        public DtoUserDeviceRelatedData GetUserInfoByUserId(long userId, TemplateTypeEnumeration enrollType)
         {
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandGetUser))
             {
@@ -636,7 +635,7 @@ namespace GuardianCommunication.Hardware.Zk
             if (_isDeviceConnected == false)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var enrollNumber = userId.ToString();
-            var result = new DtoEmployeeDeviceRelatedData();
+            var result = new DtoUserDeviceRelatedData();
             if (!_communicationOcx.SSR_GetUserInfo(
                 DeviceInfo.DeviceNumber
                 , enrollNumber
@@ -647,7 +646,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 return result;
             }
-            result.EmployeeNumber = enrollNumber.ToInt64();
+            result.UserIdOnDevice = enrollNumber.ToInt64();
             result.UserName = name;
             result.Password = password;
             //result.IsEnable = enabled;
@@ -675,7 +674,7 @@ namespace GuardianCommunication.Hardware.Zk
 
             if (enrollType.HasFlag(TemplateTypeEnumeration.Face))
             {
-                if (DeviceInfo.HasVisibleLight)
+                if (DeviceInfo.HasVisiblelight)
                 {
                     var photoData = new byte[1024 * 1024];
                     if (_communicationOcx.GetUserFacePhotoByName
@@ -697,13 +696,13 @@ namespace GuardianCommunication.Hardware.Zk
                     if (_communicationOcx.GetUserFaceStr(DeviceInfo.DeviceNumber, userId.ToString(), faceIndex, ref tmpData,
                         ref length))
                     {
-                        result.FaceDataList = new List<DtoEmployeeFace>
+                        result.FaceDataList = new List<DtoUserFace>
                         {
-                            new DtoEmployeeFace
+                            new DtoUserFace
                             {
                                 FaceIndex = faceIndex,
                                 TemplateData = DeviceSharedHelperMethods.ConvertStringToArray(tmpData),
-                                EmployeeNumber = userId,
+                                UserIdOnDevice = userId,
                                 Length = length
                             }
                         };
@@ -714,16 +713,16 @@ namespace GuardianCommunication.Hardware.Zk
             if (enrollType.HasFlag(TemplateTypeEnumeration.FingerPrint))
             {
                 _communicationOcx.ReadAllTemplate(DeviceInfo.DeviceNumber);
-                result.FingerDataList = new List<DtoEmployeeFinger>();
+                result.FingerDataList = new List<DtoUserFinger>();
 
                 int fingerIndex;
                 for (fingerIndex = 0; fingerIndex < 10; fingerIndex++)
                 {
                     if (!_communicationOcx.GetUserTmpExStr(DeviceInfo.DeviceNumber, enrollNumber, fingerIndex, out _, out var tempDataFinger, out _)) continue;
                     if (!tempDataFinger.IsNotNullOrEmpty()) continue;
-                    result.FingerDataList.Add(new DtoEmployeeFinger
+                    result.FingerDataList.Add(new DtoUserFinger
                     {
-                        EmployeeNumber = enrollNumber.ToInt64(),
+                        UserIdOnDevice = enrollNumber.ToInt64(),
                         FingerIndex = fingerIndex,
                         TemplateData = DeviceSharedHelperMethods.ConvertStringToArray(tempDataFinger)
                     });
@@ -736,7 +735,7 @@ namespace GuardianCommunication.Hardware.Zk
             return result;
         }
 
-        public void SetUserInfoWithTemplate(DtoEmployeeDeviceRelatedData userInfo)
+        public void SetUserInfoWithTemplate(DtoUserDeviceRelatedData userInfo)
         {
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandSetUser))
             {
@@ -751,13 +750,13 @@ namespace GuardianCommunication.Hardware.Zk
             var fingerErrorCode = 0;
             var faceErrorCode = 0;
             SetUserInfo(userInfo);
-            if (DeviceInfo.HasFinger && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
+            if (DeviceInfo.HasFingerPrint && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
             {
                 foreach (var fingerData in userInfo.FingerDataList)
                 {
                     var resultFinger = _communicationOcx.SetUserTmpExStr
                     (DeviceInfo.DeviceNumber
-                        , userInfo.EmployeeNumber.ToString()
+                        , userInfo.UserIdOnDevice.ToString()
                         , fingerData.FingerIndex
                         , 1
                         , DeviceSharedHelperMethods.ConvertArrayToString(fingerData.TemplateData));
@@ -768,12 +767,12 @@ namespace GuardianCommunication.Hardware.Zk
                 }
             }
 
-            if (DeviceInfo.HasVisibleLight)
+            if (DeviceInfo.HasVisiblelight)
             {
                 if (userInfo.VisibleLightImage.IsCollectionNotNullOrEmpty())
                 {
                     var filePath = Path.Combine(ServiceConstants.DeviceVisibleLightImageFolder,
-                        $"verify_biophoto_9_{userInfo.EmployeeNumber}.jpg");
+                        $"verify_biophoto_9_{userInfo.UserIdOnDevice}.jpg");
                     var filePathFull = Path.GetFullPath(filePath);
                     if (!Directory.Exists(ServiceConstants.DeviceVisibleLightImageFolder))
                     {
@@ -800,7 +799,7 @@ namespace GuardianCommunication.Hardware.Zk
                     {
                         bool resultFace = _communicationOcx.SetUserFaceStr
                         (DeviceInfo.DeviceNumber
-                            , userInfo.EmployeeNumber.ToString()
+                            , userInfo.UserIdOnDevice.ToString()
                             , faceData.FaceIndex
                             , DeviceSharedHelperMethods.ConvertArrayToString(faceData.TemplateData)
                             , faceData.Length);
@@ -827,7 +826,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         }
 
-        public void SetUserInfo(DtoEmployeeDeviceRelatedData userInfo)
+        public void SetUserInfo(DtoUserDeviceRelatedData userInfo)
         {
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandSetUser))
             {
@@ -867,8 +866,9 @@ namespace GuardianCommunication.Hardware.Zk
                 var bytes = Encoding.Default.GetBytes(userInfo.UserName);
                 var userNameUtf8 = Encoding.UTF8.GetString(bytes);
                 if (!_communicationOcx.SSR_SetUserInfo(DeviceInfo.DeviceNumber,
-                    userInfo.EmployeeNumber.ToString()
-                    , DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.ZkOldName) ? userNameUtf8 : userInfo.UserName
+                    userInfo.UserIdOnDevice.ToString()
+                    , DeviceInfo.DeviceSettings?.ZkDeviceSettings != null
+                      && DeviceInfo.DeviceSettings.ZkDeviceSettings.IsZkOldName ? userNameUtf8 : userInfo.UserName
                     , devicePassword
                     , userInfo.Privilege > 0 ? 3 : 0
                     , userInfo.IsEnable))
@@ -879,10 +879,10 @@ namespace GuardianCommunication.Hardware.Zk
 
                 }
 
-                if (!DeviceInfo.IsOldVersion)
+                if (DeviceInfo.DeviceSettings?.ZkDeviceSettings != null && !DeviceInfo.DeviceSettings.ZkDeviceSettings.IsOldVersion)
                 {
                     if (!_communicationOcx.SetUserValidDate(DeviceInfo.DeviceNumber,
-                            userInfo.EmployeeNumber.ToString()
+                            userInfo.UserIdOnDevice.ToString()
                             , 1
                             , 0
                             , startDateString
@@ -898,7 +898,7 @@ namespace GuardianCommunication.Hardware.Zk
 
                 byte reserved = 0;
                 if (!_communicationOcx.SetUserInfoEx(DeviceInfo.DeviceNumber
-                    , Convert.ToInt32(userInfo.EmployeeNumber)
+                    , Convert.ToInt32(userInfo.UserIdOnDevice)
                     , (int)verificationStyle
                     , ref reserved))
                 {
@@ -908,9 +908,9 @@ namespace GuardianCommunication.Hardware.Zk
                         DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
                 }
 
-                SetUserPhoto(new DtoEmployeeImage
+                SetUserPhoto(new DtoUserImage
                 {
-                    EmployeeNumber = userInfo.EmployeeNumber,
+                    UserIdOnDevice = userInfo.UserIdOnDevice,
                     PhotoData = userInfo.HardwareProfileImage
                 });
                 _communicationOcx.RefreshData(DeviceInfo.DeviceNumber);
@@ -925,11 +925,11 @@ namespace GuardianCommunication.Hardware.Zk
 
         }
 
-        public void SetUserPhoto(DtoEmployeeImage userPhoto)
+        public void SetUserPhoto(DtoUserImage userPhoto)
         {
-            if (userPhoto.PhotoData.IsCollectionNotNullOrEmpty() && DeviceInfo.SendProfileImage)
+            if (userPhoto.PhotoData.IsCollectionNotNullOrEmpty() && DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.IsSendProfileImageActive)
             {
-                var filePath = Path.Combine(ServiceConstants.DevicePersonalImageFolder, userPhoto.EmployeeNumber + ".jpg");
+                var filePath = Path.Combine(ServiceConstants.DevicePersonalImageFolder, userPhoto.UserIdOnDevice + ".jpg");
                 var filePathFull = Path.GetFullPath(filePath);
                 if (!Directory.Exists(ServiceConstants.DevicePersonalImageFolder))
                 {
@@ -969,7 +969,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 usersInfo.Add(new DtoUserInfoDefinedOnDevice
                 {
-                    EmployeeNumber = sdwEnrollNumber.ToInt64(),
+                    UserIdOnDevice = sdwEnrollNumber.ToInt64(),
                     Name = name,
                     Privilege = privilege > 0 ? (int)ZkDevicePrivilegeEnumeration.SuperAdministrator : privilege,
                 });
@@ -1064,7 +1064,7 @@ namespace GuardianCommunication.Hardware.Zk
             throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
         }
 
-        public DtoEmployeeFinger ScanFinger(long userId, int fingerIndex)
+        public DtoUserFinger ScanFinger(long userId, int fingerIndex)
         {
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandScan))
             {
@@ -1091,9 +1091,9 @@ namespace GuardianCommunication.Hardware.Zk
                 //if (_czkemClass.GetUserTmpExStr(DeviceInfo.DeviceNumber, userId.ToString(), fingerIndex, out _,
                 //	out var tempDataFinger, out _))
                 //{
-                //	return new DtoEmployeeFinger
+                //	return new DtoUserFinger
                 //	{
-                //		EmployeeNumber = userId,
+                //		UserIdOnDevice = userId,
                 //		FingerIndex = fingerIndex,
                 //		TemplateData = DeviceHelperMethods.ConvertStringToArray(tempDataFinger)
                 //	};
@@ -1109,7 +1109,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         }
 
-        public DtoEmployeeFace ScanFace(long userId)
+        public DtoUserFace ScanFace(long userId)
         {
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandScan))
             {
@@ -1136,11 +1136,11 @@ namespace GuardianCommunication.Hardware.Zk
                 ////get the face templates from the memory
                 //if (_czkemClass.GetUserFaceStr(DeviceInfo.DeviceNumber, userId.ToString(), faceIndex, ref tmpData, ref length))
                 //{
-                //	return new DtoEmployeeFace
+                //	return new DtoUserFace
                 //	{
                 //		FaceIndex = faceIndex,
                 //		TemplateData = DeviceHelperMethods.ConvertStringToArray(tmpData),
-                //		EmployeeNumber = userId,
+                //		UserIdOnDevice = userId,
                 //		Length = length
                 //	};
                 //}
@@ -1177,184 +1177,6 @@ namespace GuardianCommunication.Hardware.Zk
                 _communicationOcx.GetLastError(ref errorCode);
                 throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
             }
-
-            if (AppConfigs.ZkOpenDoorDelay > 0)
-            {
-                Thread.Sleep(AppConfigs.ZkOpenDoorDelay);
-                if (!_communicationOcx.ACUnlock(DeviceInfo.DeviceNumber, timeoutInSecond))
-                {
-                    _communicationOcx.GetLastError(ref errorCode);
-                    throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-                }
-            }
-        }
-
-        public void SendTimeZone(DtoTimezone timezone)
-        {
-            var accessSunday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Sunday);
-            var accessMonday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Monday);
-            var accessTuesday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Tuesday);
-            var accessWednesday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Wednesday);
-            var accessThursday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Thursday);
-            var accessFriday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Friday);
-            var accessSaturday = timezone.Intervals
-                .OrderBy(row => row.StartTime)
-                .FirstOrDefault(row => row.DayType == TimeZoneDayTypeEnumeration.Saturday);
-            var accessSundayString = accessSunday == null
-                    ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                    : accessSunday.StartTime.FormatIntAsTimeString() + accessSunday.EndTime.FormatIntAsTimeString();
-            var accessMondayString = accessMonday == null
-                ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                : accessMonday.StartTime.FormatIntAsTimeString() + accessMonday.EndTime.FormatIntAsTimeString();
-            var accessTuesdayString = accessTuesday == null
-                ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                : accessTuesday.StartTime.FormatIntAsTimeString() + accessTuesday.EndTime.FormatIntAsTimeString();
-            var accessWednesdayString = accessWednesday == null
-                ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                : accessWednesday.StartTime.FormatIntAsTimeString() + accessWednesday.EndTime.FormatIntAsTimeString();
-            var accessThursdayString = accessThursday == null
-                ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                : accessThursday.StartTime.FormatIntAsTimeString() + accessThursday.EndTime.FormatIntAsTimeString();
-            var accessFridayString = accessFriday == null
-                ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                : accessFriday.StartTime.FormatIntAsTimeString() + accessFriday.EndTime.FormatIntAsTimeString();
-            var accessSaturdayString = accessSaturday == null
-                ? 0.FormatIntAsTimeString() + 0.FormatIntAsTimeString()
-                : accessSaturday.StartTime.FormatIntAsTimeString() + accessSaturday.EndTime.FormatIntAsTimeString();
-            var finalAccess =
-                accessSundayString +
-                accessMondayString +
-                accessTuesdayString +
-                accessWednesdayString +
-                accessThursdayString +
-                accessFridayString +
-                accessSaturdayString;
-
-
-            var errorCode = 0;
-            if (!_communicationOcx.SetTZInfo(DeviceInfo.DeviceNumber, timezone.TimeZoneNumber, finalAccess))
-            {
-                _communicationOcx.GetLastError(ref errorCode);
-                throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-            }
-            _communicationOcx.RefreshData(DeviceInfo.DeviceNumber);
-        }
-
-        public void SendHolidays(List<DtoDeviceHoliday> holidays)
-        {
-            if (holidays.IsCollectionNullOrEmpty() || holidays.Count > 24)
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationMaxFingerExceeded);
-            }
-            foreach (var calendarDay in holidays)
-            {
-                Thread.Sleep(100);
-
-                var errorCode = 0;
-                if (!_communicationOcx.SSR_SetHoliday(DeviceInfo.DeviceNumber, holidays.IndexOf(calendarDay) + 1, calendarDay.StartDate.Month, calendarDay.StartDate.Day, calendarDay.EndDate.Month, calendarDay.EndDate.Day, calendarDay.TimeZoneNumber))
-                {
-                    _communicationOcx.GetLastError(ref errorCode);
-                    throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-                }
-                _communicationOcx.RefreshData(DeviceInfo.DeviceNumber);//the data in the device should be refreshed
-            }
-
-        }
-
-        public void SendUserTimeZone(long userId, List<int> timeZoneNumbers)
-        {
-            if (timeZoneNumbers.IsCollectionNullOrEmpty())
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusAccessControlInvalidTimeZoneCount);
-            }
-
-            switch (timeZoneNumbers.Count)
-            {
-                case 1:
-                    timeZoneNumbers.Add(0);
-                    timeZoneNumbers.Add(0);
-                    break;
-                case 2:
-                    timeZoneNumbers.Add(0);
-                    break;
-            }
-
-            var errorCode = 0;
-            if (!_communicationOcx.SetUserTZStr(DeviceInfo.DeviceNumber, (int)userId
-                , $"{string.Join(":", timeZoneNumbers.OrderByDescending(row => row).Take(3).Select(row => row.ToString()))}:{1}"))
-            {
-                _communicationOcx.GetLastError(ref errorCode);
-                throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-            }
-            _communicationOcx.RefreshData(DeviceInfo.DeviceNumber);//the data in the device should be ref
-
-        }
-
-        public void SendDoorInfo(DtoZkDeviceDoor doorInfo)
-        {
-            var errorCode = 0;
-            if (!_communicationOcx.SSR_SetGroupTZ(DeviceInfo.DeviceNumber, 1, 1, 0, 0, 0, doorInfo.VerificationStyle))
-            {
-                _communicationOcx.GetLastError(ref errorCode);
-                throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-            }
-
-
-            string wigandFormat = "auto";
-            switch ((WiegandFormatEnumeration)doorInfo.WiegandFormat)
-            {
-                case WiegandFormatEnumeration.Format26:
-                    wigandFormat = "Wiegand26";
-                    break;
-                case WiegandFormatEnumeration.Format26A:
-                    wigandFormat = "Wiegand26A";
-                    break;
-                case WiegandFormatEnumeration.Format34:
-                    wigandFormat = "Wiegand34";
-                    break;
-                case WiegandFormatEnumeration.Format34A:
-                    wigandFormat = "Wiegand34A";
-                    break;
-                case WiegandFormatEnumeration.Format36:
-                    wigandFormat = "Wiegand36";
-                    break;
-                case WiegandFormatEnumeration.Format37:
-                    wigandFormat = "Wiegand37";
-                    break;
-                case WiegandFormatEnumeration.Format37A:
-                    wigandFormat = "Wiegand37A";
-                    break;
-                case WiegandFormatEnumeration.Format50:
-                    wigandFormat = "Wiegand50";
-                    break;
-                case WiegandFormatEnumeration.Format66:
-                    wigandFormat = "Wiegand66";
-                    break;
-            }
-            if (!_communicationOcx.GetWiegandFmt(DeviceInfo.DeviceNumber, wigandFormat))
-            {
-                _communicationOcx.GetLastError(ref errorCode);
-                throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-            }
-
-
-            //if (!_communicationOcx.CloseAlarm(this.DeviceInfo.DeviceNumber))
-            //{
-            //    _communicationOcx.GetLastError(ref errorCode);
-            //    throw new OperationCannotBeDoneException(DeviceHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
-            //}
 
         }
 

@@ -21,6 +21,7 @@ using GuardianCommunication.Hardware.Timy;
 using GuardianCommunication.Hardware.Virdi;
 using GuardianCommunication.Hardware.XRayDevice;
 using GuardianCommunication.Hardware.Zk;
+using GuardianCommunication.Hardware.Zk.ZkConcepts;
 using GuardianCommunication.Service;
 
 namespace GuardianCommunication.ServiceInstaller

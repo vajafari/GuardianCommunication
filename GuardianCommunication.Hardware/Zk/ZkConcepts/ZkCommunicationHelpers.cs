@@ -1,4 +1,4 @@
-﻿namespace GuardianCommunication.Hardware.Zk
+﻿namespace GuardianCommunication.Hardware.Zk.ZkConcepts
 {
     internal static class ZkCommunicationHelpers
     {

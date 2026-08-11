@@ -232,49 +232,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="PadisController\Protos\padis_service.proto" />
-    <Compile Include="PadisController\Model\PadisControllerMatchOnServerResponseModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerGrpcDeviceCommandModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerGrpcDeviceCommandResultModel.cs" />
-    <Compile Include="PadisController\PadisControllerAgent.cs" />
-    <Compile Include="PadisController\Model\PadisControllerConfigModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerAccessGroupAccessDataCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerAccessGroupCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerAccessLevelCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerConstants.cs" />
-    <Compile Include="PadisController\Model\PadisControllerCommandResponseModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerTestConnectionCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerOperationLogCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerChangeLockStatusCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerUserLimitationAttendanceCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerUserLimitationTimeCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerUserIdCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerDoorIdCommunicationModel.cs" />
-    <Compile Include="PadisController\Definition\PadisControllerContentTypeEnumeration.cs" />
-    <Compile Include="PadisController\Definition\PadisControllerAttendanceStatusEnumeration.cs" />
-    <Compile Include="PadisController\Definition\PadisControllerErrorEnumeration.cs" />
-    <Compile Include="PadisController\Model\PadisControllerEasyAccessCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerIoPortCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerDeviceDoorCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerWiegandCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerRelayCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerCommandModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerServerConfig.cs" />
-    <Compile Include="PadisController\Model\PadisControllerEasyPermissionCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerUserCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerCalendarDetailsCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerCalendarCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerEventCountCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerAttendanceCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerDateIntervalCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerDeviceInfoCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerDateAndTimeCommunicationModel.cs" />
-    <Compile Include="PadisController\Model\PadisControllerErrorCommunicationModel.cs" />
-    <Compile Include="PadisController\PadisControllerOnDemandAdapter.cs" />
-    <Compile Include="PadisController\PadisControllerUtils.cs" />
-    <Compile Include="PadisController\PadisControllerServer.cs" />
-    <Compile Include="PadisController\PadisControllerPushCommands.cs" />
     <Compile Include="Shared\Commands\CommandCameraId.cs" />
     <Compile Include="Shared\Helpers\AttendanceImageHelpers.cs" />
     <Compile Include="Shared\Helpers\DeviceSharedHelperMethods.cs" />
@@ -314,15 +271,14 @@
     <Compile Include="Virdi\VirdiConcepts\GetDataCommand.cs" />
     <Compile Include="Virdi\VirdiConcepts\VirdiDeviceLogTypeEnum.cs" />
     <Compile Include="Virdi\VirdiConcepts\VirdiErrorEnum.cs" />
-    <Compile Include="Zk\ZkDevicePrivilegeEnumeration.cs" />
-    <Compile Include="Zk\ZkCommunicationHelpers.cs" />
-    <Compile Include="Zk\WiegandFormatEnumeration.cs" />
-    <Compile Include="Zk\ZkOnDemandCommands.cs" />
-    <Compile Include="Zk\ZkPushVerificationStyleEnumeration.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkDevicePrivilegeEnumeration.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkCommunicationHelpers.cs" />
+    <Compile Include="Zk\ZkConcepts\WiegandFormatEnumeration.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkPushVerificationStyleEnumeration.cs" />
     <Compile Include="Zk\ZkServer.cs" />
-    <Compile Include="Zk\ZkUtils.cs" />
-    <Compile Include="Zk\ZkVerificationStyleEnumeration.cs" />
-    <Compile Include="Zk\ZkErrorEnum.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkUtils.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkVerificationStyleEnumeration.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkErrorEnum.cs" />
     <Compile Include="Suprema\SupremaSdk1OnDemandAdapter.cs" />
     <Compile Include="Suprema\SupremaConcepts\V1\BSSDK.cs" />
     <Compile Include="Suprema\SupremaConcepts\V2\ApiV2.cs" />
@@ -339,9 +295,7 @@
     <Compile Include="Zk\ZkPushCommands.cs" />
     <Compile Include="Zk\ZkOnDemandAdapter.cs" />
     <Compile Include="Suprema\SupremaConcepts\V2\SupremaSdk2ServerConfig.cs" />
-    <Compile Include="Zk\ZkPushConfig.cs" />
-    <Compile Include="Zk\ZkAgentConfig.cs" />
-    <Compile Include="Zk\ZkDeviceAgent.cs" />
+    <Compile Include="Zk\ZkConcepts\ZkPushConfig.cs" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="DLL\ElmOSanat\EosClocks.dll" />

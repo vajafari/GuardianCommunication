@@ -750,7 +750,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
             }
             return inputItems.Select(ii => new UserInfoDefinedOnDeviceModel
             {
-                EmployeeNumber = ii.EmployeeNumber,
+                EmployeeNumber = ii.UserIdOnDevice,
                 Name = ii.Name,
                 Privilege = ii.Privilege,
             }).ToList();

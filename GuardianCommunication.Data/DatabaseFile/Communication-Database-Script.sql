@@ -30,6 +30,7 @@ BEGIN
 CREATE TABLE [com].[Attendance](
 	[Id] [uniqueidentifier] NOT NULL,
 	[UserIdOnDevice] [bigint] NOT NULL,
+	[LogIdOnDevice] [bigint] NULL,
 	[AttendanceDateTime] [datetime2](7) NOT NULL,
 	[DeviceId] [uniqueidentifier] NULL,
 	[CameraId] [uniqueidentifier] NULL,
@@ -115,6 +116,7 @@ IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[De
 BEGIN
 CREATE TABLE [com].[DeviceCommand](
 	[Id] [uniqueidentifier] NOT NULL,
+	[NumericId] [bigint] IDENTITY(1,1) NOT NULL,
 	[DeviceId] [uniqueidentifier] NOT NULL,
 	[DeviceNumber] [int] NOT NULL,
 	[DeviceContent] [nvarchar](max) NOT NULL,

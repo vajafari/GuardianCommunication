@@ -6,7 +6,7 @@ namespace GuardianCommunication.Shared.Dto
 	public class DtoDeviceUnsentCommand
 	{
 
-		public int Id { get; set; }
+		public int NumericId { get; set; }
 
 		public string DeviceSerialNumber { get; set; }
 

@@ -101,6 +101,7 @@ namespace GuardianCommunication.Data.Repository
                 (
                      [Id]
                    , [UserIdOnDevice]
+                   , [LogIdOnDevice]
                    , [AttendanceDateTime]
                    , [DeviceId]
                    , [CameraId]
@@ -121,6 +122,7 @@ namespace GuardianCommunication.Data.Repository
                 (
                      @CurrentId
                    , @UserIdOnDevice
+                   , @LogIdOnDevice
                    , @AttendanceDateTime
                    , @DeviceId
                    , @CameraId
@@ -150,6 +152,7 @@ namespace GuardianCommunication.Data.Repository
                     (
                          [Id]
                        , [UserIdOnDevice]
+                       , [LogIdOnDevice]
                        , [AttendanceDateTime]
                        , [DeviceId]
                        , [CameraId]
@@ -170,6 +173,7 @@ namespace GuardianCommunication.Data.Repository
                     (
                          @CurrentId
                        , @UserIdOnDevice
+                       , @LogIdOnDevice
                        , @AttendanceDateTime
                        , @DeviceId
                        , @CameraId
@@ -226,6 +230,7 @@ namespace GuardianCommunication.Data.Repository
                 (
                      [Id]
                    , [UserIdOnDevice]
+                   , [LogIdOnDevice]
                    , [AttendanceDateTime]
                    , [DeviceId]
                    , [CameraId]
@@ -246,6 +251,7 @@ namespace GuardianCommunication.Data.Repository
                 (
                      @CurrentId
                    , @UserIdOnDevice
+                   , @LogIdOnDevice
                    , @AttendanceDateTime
                    , @DeviceId
                    , @CameraId
@@ -276,6 +282,7 @@ namespace GuardianCommunication.Data.Repository
                     (
                          [Id]
                        , [UserIdOnDevice]
+                       , [LogIdOnDevice]
                        , [AttendanceDateTime]
                        , [DeviceId]
                        , [CameraId]
@@ -296,6 +303,7 @@ namespace GuardianCommunication.Data.Repository
                     (
                          @CurrentId
                        , @UserIdOnDevice
+                       , @LogIdOnDevice
                        , @AttendanceDateTime
                        , @DeviceId
                        , @CameraId
