@@ -298,9 +298,6 @@
     <Compile Include="Zk\ZkConcepts\ZkPushConfig.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="DLL\ElmOSanat\EosClocks.dll" />
-    <Content Include="DLL\JahanGostar\DCL.dll" />
-    <Content Include="DLL\ProcessingWorld\xLink.dll" />
     <Content Include="DLL\Suprema\sdkv1.8\BS_SDK.dll" />
     <Content Include="DLL\Suprema\sdkv1.8\libeay32.dll" />
     <Content Include="DLL\Suprema\sdkv1.8\libssl32.dll" />

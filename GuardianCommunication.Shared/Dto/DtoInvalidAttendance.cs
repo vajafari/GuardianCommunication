@@ -14,8 +14,8 @@ namespace GuardianCommunication.Shared.Dto
         public DeviceAttendanceIoRetrieveTypeEnumeration? DeviceAttendanceIoRetrieveType { get; set; }
         public AttendanceSourceEnumeration AttendanceSource { get; set; }
         public InvalidAttendanceReasonEnumeration Reason { get; set; }
-        public int? DeviceNumber { get; set; }
-        public int? DoorId { get; set; }
+        public Guid? DeviceId { get; set; }
+        public Guid? DoorId { get; set; }
         public int StatusCode { get; set; }
         public byte[] Image { get; set; }
 

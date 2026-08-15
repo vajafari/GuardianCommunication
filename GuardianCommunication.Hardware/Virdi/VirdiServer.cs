@@ -12,6 +12,14 @@ using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Shared.Commands;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Virdi.VirdiConcepts;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 using UCSAPICOMLib;
 
 namespace GuardianCommunication.Hardware.Virdi
@@ -30,10 +38,10 @@ namespace GuardianCommunication.Hardware.Virdi
         #region Variable
         private Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> _actionToGetCommands;
         private Func<DtoServerMatchData, DtoServerMatchResult> _serverMatchProcessor;
-        private readonly ConcurrentDictionary<int, DtoCommunicationDeviceData> _deviceList = new ConcurrentDictionary<int, DtoCommunicationDeviceData>();
+        private readonly List<DtoDevice> _deviceList = new List<DtoDevice>();
         private Thread _deviceCommandsThread;
         private CancellationTokenSource _serverCts;
-        private readonly List<int> _connectedDevices = new List<int>();
+        private readonly List<Guid> _connectedDeviceIds = new List<Guid>();
 
         private UCSAPI _ucsApi;
         private ITerminalUserData _terminalUserData;
@@ -66,7 +74,7 @@ namespace GuardianCommunication.Hardware.Virdi
         public void StartVirdiServer(VirdiServerConfig config
             , Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> actionToGetCommands
             , Func<DtoServerMatchData, DtoServerMatchResult> serverMatchProcessor
-            , List<DtoCommunicationDeviceData> deviceInfos)
+            , List<DtoDevice> deviceInfos)
         {
 
             if (_isVirdiServerStarted)
@@ -107,9 +115,7 @@ namespace GuardianCommunication.Hardware.Virdi
                 _ucsApi.EventRegistIris -= ucsAPI_EventRegistIris;
                 //_ucsApi.EventGetUserInfoList -= ucsAPI_EventGetUserInfoList;
                 _ucsApi.EventVerifyCard -= ucsAPI_EventVerifyCard;
-                _ucsApi.EventVerifyPassword -= ucsAPI_EventVerifyPassword;
                 _ucsApi.EventGetTerminalTime -= ucsAPI_OnEventGetTerminalTime;
-                _ucsApi.EventSetAccessControlData -= ucsApi_OnEventSetAccessControlData;
 
                 _ucsApi.ServerStop();
                 if ((VirdiErrorEnum)_ucsApi.ErrorCode != VirdiErrorEnum.Success)
@@ -131,7 +137,7 @@ namespace GuardianCommunication.Hardware.Virdi
             }
         }
 
-        public void SetDeviceList(List<DtoCommunicationDeviceData> deviceInfos)
+        public void SetDeviceList(List<DtoDevice> deviceInfos)
         {
 
             try
@@ -143,17 +149,17 @@ namespace GuardianCommunication.Hardware.Virdi
 
                 var pushDeviceInfos = deviceInfos.Where
                     (row =>
-                    row.ProducerEnum == ProducerEnumeration.Virdi
-                    && row.SdkVersionEnum == SdkVersionEnumeration.SdkVersion1).ToList();
+                    row.ProducerNumber == ProducerEnumeration.Virdi
+                    && row.SdkVersion == SdkVersionEnumeration.SdkVersion1).ToList();
                 if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerSetDeviceList))
                 {
                     LoggingSystem.LogInfo("Virdi Server set device list", pushDeviceInfos);
                 }
 
-                _deviceList.Clear();
-                foreach (var device in pushDeviceInfos)
+                lock (_deviceList)
                 {
-                    _deviceList.TryAdd(device.DeviceNumber, device);
+                    _deviceList.Clear();
+                    _deviceList.AddRange(pushDeviceInfos);
                 }
             }
             catch (Exception exp)
@@ -162,7 +168,7 @@ namespace GuardianCommunication.Hardware.Virdi
             }
         }
 
-        private void DelayedStartServer(List<DtoCommunicationDeviceData> deviceInfos)
+        private void DelayedStartServer(List<DtoDevice> deviceInfos)
         {
             SetDeviceList(deviceInfos);
 
@@ -191,7 +197,7 @@ namespace GuardianCommunication.Hardware.Virdi
                 _ucsApi.ServerStart(9999, _config.ServerPort);
                 if ((VirdiErrorEnum)_ucsApi.ErrorCode != VirdiErrorEnum.Success)
                 {
-                    LoggingSystem.LogError($"Error On Virdi Service Start", $"Error code = {_ucsApi.ErrorCode}");
+                    LoggingSystem.LogError("Error On Virdi Service Start", $"Error code = {_ucsApi.ErrorCode}");
                 }
                 else
                 {
@@ -212,12 +218,7 @@ namespace GuardianCommunication.Hardware.Virdi
                     _ucsApi.EventRegistIris += ucsAPI_EventRegistIris;
                     //_ucsApi.EventGetUserInfoList += ucsAPI_EventGetUserInfoList;
                     _ucsApi.EventVerifyCard += ucsAPI_EventVerifyCard;
-                    _ucsApi.EventVerifyPassword += ucsAPI_EventVerifyPassword;
                     _ucsApi.EventGetTerminalTime += ucsAPI_OnEventGetTerminalTime;
-                    _ucsApi.EventSetAccessControlData += ucsApi_OnEventSetAccessControlData;
-
-
-
 
                     _isVirdiServerStarted = true;
                     LoggingSystem.LogInfo($"Virdi Service start successfully at port {_config.ServerPort}");
@@ -232,12 +233,12 @@ namespace GuardianCommunication.Hardware.Virdi
 
         #region Connection
 
-        public List<int> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceNumbers()
         {
-            lock (_connectedDevices)
+            lock (_connectedDeviceIds)
             {
                 // Return a snapshot copy, never the live list (callers enumerate off-lock).
-                return _connectedDevices.ToList();
+                return _connectedDeviceIds.ToList();
             }
         }
 
@@ -255,13 +256,15 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     return;
                 }
-                lock (_connectedDevices)
+
+
+                lock (_connectedDeviceIds)
                 {
-                    if (_connectedDevices.Contains(terminalId))
+                    if (_connectedDeviceIds.Contains(device.Id))
                     {
-                        _connectedDevices.Remove(terminalId);
+                        _connectedDeviceIds.Remove(device.Id);
                     }
-                    _connectedDevices.Add(terminalId);
+                    _connectedDeviceIds.Add(device.Id);
                     if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerDeviceConnection))
                     {
                         LoggingSystem.LogInfo($"Virdi Server Terminal is {terminalId} & Connected with ip {terminalIp} connected successfully");
@@ -271,7 +274,7 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     new DtoDeviceConnectionStatus
                     {
-                        DeviceNumber = terminalId,
+                        DeviceId = device.Id,
                         IsConnected = true
                     }
                 });
@@ -292,18 +295,24 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     LoggingSystem.LogInfo($"Virdi Server Terminal {terminalId} is disconnected");
                 }
-                lock (_connectedDevices)
+                var device = GetDeviceByTerminalId(terminalId);
+                if (device == null)
                 {
-                    if (_connectedDevices.Contains(terminalId))
+                    return;
+                }
+
+                lock (_connectedDeviceIds)
+                {
+                    if (_connectedDeviceIds.Contains(device.Id))
                     {
-                        _connectedDevices.Remove(terminalId);
+                        _connectedDeviceIds.Remove(device.Id);
                     }
                 }
                 HardwareEventPublisher.Instance.PublishDeviceConnectionStatusChanged(new List<DtoDeviceConnectionStatus>
                 {
                     new DtoDeviceConnectionStatus
                     {
-                        DeviceNumber = terminalId,
+                        DeviceId = device.Id,
                         IsConnected = false
                     }
                 });
@@ -345,14 +354,13 @@ namespace GuardianCommunication.Hardware.Virdi
                 }
                 try
                 {
-                    List<int> connectedDeviceNumbers;
-                    lock (_connectedDevices)
+                    List<Guid> connectedDeviceIds;
+                    lock (_connectedDeviceIds)
                     {
-                        // Snapshot once under the lock; used for both the emptiness check and the filter below.
-                        connectedDeviceNumbers = _connectedDevices.ToList();
+                        connectedDeviceIds = _connectedDeviceIds.ToList();
                     }
 
-                    if (!connectedDeviceNumbers.IsCollectionNotNullOrEmpty())
+                    if (!connectedDeviceIds.IsCollectionNotNullOrEmpty())
                     {
                         token.WaitHandle.WaitOne(_config.CommandSetting.SleepBetweenSendsIfCommandNotExistsInMilliSeconds);
                         continue;
@@ -360,7 +368,7 @@ namespace GuardianCommunication.Hardware.Virdi
                     var commandFetchParams = new DeviceNotSentCommandsFilter
                     {
                         Count = 1,
-                        DeviceNumbers = connectedDeviceNumbers,
+                        DeviceIds = connectedDeviceIds,
                         Producer = ProducerEnumeration.Virdi,
                         SdkVersion = SdkVersionEnumeration.SdkVersion1,
                     };
@@ -371,7 +379,7 @@ namespace GuardianCommunication.Hardware.Virdi
                     var allCommands = _actionToGetCommands(commandFetchParams);
                     if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerCommandFetchResult))
                     {
-                        LoggingSystem.LogInfo("Virdi Server Command Fetch result", allCommands.Select(c => new { c.Id, c.DeviceNumber, c.CommandType }));
+                        LoggingSystem.LogInfo("Virdi Server Command Fetch result", allCommands.Select(c => new { c.DeviceId, c.DeviceNumber, c.CommandType }));
                     }
 
                     if (allCommands.IsCollectionNullOrEmpty())
@@ -403,27 +411,27 @@ namespace GuardianCommunication.Hardware.Virdi
                                 case DeviceCommandTypeEnumeration.SetUserInfo:
                                 case DeviceCommandTypeEnumeration.EnrollUserWithTemplate:
                                     {
-                                        virdiError = AddUserSync(command.Id, command.DeviceNumber, device,
-                                            ObjectHelper.DeserializeAsJson<DtoEmployeeDeviceRelatedData>(
+                                        virdiError = AddUserSync(command.NumericId, command.DeviceNumber, device,
+                                            ObjectHelper.DeserializeAsJson<DtoUserDeviceRelatedData>(
                                                 command.CommandContent));
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.DeleteUser:
                                     {
-                                        virdiError = DeleteUserByIdAsync(command.Id, command.DeviceNumber,
+                                        virdiError = DeleteUserByIdAsync(command.NumericId, command.DeviceNumber,
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.ReadUser:
                                     {
                                         virdiError = GetUserDataAsync
-                                        (command.Id, command.DeviceNumber,
+                                        (command.NumericId, command.DeviceNumber,
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.ClearUser:
                                     {
-                                        DeleteAllUserAsync(command.Id, command.DeviceNumber);
+                                        DeleteAllUserAsync(command.NumericId, command.DeviceNumber);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.ScanFace:
@@ -431,9 +439,9 @@ namespace GuardianCommunication.Hardware.Virdi
 
                                         var dbCommand =
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
-                                        virdiError = device.HasVisibleLight
-                                            ? ScanVisiblelightFaceAsync(command.Id, command.DeviceNumber, dbCommand.UserId)
-                                            : ScanFaceAsync(command.Id, command.DeviceNumber, dbCommand.UserId);
+                                        virdiError = device.HasVisiblelight
+                                            ? ScanVisiblelightFaceAsync(command.NumericId, command.DeviceNumber, dbCommand.UserId)
+                                            : ScanFaceAsync(command.NumericId, command.DeviceNumber, dbCommand.UserId);
                                         Thread.Sleep(_config.CommandSetting.WaitBetweenCommandSendInMilliseconds * 3);
                                     }
                                     break;
@@ -441,7 +449,7 @@ namespace GuardianCommunication.Hardware.Virdi
                                     {
                                         var dbCommand =
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
-                                        virdiError = ScanIrisAsync(command.Id, command.DeviceNumber, dbCommand.UserId);
+                                        virdiError = ScanIrisAsync(command.NumericId, command.DeviceNumber, dbCommand.UserId);
                                         Thread.Sleep(_config.CommandSetting.WaitBetweenCommandSendInMilliseconds * 3);
                                     }
                                     break;
@@ -453,7 +461,7 @@ namespace GuardianCommunication.Hardware.Virdi
                                 // ولی باید چک کنیم ببینیم وصل هست یا خیر
                                 // HardwareEventPublisher.Instance.PublishNewFingerEnrolled(resultOfScan.Item1, command.DeviceNumber);
                                 //        var resultOfScan = ScanFingerSync(command.DeviceNumber, dbCommand.UserId, dbCommand.FingerIndex);
-                                //        PublishCommandSendEvent(command.Id, result);
+                                //        PublishCommandSendEvent(command.NumericId, result);
                                 //        if (resultOfScan.Item2 == VirdiErrorEnum.Success)
                                 //        {
                                 //            HardwareEventPublisher.Instance.PublishNewFingerEnrolled(resultOfScan.Item1, command.DeviceNumber);
@@ -463,9 +471,9 @@ namespace GuardianCommunication.Hardware.Virdi
                                 // ReSharper restore CommentTypo
                                 case DeviceCommandTypeEnumeration.ReadAttendance:
                                     {
-                                        if (!device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                                        if (device.DeviceSettings == null || !device.DeviceSettings.DontSaveAttendance)
                                         {
-                                            virdiError = GetLogAsync(command.Id, command.DeviceNumber,
+                                            virdiError = GetLogAsync(command.NumericId, command.DeviceNumber,
                                                 ObjectHelper.DeserializeAsJson<VirdiGetDataCommand>(command.CommandContent)
                                                     .LogType);
                                         }
@@ -473,43 +481,37 @@ namespace GuardianCommunication.Hardware.Virdi
                                     break;
                                 case DeviceCommandTypeEnumeration.ReadoutAttendance:
                                     {
-                                        if (!device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                                        if (device.DeviceSettings == null || !device.DeviceSettings.DontSaveAttendance)
                                         {
                                             var dbCommand =
                                                 ObjectHelper.DeserializeAsJson<CommandStartAndEndDate>(
                                                     command.CommandContent);
                                             virdiError = GetDataByRangeDateAsync
-                                            (command.Id, command.DeviceNumber, dbCommand.StartDate, dbCommand.EndDate,
+                                            (command.NumericId, command.DeviceNumber, dbCommand.StartDate, dbCommand.EndDate,
                                                 VirdiDeviceLogTypeEnum.Period);
                                         }
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.UserCount:
                                     {
-                                        virdiError = GetUserCountAsync(command.Id, command.DeviceNumber);
+                                        virdiError = GetUserCountAsync(command.NumericId, command.DeviceNumber);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.AttendanceLogCount:
                                     {
                                         virdiError = GetLogCountAsync
-                                            (command.Id, command.DeviceNumber, VirdiDeviceLogTypeEnum.New);
-                                    }
-                                    break;
-                                case DeviceCommandTypeEnumeration.VirdiAccessControlData:
-                                    {
-                                        virdiError = SendAccessControlData(command.Id, command.DeviceNumber,
-                                            ObjectHelper.DeserializeAsJson<DtoVirdiAccessControlData>(command.CommandContent));
+                                            (command.NumericId, command.DeviceNumber, VirdiDeviceLogTypeEnum.New);
                                     }
                                     break;
                                 default:
-                                    PublishResponseReceivedEvent(command.Id, "NOT SUPPORTED");
+                                    PublishResponseReceivedEvent(command.NumericId, "NOT SUPPORTED");
                                     break;
                             }
 
                             if (virdiError != VirdiErrorEnum.NotConnected &&
                                 virdiError != VirdiErrorEnum.InvalidTerminal)
                             {
-                                PublishMessageSentEvent(command.Id);
+                                PublishMessageSentEvent(command.NumericId);
                             }
 
                             if (virdiError != VirdiErrorEnum.Success)
@@ -518,7 +520,7 @@ namespace GuardianCommunication.Hardware.Virdi
 
                                 HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription()
                                 {
-                                    Id = command.Id,
+                                    NumericId = command.NumericId,
                                     Description = $"Error Code is = {virdiError.ToString()}",
                                 });
                             }
@@ -526,12 +528,13 @@ namespace GuardianCommunication.Hardware.Virdi
                         }
                         catch (Exception exp)
                         {
-                            PublishMessageSentEvent(command.Id);
+                            PublishMessageSentEvent(command.NumericId);
                             // Record the failure instead of silently reporting the command as delivered.
                             HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription
                             {
-                                Id = command.Id,
+                                NumericId = command.NumericId,
                                 Description = $"Unknown Error. Message is {exp.GetFullExceptionMessage()}",
+                                Mode = CommandMode,
                             });
                             LoggingSystem.LogError(exp);
                         }
@@ -608,77 +611,76 @@ namespace GuardianCommunication.Hardware.Virdi
                 if (_accessLogData.UserID <= 0) return;
                 try
                 {
-                    
+                    var deviceInList = GetDeviceByTerminalId(terminalId);
+                    if (deviceInList == null)
+                    {
+                        return;
+                    }
 
                     if (_accessLogData.IsAuthorized != 1)
                     {
                         // تردد نامجاز
-                        if (!IsInvalidSaveAttendanceActive(terminalId)) return;
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        
+                        if (deviceInList.DeviceSettings != null && deviceInList.DeviceSettings.DontSaveInvalidAttendance)
+                        {
+                            return;
+                        }
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
                         var currentRecord = new DtoInvalidAttendance
                         {
                             AttendanceDateTime = attendanceDate,
-                            EmployeeNumber = _accessLogData.UserID,
+                            UserIdOnDevice = _accessLogData.UserID,
                             StatusCode = _accessLogData.AuthMode,
-                            DeviceNumber = terminalId,
+                            DeviceId = deviceInList.Id,
                             VerificationStyle = (int)GetVerificationStyle(_accessLogData.AuthType),
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
                             RfCardNumber = _accessLogData.RFID,
                             Reason = GetAuthFailReason(_accessLogData.AuthResult),
-                            DoorId = null,
+                            Image = _accessLogData.PictureDataLength > 0 ? _accessLogData.PictureData as byte[] : null,
                         };
-                        if (_accessLogData.PictureDataLength > 0)
-                        {
-                            currentRecord.Image = _accessLogData.PictureData as byte[];
-                        }
-
                         if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerRealTimeLog))
                         {
                             LoggingSystem.LogInfo("Virdi real time Access log invalid received", currentRecord);
                         }
-
-                        var deviceInList = GetDeviceByTerminalId(terminalId);
-                        if (deviceInList == null ||
-                            !deviceInList.DeviceSettings.HasFlag(DeviceSettingsEnumeration.ServerMatch))
-                        {
-                            HardwareEventPublisher.Instance.PublishInvalidAttendance(currentRecord);
-                        }
-
+                        HardwareEventPublisher.Instance.PublishInvalidAttendance(currentRecord);
 
                     }
                     else
                     {
-                        if (!IsSaveAttendanceActive(terminalId)) return;
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        if (deviceInList.DeviceSettings != null && deviceInList.DeviceSettings.DontSaveAttendance)
+                        {
+                            return;
+                        }
+
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
                         var currentRecord = new DtoAttendance
                         {
                             AttendanceDateTime = attendanceDate,
-                            EmployeeNumber = _accessLogData.UserID,
+                            UserIdOnDevice = _accessLogData.UserID,
                             CameraId = null,
                             StatusCode = _accessLogData.AuthMode,
-                            Id = 0,
-                            DeviceNumber = terminalId,
+                            DeviceId = deviceInList.Id,
                             VerificationStyle = (int)GetVerificationStyle(_accessLogData.AuthType),
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
-                            IsInvalid = false,
-                            IsSent = false,
+                            IsSentToGuardian = false,
                             RfCardNumber = _accessLogData.RFID,
+                            IoType = deviceInList.IoType,
+                            ModuleId = deviceInList.ModuleId,
                         };
                         if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerAccessLog))
                         {
                             LoggingSystem.LogInfo("Virdi Server Virdi Access log received", currentRecord);
                         }
-
                         HardwareEventPublisher.Instance.PublishAttendance(currentRecord);
 
                         if (_accessLogData.PictureDataLength > 0)
                         {
                             HardwareEventPublisher.Instance.PublishAttendanceImage(new DtoDeviceAttendanceImage
                             {
-                                DeviceNumber = terminalId,
-                                EmployeeNumber = currentRecord.EmployeeNumber,
+                                DeviceId = deviceInList.Id,
+                                UserIdOnDevice = currentRecord.UserIdOnDevice,
                                 AttendanceDateTime = currentRecord.AttendanceDateTime,
                                 Image = _accessLogData.PictureData as byte[]
                             });
@@ -700,79 +702,78 @@ namespace GuardianCommunication.Hardware.Virdi
                 if (_accessLogData.UserID <= 0) return;
                 try
                 {
+                    var deviceInList = GetDeviceByTerminalId(terminalId);
+                    if (deviceInList == null)
+                    {
+                        return;
+                    }
                     if (_accessLogData.IsAuthorized != 1)
                     {
-                        if (!IsInvalidSaveAttendanceActive(terminalId)) return;
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        // تردد نامجاز
                         
+                        if (deviceInList.DeviceSettings != null && deviceInList.DeviceSettings.DontSaveInvalidAttendance)
+                        {
+                            return;
+                        }
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
+
                         var currentRecord = new DtoInvalidAttendance
                         {
                             AttendanceDateTime = attendanceDate,
-                            EmployeeNumber = _accessLogData.UserID,
+                            UserIdOnDevice = _accessLogData.UserID,
                             StatusCode = _accessLogData.AuthMode,
-                            DeviceNumber = terminalId,
+                            DeviceId = deviceInList.Id,
                             VerificationStyle = (int)GetVerificationStyle(_accessLogData.AuthType),
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
                             RfCardNumber = _accessLogData.RFID,
                             Reason = GetAuthFailReason(_accessLogData.AuthResult),
                             DoorId = null,
+                            Image = _accessLogData.PictureDataLength > 0 ? _accessLogData.PictureData as byte[] : null,
                         };
-                        if (_accessLogData.PictureDataLength > 0)
-                        {
-                            currentRecord.Image = _accessLogData.PictureData as byte[];
-                        }
-
                         if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerRealTimeLog))
                         {
                             LoggingSystem.LogInfo("Virdi real time Access log invalid received", currentRecord);
                         }
 
-                        var deviceInList = GetDeviceByTerminalId(terminalId);
-                        if (deviceInList == null ||
-                            !deviceInList.DeviceSettings.HasFlag(DeviceSettingsEnumeration.ServerMatch))
-                        {
-                            HardwareEventPublisher.Instance.PublishInvalidAttendance(currentRecord);
-                        }
                     }
                     else
                     {
                         // تردد مجاز
-                        if (!IsSaveAttendanceActive(terminalId)) return;
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        if (deviceInList.DeviceSettings != null && deviceInList.DeviceSettings.DontSaveAttendance)
+                        {
+                            return;
+                        }
+
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
                         var currentRecord = new DtoAttendance
                         {
                             AttendanceDateTime = attendanceDate,
-                            EmployeeNumber = _accessLogData.UserID,
+                            UserIdOnDevice = _accessLogData.UserID,
                             StatusCode = _accessLogData.AuthMode,
-                            DeviceNumber = terminalId,
+                            DeviceId = deviceInList.Id,
                             CameraId = null,
                             VerificationStyle = (int)GetVerificationStyle(_accessLogData.AuthType),
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
-                            IsInvalid = false,
-                            IsSent = false,
+                            IsSentToGuardian = false,
                             RfCardNumber = _accessLogData.RFID,
+                            IoType = deviceInList.IoType,
+                            ModuleId = deviceInList.ModuleId,
 
                         };
                         if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerRealTimeLog))
                         {
                             LoggingSystem.LogInfo("Virdi real time Access log valid received", currentRecord);
                         }
-
-                        var deviceInList = GetDeviceByTerminalId(terminalId);
-                        if (deviceInList == null ||
-                            !deviceInList.DeviceSettings.HasFlag(DeviceSettingsEnumeration.ServerMatch))
-                        {
-                            HardwareEventPublisher.Instance.PublishAttendance(currentRecord);
-                        }
+                        HardwareEventPublisher.Instance.PublishAttendance(currentRecord);
 
                         if (_accessLogData.PictureDataLength > 0)
                         {
                             HardwareEventPublisher.Instance.PublishAttendanceImage(new DtoDeviceAttendanceImage
                             {
-                                DeviceNumber = terminalId,
-                                EmployeeNumber = currentRecord.EmployeeNumber,
+                                DeviceId = deviceInList.Id,
+                                UserIdOnDevice = currentRecord.UserIdOnDevice,
                                 AttendanceDateTime = currentRecord.AttendanceDateTime,
                                 Image = _accessLogData.PictureData as byte[]
                             });
@@ -855,9 +856,9 @@ namespace GuardianCommunication.Hardware.Virdi
             }
             PublishResponseReceivedEvent(clientId);
             var user = GetUserInfo(_terminalUserData, true);
-            HardwareEventPublisher.Instance.PublishNewUserEnrolled(user, terminalId, DtoEmployeeEnrolledSetting.GetAllSettingInstance());
+            HardwareEventPublisher.Instance.PublishNewUserEnrolled(user, terminalId, DtoUserEnrolledSetting.GetAllSettingInstance());
         }
-        private DtoEmployeeDeviceRelatedData GetUserInfo(ITerminalUserData terminalUserData, bool addTemplateInfos)
+        private DtoUserDeviceRelatedData GetUserInfo(ITerminalUserData terminalUserData, bool addTemplateInfos)
         {
 
             lock (_terminalUserData)
@@ -883,22 +884,22 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     verificationStyle |= VirdiVerificationStyleEnumeration.IsFace;
                 }
-                if (_terminalUserData.IsIris  != 0)
+                if (_terminalUserData.IsIris != 0)
                 {
                     verificationStyle |= VirdiVerificationStyleEnumeration.IsIris;
                 }
-                
-                var currentUser = new DtoEmployeeDeviceRelatedData
+
+                var currentUser = new DtoUserDeviceRelatedData()
                 {
-                    EmployeeNumber = _terminalUserData.UserID,
+                    UserIdOnDevice = _terminalUserData.UserID,
                     Password = _terminalUserData.Password,
                     Privilege = _terminalUserData.IsAdmin,
                     UserName = _terminalUserData.UserName,
                     //IsEnable = _terminalUserData.IsIdentify == 1,
                     IsEnable = true,
                     VerificationStyle = (int)verificationStyle,
-                    FingerDataList = new List<DtoEmployeeFinger>(),
-                    FaceDataList = new List<DtoEmployeeFace>(),
+                    FingerDataList = new List<DtoUserFinger>(),
+                    FaceDataList = new List<DtoUserFace>(),
                     RfCardNumbers = new List<string>(),
                 };
                 if (addTemplateInfos)
@@ -924,23 +925,23 @@ namespace GuardianCommunication.Hardware.Virdi
                         var allTemplate = new byte[NTemplateType400 + NTemplateType400];
                         Buffer.BlockCopy(fingerPrintData1, 0, allTemplate, 0, NTemplateType400);
                         Buffer.BlockCopy(fingerPrintData2, 0, allTemplate, NTemplateType400, NTemplateType400);
-                        var fingerData = new DtoEmployeeFinger
+                        var fingerData = new DtoUserFinger
                         {
                             FingerIndex = fingerIndex,
                             TemplateData = allTemplate,
-                            EmployeeNumber = terminalUserData.UserID,
+                            UserIdOnDevice = terminalUserData.UserID,
                             //CheckSum = (uint)((NTemplateType400 * 100000)  + NTemplateType400)
                         };
                         currentUser.FingerDataList.Add(fingerData);
                     }
 
-                    currentUser.FaceDataList = new List<DtoEmployeeFace>();
+                    currentUser.FaceDataList = new List<DtoUserFace>();
                     if (_terminalUserData.FaceNumber > 0)
                     {
                         var biFaceData = (byte[])terminalUserData.FaceData;
-                        var currentFace = new DtoEmployeeFace
+                        var currentFace = new DtoUserFace
                         {
-                            EmployeeNumber = terminalUserData.UserID,
+                            UserIdOnDevice = terminalUserData.UserID,
                             Length = biFaceData.Length,
                             TemplateData = biFaceData,
                             FaceIndex = terminalUserData.FaceNumber,
@@ -948,13 +949,13 @@ namespace GuardianCommunication.Hardware.Virdi
                         currentUser.FaceDataList.Add(currentFace);
                     }
 
-                    currentUser.IrisDataList = new List<DtoEmployeeIris>();
+                    currentUser.IrisDataList = new List<DtoUserIris>();
                     if (_terminalUserData.IrisDataLength > 0)
                     {
                         var biIrisData = (byte[])terminalUserData.IrisData;
-                        var currentIris = new DtoEmployeeIris
+                        var currentIris = new DtoUserIris
                         {
-                            EmployeeNumber = terminalUserData.UserID,
+                            UserIdOnDevice = terminalUserData.UserID,
                             Length = biIrisData.Length,
                             TemplateData = biIrisData,
                         };
@@ -965,12 +966,12 @@ namespace GuardianCommunication.Hardware.Virdi
                     {
                         if (_terminalUserData.WalkThroughType == WalkThroughTemplateType)
                         {
-                            currentUser.FaceDataList = new List<DtoEmployeeFace>
+                            currentUser.FaceDataList = new List<DtoUserFace>
                             {
-                                new DtoEmployeeFace
+                                new DtoUserFace
                                 {
                                     Length = _terminalUserData.WalkThroughLength,
-                                    EmployeeNumber =  terminalUserData.UserID,
+                                    UserIdOnDevice =  terminalUserData.UserID,
                                     FaceIndex = WalkThroughFaceIndex,
                                     TemplateData = (byte[])_terminalUserData.WalkThroughData,
                                 }
@@ -1039,7 +1040,7 @@ namespace GuardianCommunication.Hardware.Virdi
             PublishResponseReceivedEvent(clientId);
         }
 
-        public VirdiErrorEnum AddUserSync(int clientId, int terminalId, DtoCommunicationDeviceData device, DtoEmployeeDeviceRelatedData userInfo)
+        public VirdiErrorEnum AddUserSync(int clientId, int terminalId, DtoDevice device, DtoUserDeviceRelatedData userInfo)
         {
             if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerSetUser))
             {
@@ -1048,8 +1049,8 @@ namespace GuardianCommunication.Hardware.Virdi
             lock (_serverUserData)
             {
                 _serverUserData.InitUserData();
-                _serverUserData.UserID = (int)userInfo.EmployeeNumber;
-                _serverUserData.UniqueID = userInfo.EmployeeNumber.ToString();
+                _serverUserData.UserID = (int)userInfo.UserIdOnDevice;
+                _serverUserData.UniqueID = userInfo.UserIdOnDevice.ToString();
                 _serverUserData.UserName = Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(userInfo.UserName));
                 _serverUserData.IsAdmin = userInfo.Privilege;
                 _serverUserData.IsIdentify = 1;
@@ -1061,17 +1062,13 @@ namespace GuardianCommunication.Hardware.Virdi
                 _serverUserData.SetAccessDate(1,
                     startDate.Year, startDate.Month, startDate.Day,
                     endDate.Year, endDate.Month, endDate.Day);
-                if (userInfo.VirdiAccessGroupCode.IsNotNullOrEmpty())
-                {
-                    _serverUserData.AccessGroup = userInfo.VirdiAccessGroupCode;
-                }
                 var verificationStyleEnum = (VirdiVerificationStyleEnumeration)userInfo.VerificationStyle;
                 _serverUserData.SetAuthType(
                     Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsAndOperation)),
-                    device.HasFinger ? Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsFinger)) : 0,
+                    device.HasFingerPrint ? Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsFinger)) : 0,
                     0,
                     Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsPassword)),
-                    device.HasRfCard ? Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsCard)) : 0,
+                    device.HasRfReader ? Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsCard)) : 0,
                     0);
                 _serverUserData.SetAuthTypeEx(
                     device.HasFace ? Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsFace)) : 0
@@ -1082,7 +1079,7 @@ namespace GuardianCommunication.Hardware.Virdi
                     , 0
                     , 0
                     , 0);
-                if (device.HasRfCard && userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                if (device.HasRfReader && userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
                 {
                     var rfCardNumbers = userInfo.RfCardNumbers.Distinct().ToList();
                     for (var i = 0; i < rfCardNumbers.Count; i++)
@@ -1108,7 +1105,7 @@ namespace GuardianCommunication.Hardware.Virdi
                 }
 
                 // Set Finger data
-                if (device.HasFinger)
+                if (device.HasFingerPrint)
                 {
                     if (userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
                     {
@@ -1129,7 +1126,7 @@ namespace GuardianCommunication.Hardware.Virdi
                 // Set face data
                 if (device.HasFace)
                 {
-                    if (device.HasVisibleLight)
+                    if (device.HasVisiblelight)
                     {
                         var walkThroughTemplate =
                             userInfo.FaceDataList.FirstOrDefault(f => f.FaceIndex == WalkThroughFaceIndex);
@@ -1180,7 +1177,7 @@ namespace GuardianCommunication.Hardware.Virdi
                 //}
                 //else 
 
-                if (device.SendProfileImage
+                if ((device.DeviceSettings == null || device.DeviceSettings.IsSendProfileImageActive)
                     && userInfo.HardwareProfileImage.IsCollectionNotNullOrEmpty()
                     && userInfo.HardwareProfileImage.Length <= MaxSizeForProfileImage)
                 {
@@ -1217,7 +1214,7 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription()
                 {
-                    Id = clientId,
+                    NumericId = clientId,
                     Mode = CommandMode,
                     Description = $"Error Code is = {_ucsApi.EventError.ToString()}",
                 });
@@ -1225,7 +1222,7 @@ namespace GuardianCommunication.Hardware.Virdi
 
         }
 
-        public Tuple<DtoEmployeeFinger, VirdiErrorEnum> ScanFingerSync(int terminalId, long userId, int fingerIndex)
+        public Tuple<DtoUserFinger, VirdiErrorEnum> ScanFingerSync(int terminalId, long userId, int fingerIndex)
         {
             _ucsApi.EnrollFromTerminal(0, terminalId);
 
@@ -1233,15 +1230,15 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 var templateIndex = 0;
                 var nFingerId = _ucsApi.get_FingerID(fingerIndex);
-                var fingerTemplate1 = _ucsApi.get_FPSampleData(nFingerId, (int)templateIndex) as byte[];
-                var fingerTemplate2 = _ucsApi.get_FPSampleData(nFingerId, (int)templateIndex + 1) as byte[];
+                var fingerTemplate1 = _ucsApi.get_FPSampleData(nFingerId, templateIndex) as byte[];
+                var fingerTemplate2 = _ucsApi.get_FPSampleData(nFingerId, templateIndex + 1) as byte[];
 
                 var allTemplate = new byte[NTemplateType400 + NTemplateType400];
                 Buffer.BlockCopy(fingerTemplate1, 0, allTemplate, 0, NTemplateType400);
                 Buffer.BlockCopy(fingerTemplate2, 0, allTemplate, NTemplateType400, NTemplateType400);
-                return new Tuple<DtoEmployeeFinger, VirdiErrorEnum>(new DtoEmployeeFinger
+                return new Tuple<DtoUserFinger, VirdiErrorEnum>(new DtoUserFinger
                 {
-                    EmployeeNumber = userId,
+                    UserIdOnDevice = userId,
                     FingerIndex = fingerIndex,
                     TemplateData = allTemplate,
                     CheckSum = 0,
@@ -1249,7 +1246,7 @@ namespace GuardianCommunication.Hardware.Virdi
             }
             else
             {
-                return new Tuple<DtoEmployeeFinger, VirdiErrorEnum>(null, (VirdiErrorEnum)_ucsApi.ErrorCode);
+                return new Tuple<DtoUserFinger, VirdiErrorEnum>(null, (VirdiErrorEnum)_ucsApi.ErrorCode);
             }
         }
 
@@ -1264,7 +1261,7 @@ namespace GuardianCommunication.Hardware.Virdi
             _scanWalkThroughData.Add(new ScanWalkThroughData
             {
                 Date = DateTime.Now,
-                EmployeeNumber = userId,
+                UserIdOnDevice = userId,
                 ClientId = newClientId,
             });
             _terminalUserData.RegistWalkThroughFaceFromTerminal(newClientId, terminalId, 0); //opt: 0=jpg & template, 1=jpg, 2=template
@@ -1290,9 +1287,9 @@ namespace GuardianCommunication.Hardware.Virdi
                     var scanWalkThroughData = _scanWalkThroughData.FirstOrDefault(row => row.ClientId == clientId);
                     if (scanWalkThroughData != null)
                     {
-                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(new DtoEmployeeFace
+                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(new DtoUserFace
                         {
-                            EmployeeNumber = scanWalkThroughData.EmployeeNumber,
+                            UserIdOnDevice = scanWalkThroughData.UserIdOnDevice,
                             FaceIndex = 1,
                             Length = walkThroughData.Length,
                             TemplateData = walkThroughData
@@ -1311,9 +1308,9 @@ namespace GuardianCommunication.Hardware.Virdi
                     var scanWalkThroughData = _scanWalkThroughData.FirstOrDefault(row => row.ClientId == clientId);
                     if (scanWalkThroughData != null)
                     {
-                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(new DtoEmployeeFace
+                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(new DtoUserFace
                         {
-                            EmployeeNumber = scanWalkThroughData.EmployeeNumber,
+                            UserIdOnDevice = scanWalkThroughData.UserIdOnDevice,
                             FaceIndex = WalkThroughFaceIndex,
                             Length = walkThroughData.Length,
                             TemplateData = walkThroughData
@@ -1342,7 +1339,7 @@ namespace GuardianCommunication.Hardware.Virdi
             _scanFaceCommands.Add(new ScanFaceData
             {
                 Date = DateTime.Now,
-                EmployeeNumber = userId,
+                UserIdOnDevice = userId,
                 ClientId = newClientId,
             });
             _terminalUserData.RegistFaceFromTerminal(newClientId, terminalId, 0);
@@ -1393,9 +1390,9 @@ namespace GuardianCommunication.Hardware.Virdi
                                 }
                             }
                             var bytes = memoryStream.ToArray();
-                            HardwareEventPublisher.Instance.PublishNewFaceEnrolled(new DtoEmployeeFace
+                            HardwareEventPublisher.Instance.PublishNewFaceEnrolled(new DtoUserFace
                             {
-                                EmployeeNumber = scanFaceData.EmployeeNumber,
+                                UserIdOnDevice = scanFaceData.UserIdOnDevice,
                                 FaceIndex = totalNumber,
                                 Length = bytes.Length,
                                 TemplateData = bytes
@@ -1423,7 +1420,7 @@ namespace GuardianCommunication.Hardware.Virdi
             _scanIrisCommands.Add(new ScanIrisData
             {
                 Date = DateTime.Now,
-                EmployeeNumber = userId,
+                UserIdOnDevice = userId,
                 ClientId = newClientId,
             });
             _terminalUserData.RegistIrisFromTerminal(newClientId, terminalId, 0);
@@ -1447,9 +1444,9 @@ namespace GuardianCommunication.Hardware.Virdi
                 var irisData = _scanIrisCommands.FirstOrDefault(row => row.ClientId == clientId);
                 if (irisData != null)
                 {
-                    HardwareEventPublisher.Instance.PublishNewIrisEnrolled(new DtoEmployeeIris()
+                    HardwareEventPublisher.Instance.PublishNewIrisEnrolled(new DtoUserIris()
                     {
-                        EmployeeNumber = irisData.EmployeeNumber,
+                        UserIdOnDevice = irisData.UserIdOnDevice,
                         Length = walkThroughData.Length,
                         TemplateData = walkThroughData
                     }, terminalId);
@@ -1462,25 +1459,31 @@ namespace GuardianCommunication.Hardware.Virdi
             }
         }
 
-        
+
         private readonly AutoResetEvent _userDataListWaitHandle = new AutoResetEvent(false);
-        private List<DtoEmployeeDeviceRelatedData> _userDataListSync = new List<DtoEmployeeDeviceRelatedData>();
-        public List<DtoEmployeeDeviceRelatedData> GetDeviceUserIdsSync(int clientId, int terminalId)
+        private List<DtoUserDeviceRelatedData> _userDataListSync = new List<DtoUserDeviceRelatedData>();
+        public List<DtoUserDeviceRelatedData> GetDeviceUserIdsSync(int clientId, int terminalId)
         {
             if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.ServerGetUserData))
             {
                 LoggingSystem.LogInfo("Virdi Server get user ids command", new { ClientId = clientId, TerminalId = terminalId });
             }
-            lock (_connectedDevices)
+
+            var deviceInList = GetDeviceByTerminalId(terminalId);
+            if (deviceInList == null)
             {
-                if (!_connectedDevices.Contains(terminalId))
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusCannotConnect);
+            }
+            lock (_connectedDeviceIds)
+            {
+                if (!_connectedDeviceIds.Contains(deviceInList.Id))
                 {
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusCannotConnect);
                 }
             }
             lock (_userDataListSync)
             {
-                _userDataListSync = new List<DtoEmployeeDeviceRelatedData>();
+                _userDataListSync = new List<DtoUserDeviceRelatedData>();
                 _terminalUserData.GetUserInfoListFromTerminal(clientId, terminalId);
                 _userDataListWaitHandle.WaitOne(new TimeSpan(0, 0, 0, _config.SyncOperationTimeout));
                 var resultOfLogCount = (VirdiErrorEnum)_ucsApi.ErrorCode;
@@ -1509,7 +1512,8 @@ namespace GuardianCommunication.Hardware.Virdi
 
         #endregion
 
-        #region Access control
+        #region Door controll
+
 
         public VirdiErrorEnum OpenDoor(int clientId, int terminalId)
         {
@@ -1529,165 +1533,10 @@ namespace GuardianCommunication.Hardware.Virdi
         }
 
 
-        public VirdiErrorEnum SendAccessControlData(int clientId, int terminalId, DtoVirdiAccessControlData accessControlData)
-        {
-            lock (_accessControlData)
-            {
-                _accessControlData.InitData();
-
-                #region Holiday
-
-                if (accessControlData.AccessDataType.HasFlag(VirdiAccessControlDataTypeEnumeration.Holiday))
-                {
-                    if (accessControlData.Holidays.IsCollectionNotNullOrEmpty())
-                    {
-                        foreach (var item in accessControlData.Holidays)
-                        {
-                            _accessControlData.SetHoliday(item.GroupCode, item.Index, item.Month, item.Day);
-                        }
-                    }
-                }
-
-                #endregion
-
-                #region TimeZone
-
-                if (accessControlData.AccessDataType.HasFlag(VirdiAccessControlDataTypeEnumeration.TimeZone))
-                {
-                    if (accessControlData.Timezones.IsCollectionNotNullOrEmpty())
-                    {
-                        foreach (var item in accessControlData.Timezones)
-                        {
-                            _accessControlData.SetTimeZone(item.Code, item.Index, item.StartHour, item.StartMinute,
-                                item.EndHour, item.EndMinute);
-                        }
-                    }
-                }
-
-                #endregion
-
-                #region AccessTimes
-
-                if (accessControlData.AccessDataType.HasFlag(VirdiAccessControlDataTypeEnumeration.AccessTimes))
-                {
-                    if (accessControlData.AccessTimes.IsCollectionNotNullOrEmpty())
-                    {
-                        var codes = accessControlData.AccessTimes.Select(at => at.Code).Distinct().ToList();
-                        foreach (var code in codes)
-                        {
-                            var currentCodeAccessTimes =
-                                accessControlData.AccessTimes.Where(at => at.Code == code).ToList();
-                            var sunday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Sunday);
-                            var monday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Monday);
-                            var tuesday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Tuesday);
-                            var wednesday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Wednesday);
-                            var thursday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Thursday);
-                            var friday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Friday);
-                            var saturday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Saturday);
-                            var holiday =
-                                currentCodeAccessTimes.FirstOrDefault(i =>
-                                    i.DayOfWeekEnum == VirdiDayOfWeekEnumeration.Holiday);
-                            _accessControlData.SetAccessTime(code
-                                , sunday?.TimezoneCode ?? null
-                                , monday?.TimezoneCode ?? null
-                                , tuesday?.TimezoneCode ?? null
-                                , wednesday?.TimezoneCode ?? null
-                                , thursday?.TimezoneCode ?? null
-                                , friday?.TimezoneCode ?? null
-                                , saturday?.TimezoneCode ?? null
-                                , holiday?.TimezoneCode ?? null
-                                , holiday?.HolidayCode ?? null
-                            );
-                        }
-                    }
-                }
-
-                #endregion
-
-                #region AccessGroup
-
-                if (accessControlData.AccessDataType.HasFlag(VirdiAccessControlDataTypeEnumeration.AccessGroup))
-                {
-                    if (accessControlData.AccessGroups.IsCollectionNotNullOrEmpty())
-                    {
-                        foreach (var item in accessControlData.AccessGroups)
-                        {
-                            _accessControlData.SetAccessGroup(item.Code, item.Index, item.AccessTimeCode);
-                        }
-                    }
-                }
-
-                #endregion
-                _accessControlData.SetAccessControlDataToTerminal(ProcessClientIdBeforeSend(clientId), terminalId, 0);
-                _accessControlData.SetAccessControlDataToTerminal(ProcessClientIdBeforeSend(clientId), terminalId, 1);
-                _accessControlData.SetAccessControlDataToTerminal(ProcessClientIdBeforeSend(clientId), terminalId, 2);
-                _accessControlData.SetAccessControlDataToTerminal(ProcessClientIdBeforeSend(clientId), terminalId, 3);
-
-                return (VirdiErrorEnum)_ucsApi.ErrorCode;
-            }
-
-        }
-
-        private void ucsApi_OnEventSetAccessControlData(int clientId, int terminalId, int datatype)
-        {
-            if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.SendAccessControlData))
-            {
-                LoggingSystem.LogInfo("Virdi send access control data", new { ClientId = clientId, TerminalId = terminalId, DataType = datatype });
-            }
-            PublishResponseReceivedEvent(clientId);
-        }
-
-
         #endregion
 
         #region Match On Server
 
-        private void ucsAPI_EventVerifyPassword(int terminalId, int userId, int authMode, int antiPassBackLevel, string password)
-        {
-            if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.MatchOnServer))
-            {
-                LoggingSystem.LogInfo("Virdi Server Match on server password received", new { UserId = userId, TerminalId = terminalId, AuthMode = authMode, AntiPassBackLevel = antiPassBackLevel, Password = password });
-            }
-            var now = DateTime.Now;
-            var authorizationResult = _serverMatchProcessor(new DtoServerMatchData
-            {
-                MatchType = ServerMatchingTypeEnumeration.Password,
-                DeviceNumber = terminalId,
-                UserId = userId,
-                Password = password,
-                EventDateTime = now,
-            });
-            if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.MatchOnServer))
-            {
-                LoggingSystem.LogInfo("Virdi Server Match on server password result", new
-                {
-                    AuthResult = authorizationResult,
-                    Password = password,
-                    TerminalId = terminalId,
-                    AuthMode = authMode,
-                    AntiPassBackLevel = antiPassBackLevel
-                });
-            }
-            var isAuthorized = authorizationResult.IsSuccessfullyProcessed ? 1 : 0;
-            // ReSharper disable PossibleInvalidOperationException
-            _serverAuthentication.SendAuthResultToTerminal(terminalId, (int)authorizationResult.UserId, 1, 0, isAuthorized, now.ToString("yyyy-MM-dd hh:mm:ss"), 0);
-            // ReSharper restore PossibleInvalidOperationException
-
-        }
 
         private void ucsAPI_EventVerifyCard(int terminalId, int authMode, int antiPassBackLevel, string rfidNumber)
         {
@@ -1696,11 +1545,16 @@ namespace GuardianCommunication.Hardware.Virdi
                 LoggingSystem.LogInfo("Virdi Server Match on server card received", new { RfidNumber = rfidNumber, TerminalId = terminalId, AuthMode = authMode, AntiPassBackLevel = antiPassBackLevel });
             }
 
+            var deviceInList = GetDeviceByTerminalId(terminalId);
+            if (deviceInList == null)
+            {
+                return;
+            }
             var now = DateTime.Now;
 
             var authorizationResult = _serverMatchProcessor(new DtoServerMatchData
             {
-                DeviceNumber = terminalId,
+                DeviceId = deviceInList.Id,
                 RfCardNumber = rfidNumber,
                 MatchType = ServerMatchingTypeEnumeration.Card,
                 EventDateTime = now,
@@ -1721,7 +1575,7 @@ namespace GuardianCommunication.Hardware.Virdi
             _serverAuthentication.SetAuthType(1, 0, 0, 0, 1, 0);
             _serverAuthentication.SetAuthTypeEx(0, 0, 0, 0, 0, 0, 0, 0);
             // ReSharper disable PossibleInvalidOperationException
-            _serverAuthentication.SendAuthResultToTerminal(terminalId, (int)authorizationResult.UserId, 1, 0, isAuthorized, now.ToString("yyyy-MM-dd hh:mm:ss"), 0);
+            _serverAuthentication.SendAuthResultToTerminal(terminalId, (int)authorizationResult.UserIdOnDevice, 1, 0, isAuthorized, now.ToString("yyyy-MM-dd hh:mm:ss"), 0);
             // ReSharper restore PossibleInvalidOperationException
         }
 
@@ -1745,7 +1599,7 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 CommandResponseResult = commandResponse,
                 CommandResponseTime = DateTime.Now,
-                Id = commandId,
+                NumericId = commandId,
                 Mode = CommandMode,
             });
         }
@@ -1755,33 +1609,14 @@ namespace GuardianCommunication.Hardware.Virdi
             return clientId % CommandMode;
         }
 
-        public DtoCommunicationDeviceData GetDeviceByTerminalId(int terminalId)
+        public DtoDevice GetDeviceByTerminalId(int terminalId)
         {
-            _deviceList.TryGetValue(terminalId, out var deviceAdapter);
-            return deviceAdapter;
-        }
-
-
-        public bool IsSaveAttendanceActive(int terminalId)
-        {
-            var deviceInfo = GetDeviceByTerminalId(terminalId);
-            if (deviceInfo == null)
+            lock (_deviceList)
             {
-                return true;
+                return _deviceList.FirstOrDefault(d => d.DeviceNumber == terminalId);
             }
-            return !deviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance);
+            
         }
-
-        public bool IsInvalidSaveAttendanceActive(int terminalId)
-        {
-            var deviceInfo = GetDeviceByTerminalId(terminalId);
-            if (deviceInfo == null)
-            {
-                return true;
-            }
-            return !deviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveInvalidAttendance);
-        }
-
 
         private InvalidAttendanceReasonEnumeration GetAuthFailReason(int authResult)
         {
@@ -1810,7 +1645,7 @@ namespace GuardianCommunication.Hardware.Virdi
 
         private class ScanWalkThroughData
         {
-            public long EmployeeNumber { get; set; }
+            public long UserIdOnDevice { get; set; }
             public DateTime Date { get; set; }
             public int ClientId { get; set; }
         }
@@ -1818,14 +1653,14 @@ namespace GuardianCommunication.Hardware.Virdi
         private class ScanFaceData
         {
             public FaceData Face { get; set; }
-            public long EmployeeNumber { get; set; }
+            public long UserIdOnDevice { get; set; }
             public DateTime Date { get; set; }
             public int ClientId { get; set; }
         }
 
         private class ScanIrisData
         {
-            public long EmployeeNumber { get; set; }
+            public long UserIdOnDevice { get; set; }
             public DateTime Date { get; set; }
             public int ClientId { get; set; }
         }

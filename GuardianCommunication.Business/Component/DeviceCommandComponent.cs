@@ -2,6 +2,11 @@
 using System.Collections.Generic;
 using System.Linq;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.SearchDataWrapper;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -21,13 +26,13 @@ namespace GuardianCommunication.Business.Component
         public List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumberForEachDevice
             (DeviceNotSentCommandsFilter filter)
         {
-            return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceSerialNumberForEachDevice(filter);
+            return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceSerialNumber(filter);
         }
 
         public List<DtoUnsentCommandCountByDeviceNumber> GetUnsentCommandsCountByDeviceNumberForEachDevice
             (DeviceNotSentCommandsFilter filter)
         {
-            return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceNumberForEachDevice(filter);
+            return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceNumbers(filter);
         }
 
         public List<DtoFailedCommandStatistics> GetDeviceNotSendCommandsStatistics(List<int> deviceNumbers)

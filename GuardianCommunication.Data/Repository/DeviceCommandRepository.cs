@@ -20,11 +20,14 @@ namespace GuardianCommunication.Data.Repository
 
         List<DtoDeviceUnsentCommand> GetUnsentCommandsForEachDevice(DeviceNotSentCommandsFilter filter);
 
-        List<DtoUnsentCommandCountByDeviceNumber> GetUnsentCommandsCountByDeviceNumberForEachDevice(
-            DeviceNotSentCommandsFilter filter);
+        List<DtoUnsentCommandCountByDeviceNumber> GetUnsentCommandsCountByDeviceNumbers(
+            DeviceNotSentCommandsCountByDeviceNumberFilter filter);
 
-        List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumberForEachDevice(
-            DeviceNotSentCommandsFilter filter);
+        List<DtoUnsentCommandCountByDeviceId> GetUnsentCommandsCountByDeviceIds(
+            DeviceNotSentCommandsCountByDeviceIdFilter filter);
+
+        List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumber(
+            DeviceNotSentCommandsCountByDeviceSerialNumberFilter filter);
 
         void UpdateSendData(List<long> numericIds);
 
@@ -119,19 +122,23 @@ namespace GuardianCommunication.Data.Repository
 
         private const string SelectUnsentCommandsForEachDeviceCommand =
             @"	
-				SELECT	tmp.[Id] AS Id
-						, tmp.[DeviceSerialNumber] AS DeviceSerialNumber
-						, tmp.[CommandContent] AS CommandContent
-						, tmp.[CommandType] AS CommandType
+				SELECT	  tmp.[Id] AS Id
+						, tmp.[NumericId] AS NumericId
+						, tmp.[DeviceId] AS DeviceId
 						, tmp.[DeviceNumber] AS DeviceNumber
+						, tmp.[DeviceSerialNumber] AS DeviceSerialNumber
+						, tmp.[CommandType] AS CommandType
+						, tmp.[CommandContent] AS CommandContent
 						, tmp.[DeviceContent] AS DeviceContent
 				FROM    (
-				        SELECT  ROW_NUMBER() OVER (PARTITION BY dc.[DeviceNumber] ORDER BY dc.[Priority] DESC, dc.[RetryCount] ASC, dc.[CommitTime] ASC) RowNumber
+				        SELECT  ROW_NUMBER() OVER (PARTITION BY dc.[DeviceId] ORDER BY dc.[Priority] DESC, dc.[RetryCount] ASC, dc.[CommitTime] ASC) RowNumber
 								, dc.[Id] AS Id
-								, dc.[DeviceSerialNumber] AS DeviceSerialNumber
-								, dc.[CommandContent] AS CommandContent
-								, dc.[CommandType] AS CommandType
+								, dc.[NumericId] AS NumericId
+								, dc.[DeviceId] AS DeviceId
 								, dc.[DeviceNumber] AS DeviceNumber
+								, dc.[DeviceSerialNumber] AS DeviceSerialNumber
+								, dc.[CommandType] AS CommandType
+								, dc.[CommandContent] AS CommandContent
 								, dc.[DeviceContent] AS DeviceContent
 				        FROM [com].[DeviceCommand] dc
 						WHERE	dc.[ProducerNumber] = @Producer
@@ -155,10 +162,13 @@ namespace GuardianCommunication.Data.Repository
 								OR dc.[Deadline] >= GETDATE()
 							)";
 
-        private const string SelectUnsentCommandsCountForEachDeviceByDeviceNumberCommand =
+        private const string SelectUnsentCommandsCountByDeviceNumberCommand =
             @"[com].[DeviceCommandCountByDeviceNumber]";
 
-        private const string SelectUnsentCommandsCountForEachDeviceByDeviceSerialNumberCommand =
+        private const string SelectUnsentCommandsCountByDeviceIdCommand =
+            @"[com].[DeviceCommandCountByDeviceId]";
+
+        private const string SelectUnsentCommandsCountByDeviceSerialNumberCommand =
             @"[com].[DeviceCommandCountByDeviceSerialNumber]";
 
         private const string UpdateSendDataCommand =
@@ -506,6 +516,10 @@ namespace GuardianCommunication.Data.Repository
             {
                 sb.AppendLine($"AND dc.[DeviceNumber] IN @{nameof(filter.DeviceNumbers)}");
             }
+            if (filter.DeviceIds.IsCollectionNotNullOrEmpty())
+            {
+                sb.AppendLine($"AND dc.[DeviceId] IN @{nameof(filter.DeviceIds)}");
+            }
             if (filter.DeviceSerialNumbers.IsCollectionNotNullOrEmpty())
             {
                 sb.AppendLine($"AND dc.[DeviceSerialNumber] IN @{nameof(filter.DeviceSerialNumbers)}");
@@ -521,7 +535,7 @@ namespace GuardianCommunication.Data.Repository
             }
         }
 
-        public List<DtoUnsentCommandCountByDeviceNumber> GetUnsentCommandsCountByDeviceNumberForEachDevice(DeviceNotSentCommandsFilter filter)
+        public List<DtoUnsentCommandCountByDeviceNumber> GetUnsentCommandsCountByDeviceNumbers(DeviceNotSentCommandsCountByDeviceNumberFilter filter)
         {
             if (filter.DeviceNumbers.IsCollectionNotNullOrEmpty())
             {
@@ -535,7 +549,7 @@ namespace GuardianCommunication.Data.Repository
                 using (var connection = GetConnection())
                 {
                     return connection.Query<DtoUnsentCommandCountByDeviceNumber>(
-                        SelectUnsentCommandsCountForEachDeviceByDeviceNumberCommand
+                        SelectUnsentCommandsCountByDeviceNumberCommand
                         , parameters
                         , commandType: CommandType.StoredProcedure
                         , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
@@ -545,7 +559,31 @@ namespace GuardianCommunication.Data.Repository
             return new List<DtoUnsentCommandCountByDeviceNumber>();
         }
 
-        public List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumberForEachDevice(DeviceNotSentCommandsFilter filter)
+        public List<DtoUnsentCommandCountByDeviceId> GetUnsentCommandsCountByDeviceIds(DeviceNotSentCommandsCountByDeviceIdFilter filter)
+        {
+            if (filter.DeviceIds.IsCollectionNotNullOrEmpty())
+            {
+                var parameters = new DynamicParameters();
+                parameters.Add("@Producer", (int)filter.Producer);
+                parameters.Add("@SdkVersion", (int)filter.SdkVersion);
+                parameters.Add(
+                    "@DeviceNumbersList",
+                    CreateDeviceIdTable(filter.DeviceIds)
+                        .AsTableValuedParameter("dbo.UniqueIdentifierValueListTable"));
+                using (var connection = GetConnection())
+                {
+                    return connection.Query<DtoUnsentCommandCountByDeviceId>(
+                        SelectUnsentCommandsCountByDeviceIdCommand
+                        , parameters
+                        , commandType: CommandType.StoredProcedure
+                        , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
+                }
+            }
+
+            return new List<DtoUnsentCommandCountByDeviceId>();
+        }
+
+        public List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumber(DeviceNotSentCommandsCountByDeviceSerialNumberFilter filter)
         {
             if (filter.DeviceSerialNumbers.IsCollectionNotNullOrEmpty())
             {
@@ -559,7 +597,7 @@ namespace GuardianCommunication.Data.Repository
                 using (var connection = GetConnection())
                 {
                     return connection.Query<DtoUnsentCommandCountByDeviceSerialNumber>(
-                        SelectUnsentCommandsCountForEachDeviceByDeviceSerialNumberCommand
+                        SelectUnsentCommandsCountByDeviceSerialNumberCommand
                         , parameters
                         , commandType: CommandType.StoredProcedure
                         , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
@@ -769,6 +807,20 @@ namespace GuardianCommunication.Data.Repository
             foreach (var deviceNumber in deviceNumbers)
             {
                 table.Rows.Add(deviceNumber);
+            }
+
+            return table;
+        }
+
+        private static DataTable CreateDeviceIdTable(IEnumerable<Guid> deviceIds)
+        {
+            var table = new DataTable();
+
+            table.Columns.Add("@DeviceIdsList", typeof(int));
+
+            foreach (var deviceId in deviceIds)
+            {
+                table.Rows.Add(deviceId);
             }
 
             return table;

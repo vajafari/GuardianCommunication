@@ -21,6 +21,16 @@ CREATE TYPE [dbo].[StringValueListTable] AS TABLE(
 )WITH (IGNORE_DUP_KEY = OFF)
 )
 GO
+IF NOT EXISTS (SELECT * FROM sys.types st JOIN sys.schemas ss ON st.schema_id = ss.schema_id WHERE st.name = N'UniqueIdentifierValueListTable' AND ss.name = N'dbo')
+CREATE TYPE [dbo].[UniqueIdentifierValueListTable] AS TABLE(
+	[UniqueIdentifierValue] [uniqueidentifier] NOT NULL,
+	PRIMARY KEY CLUSTERED 
+(
+	[UniqueIdentifierValue] ASC
+)WITH (IGNORE_DUP_KEY = OFF)
+)
+GO
+
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -546,8 +556,42 @@ BEGIN
         s.IntegerValue;
 END
 
----- SCRIPT LOGICAL REGION -----
 
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DeviceCommandCountByDeviceId]') AND type in (N'P', N'PC'))
+BEGIN
+EXEC dbo.sp_executesql @statement = N'CREATE PROCEDURE [com].[DeviceCommandCountByDeviceId] AS' 
+END
+GO
+
+
+ALTER PROCEDURE [com].[DeviceCommandCountByDeviceId] 
+	@Producer INT,
+    @SdkVersion INT,
+    @DeviceIdsList dbo.UniqueIdentifierValueListTable READONLY
+AS 
+BEGIN
+	SET NOCOUNT ON;
+    SELECT
+        s.UniqueIdentifierValue AS DeviceId,
+        COUNT(dc.DeviceId) AS DeviceId
+    FROM @DeviceIdsList AS s
+		LEFT JOIN com.DeviceCommand AS dc ON dc.DeviceId = s.UniqueIdentifierValue
+	WHERE
+			dc.[ResponseTime] IS NULL
+		AND dc.[RetryCount] < dc.[MaxRetry]
+		AND (
+				dc.[VisiblilityTime] IS NULL
+				OR dc.[VisiblilityTime] <= GETDATE()
+			)
+		AND (
+				dc.[Deadline] IS NULL 
+				OR dc.[Deadline] >= GETDATE()
+			)
+		AND dc.ProducerNumber = @Producer
+		AND dc.SdkVersion = @SdkVersion
+    GROUP BY
+        s.UniqueIdentifierValue;
+END
 
 
 

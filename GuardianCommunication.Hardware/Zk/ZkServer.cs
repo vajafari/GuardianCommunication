@@ -81,7 +81,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         private void DoStartServerProcess(List<DtoDevice> deviceInfos)
         {
-            SetDeviceOnPushModeList(deviceInfos);
+           SetDeviceOnPushModeList(deviceInfos);
             var thread = new Thread(StartPushListening) { IsBackground = true };
             thread.Start();
         }
@@ -91,14 +91,12 @@ namespace GuardianCommunication.Hardware.Zk
             Dispose(true);
         }
 
-        public List<int> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceNumbers()
         {
-            var deviceNumbers = new List<int>();
-            deviceNumbers.AddRange(_pushDevicesConnectionInfo.Values
+            return _pushDevicesConnectionInfo.Values
                 .Where(d => Math.Abs(d.ConnectionDateTime.Subtract(DateTime.Now).TotalSeconds) <=
                             _pushConfig.IntervalForConsiderDeviceOnlineInSecond)
-                .Select(d => d.DeviceNumber));
-            return deviceNumbers;
+                .Select(d => d.DeviceId).ToList();
         }
 
 
@@ -113,7 +111,8 @@ namespace GuardianCommunication.Hardware.Zk
         private TcpListener _tcpListener;
         private bool _listening;
         private readonly List<DtoDevice> _pushDevices = new List<DtoDevice>();
-        private readonly ConcurrentDictionary<int, DeviceConnectionInfo> _pushDevicesConnectionInfo = new ConcurrentDictionary<int, DeviceConnectionInfo>();
+        private readonly ConcurrentDictionary<Guid, DeviceConnectionInfo> _pushDevicesConnectionInfo
+            = new ConcurrentDictionary<Guid, DeviceConnectionInfo>();
 
         public void SetDeviceOnPushModeList(List<DtoDevice> deviceInfos)
         {
@@ -335,8 +334,9 @@ namespace GuardianCommunication.Hardware.Zk
                     SendDeviceConfig(deviceInList, deviceSocket);
                     if (deviceInList != null)
                     {
-                        _pushDevicesConnectionInfo[deviceInList.DeviceNumber] = new DeviceConnectionInfo
+                        _pushDevicesConnectionInfo[deviceInList.Id] = new DeviceConnectionInfo
                         {
+                            DeviceId = deviceInList.Id,
                             DeviceNumber = deviceInList.DeviceNumber,
                             ConnectionDateTime = DateTime.Now,
                         };
@@ -458,8 +458,9 @@ namespace GuardianCommunication.Hardware.Zk
             }
             else
             {
-                _pushDevicesConnectionInfo[deviceInList.DeviceNumber] = new DeviceConnectionInfo
+                _pushDevicesConnectionInfo[deviceInList.Id] = new DeviceConnectionInfo
                 {
+                    DeviceId = deviceInList.Id,
                     DeviceNumber = deviceInList.DeviceNumber,
                     ConnectionDateTime = DateTime.Now,
                 };
@@ -1350,6 +1351,8 @@ namespace GuardianCommunication.Hardware.Zk
 
         public class DeviceConnectionInfo
         {
+            public Guid DeviceId { get; set; }
+
             public int DeviceNumber { get; set; }
 
             public DateTime ConnectionDateTime { get; set; }

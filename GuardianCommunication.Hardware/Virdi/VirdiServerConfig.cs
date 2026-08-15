@@ -1,4 +1,6 @@
-﻿namespace GuardianCommunication.Hardware.Virdi
+﻿using GuardianCommunication.Shared.Dto;
+
+namespace GuardianCommunication.Hardware.Virdi
 {
     public class VirdiServerConfig
     {
