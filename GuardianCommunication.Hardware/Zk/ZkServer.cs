@@ -12,6 +12,7 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Timers;
+using AccessControl.TimeHandling;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Zk.ZkConcepts;
@@ -81,7 +82,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         private void DoStartServerProcess(List<DtoDevice> deviceInfos)
         {
-           SetDeviceOnPushModeList(deviceInfos);
+            SetDeviceOnPushModeList(deviceInfos);
             var thread = new Thread(StartPushListening) { IsBackground = true };
             thread.Start();
         }
@@ -94,7 +95,7 @@ namespace GuardianCommunication.Hardware.Zk
         public List<Guid> GetConnectedDeviceNumbers()
         {
             return _pushDevicesConnectionInfo.Values
-                .Where(d => Math.Abs(d.ConnectionDateTime.Subtract(DateTime.Now).TotalSeconds) <=
+                .Where(d => Math.Abs(d.ConnectionDateTimeUtc.Subtract(DateTime.UtcNow).TotalSeconds) <=
                             _pushConfig.IntervalForConsiderDeviceOnlineInSecond)
                 .Select(d => d.DeviceId).ToList();
         }
@@ -338,7 +339,7 @@ namespace GuardianCommunication.Hardware.Zk
                         {
                             DeviceId = deviceInList.Id,
                             DeviceNumber = deviceInList.DeviceNumber,
-                            ConnectionDateTime = DateTime.Now,
+                            ConnectionDateTimeUtc = DateTime.UtcNow,
                         };
                     }
                 }
@@ -371,7 +372,7 @@ namespace GuardianCommunication.Hardware.Zk
                     {
                         return;
                     }
-                    
+
                     var allAttendancesString = attendanceString.Split('\n');
                     foreach (var currentAttendanceString in allAttendancesString)
                     {
@@ -462,7 +463,7 @@ namespace GuardianCommunication.Hardware.Zk
                 {
                     DeviceId = deviceInList.Id,
                     DeviceNumber = deviceInList.DeviceNumber,
-                    ConnectionDateTime = DateTime.Now,
+                    ConnectionDateTimeUtc = DateTime.Now,
                 };
                 if (_commandCountDictionary.TryGetValue(serialNumber, out var commandCount) && commandCount > 0)
                 {
@@ -596,7 +597,7 @@ namespace GuardianCommunication.Hardware.Zk
                                         var commandResult = new DtoDeviceCommandProcessingResult
                                         {
                                             NumericId = commandIdResponseParts[1].ToInt32(),
-                                            CommandResponseTime = DateTime.Now,
+                                            CommandResponseTime = DateTime.UtcNow,
                                             CommandResponseResult = content,
                                             Mode = null,
                                         };
@@ -673,18 +674,18 @@ namespace GuardianCommunication.Hardware.Zk
 
         public void SaveUserProfileImage(string useLog, DtoDevice deviceData)
         {
-            if (useLog.IndexOfEx("PIN", 0) > 0 && useLog.IndexOfEx("FileName", 0) > 0)
+            if (useLog.IndexOfEx("PIN") > 0 && useLog.IndexOfEx("FileName") > 0)
             {
 
                 // ReSharper disable IdentifierTypo
                 // ReSharper disable InconsistentNaming
                 // ReSharper disable UnusedVariable
-                var UsInid = useLog.Substring(0, useLog.IndexOfEx("\t", 0));
-                var stillusin1 = useLog.Substring(useLog.IndexOfEx("\t", 0) + 1);
-                var usinnum1 = stillusin1.Substring(0, stillusin1.IndexOfEx("\t", 0));
-                var stillusin2 = stillusin1.Substring(stillusin1.IndexOfEx("\t", 0) + 1);
-                var usinnum2 = stillusin2.Substring(0, stillusin2.IndexOfEx("\t", 0));
-                var stillusin3 = stillusin2.Substring(stillusin2.IndexOfEx("\t", 0) + 1);
+                var UsInid = useLog.Substring(0, useLog.IndexOfEx("\t"));
+                var stillusin1 = useLog.Substring(useLog.IndexOfEx("\t") + 1);
+                var usinnum1 = stillusin1.Substring(0, stillusin1.IndexOfEx("\t"));
+                var stillusin2 = stillusin1.Substring(stillusin1.IndexOfEx("\t") + 1);
+                var usinnum2 = stillusin2.Substring(0, stillusin2.IndexOfEx("\t"));
+                var stillusin3 = stillusin2.Substring(stillusin2.IndexOfEx("\t") + 1);
                 var stillusin4 = stillusin3.Substring(8);
                 var imageData = Convert.FromBase64String(stillusin4);
                 var name = usinnum1.Replace("FileName=", "");
@@ -750,13 +751,15 @@ namespace GuardianCommunication.Hardware.Zk
                     if (nameParts.Length > 1)
                     {
                         // Attendance image
+                        var attendanceDatePure = DateTime.ParseExact(nameParts[0], "yyyyMMddHHmmss",
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.None);
+                        var deviceTimeService = new DeviceTimeService();
+                        var utcDate = deviceTimeService.DeviceTimeToUtc(attendanceDatePure, deviceData.IanaTimeZoneId);
                         var data = new DtoDeviceAttendanceImage
                         {
-
                             DeviceId = deviceData.Id,
-                            AttendanceDateTime = DateTime.ParseExact(nameParts[0], "yyyyMMddHHmmss",
-                                CultureInfo.InvariantCulture,
-                                DateTimeStyles.None),
+                            AttendanceDateTime = utcDate,
                             Image = imgReceive
                         };
                         if (long.TryParse(nameParts[1], out var userIdOnDevice))
@@ -781,13 +784,16 @@ namespace GuardianCommunication.Hardware.Zk
                     else
                     {
                         // Unauthorized attendance image
+                        var attendanceDateTimePure = DateTime.ParseExact(nameParts[0], "yyyyMMddHHmmss",
+                            CultureInfo.InvariantCulture,
+                            DateTimeStyles.None);
+                        var deviceTimeService = new DeviceTimeService();
+                        var utcDate = deviceTimeService.DeviceTimeToUtc(attendanceDateTimePure, deviceData.IanaTimeZoneId);
                         var data = new DtoDeviceUnauthorizedAttendanceImage
                         {
                             UserIdInDevice = null,
                             DeviceId = deviceData.Id,
-                            AttendanceDateTime = DateTime.ParseExact(nameParts[0], "yyyyMMddHHmmss",
-                                CultureInfo.InvariantCulture,
-                                DateTimeStyles.None),
+                            AttendanceDateTime = utcDate,
                             Image = imgReceive
                         };
                         HardwareEventPublisher.Instance.PublishUnauthorizedAttendanceImage(data);
@@ -803,8 +809,6 @@ namespace GuardianCommunication.Hardware.Zk
 
                     }
                 }
-
-
             }
             catch (Exception exp)
             {
@@ -1043,11 +1047,15 @@ namespace GuardianCommunication.Hardware.Zk
                             var opLogString = record.Split('\t');
                             try
                             {
+                                var operationDateTimePure = Convert.ToDateTime(opLogString[2], new CultureInfo("en-US"));
+                                var deviceTimeService = new DeviceTimeService();
+                                var operationUtcDateTime = deviceTimeService.DeviceTimeToUtc(operationDateTimePure, deviceData.IanaTimeZoneId);
+
                                 HardwareEventPublisher.Instance.PublishZkOperationLogData(new DtoZkOperationLog
                                 {
                                     OperationType = opLogString[0].Substring(6),
                                     Operator = opLogString[1],
-                                    OperationTime = Convert.ToDateTime(opLogString[2], new CultureInfo("en-US")),
+                                    OperationTime = operationUtcDateTime,
                                     Object1 = opLogString[3],
                                     Object2 = opLogString[4],
                                     Object3 = opLogString[5],
@@ -1079,8 +1087,8 @@ namespace GuardianCommunication.Hardware.Zk
                 var time = 0;
                 try
                 {
-
-                    var timezone = DateTimeHelper.ConvertToTimeZoneString(deviceInfo.TimeZone);
+                    var deviceTimeService = new DeviceTimeService();
+                    var timezone = deviceTimeService.GetUtcOffsetString(deviceInfo.IanaTimeZoneId);
                     string[] splittedString;
                     if ('-' == timezone[0])
                     {
@@ -1189,14 +1197,17 @@ namespace GuardianCommunication.Hardware.Zk
         {
             var attendanceStringSplitted = attendanceString.Split('\t');
             var status = Convert.ToInt32(attendanceStringSplitted[2]);
-           
+
             var attStatus = (short)(status & 0x7F);
             try
             {
+                var attendanceDatePure = Convert.ToDateTime(attendanceStringSplitted[1], new CultureInfo("en-US"));
+                DeviceTimeService deviceTimeService = new DeviceTimeService();
+                var attendanceDateUtc = deviceTimeService.DeviceTimeToUtc(attendanceDatePure, deviceInfo.IanaTimeZoneId);
                 return new DtoAttendance
                 {
                     UserIdOnDevice = long.Parse(attendanceStringSplitted[0]),
-                    AttendanceDateTime = Convert.ToDateTime(attendanceStringSplitted[1], new CultureInfo("en-US")),
+                    AttendanceDateTime = attendanceDateUtc,
                     VerificationStyle = (int)ZkUtils.GetVerificationStyle(Convert.ToInt16(attendanceStringSplitted[3])),
                     DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
                     AttendanceSource = AttendanceSourceEnumeration.Device,
@@ -1341,7 +1352,7 @@ namespace GuardianCommunication.Hardware.Zk
             if (keyToLower)
                 key = key.Trim().ToLower();
 
-            return dic.ContainsKey(key) ? dic[key] : defaultVal;
+            return dic.TryGetValue(key, out var value) ? value : defaultVal;
         }
 
         #endregion
@@ -1355,7 +1366,7 @@ namespace GuardianCommunication.Hardware.Zk
 
             public int DeviceNumber { get; set; }
 
-            public DateTime ConnectionDateTime { get; set; }
+            public DateTime ConnectionDateTimeUtc { get; set; }
         }
 
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using AccessControl.TimeHandling;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.PadisController.Definition;
 using GuardianCommunication.Hardware.Pw.PwConcepts;
@@ -1396,38 +1397,41 @@ namespace GuardianCommunication.Hardware.Shared.Helpers
             return error;
         }
 
-        public static DateTime GetEndDate(DateTime? endDate, ProducerEnumeration producerEnum, SdkVersionEnumeration sdkVersion)
+        public static DateTime GetStartDate(DateTime? startDate, DtoDevice device)
         {
-            switch (producerEnum)
+            return startDate ?? DateTime.UtcNow.Date;
+        }
+
+        public static DateTime GetEndDate(DateTime? endDate, DtoDevice device)
+        {
+            switch (device.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
+                {
+                    switch (device.SdkVersion)
                     {
-                        var newEndDate = new DateTime(2029, 01, 01);
-                        if (endDate.HasValue && endDate.Value.Date < newEndDate)
-                        {
-                            newEndDate = endDate.Value;
-                        }
-                        return newEndDate;
+                        case SdkVersionEnumeration.SdkVersion1:
+                            var newEndDate = new DateTime(2029, 01, 01);
+                            if (endDate.HasValue && endDate.Value.Date < newEndDate)
+                            {
+                                newEndDate = endDate.Value;
+                            }
+                            return newEndDate;
+                        case SdkVersionEnumeration.SdkVersion2:
+                            return endDate ?? DateTime.Now.AddYears(20);
                     }
-                case ProducerEnumeration.Zk:
-                    {
-                        var newEndDate = new DateTime(2029, 01, 01);
-                        if (endDate.HasValue && endDate.Value.Date < newEndDate)
-                        {
-                            newEndDate = endDate.Value;
-                        }
-                        return newEndDate;
-                    }
+                    break;
+                }
                 case ProducerEnumeration.Virdi:
                     return endDate.HasValue ? endDate.Value.Date.AddDays(1) : DateTime.Now.AddYears(20);
-                default:
-                    return endDate ?? DateTime.Now.AddYears(20);
             }
+
+            return endDate ?? DateTime.Now.AddYears(20);
         }
 
 
 
-        private static DateTime UnixBaseDate = new DateTime
+        private static DateTime _unixBaseDate = new DateTime
             (1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
 
         public static DateTime ConvertUnixTimestampToServerLocalTime
@@ -1440,9 +1444,9 @@ namespace GuardianCommunication.Hardware.Shared.Helpers
             {
                 // No timezone/DST settings available: return the UTC-based time without adjustments
                 // instead of throwing an NRE (which would drop the attendance record).
-                return UnixBaseDate.AddSeconds(timestamp);
+                return _unixBaseDate.AddSeconds(timestamp);
             }
-            var result = UnixBaseDate.AddSeconds(timestamp).AddSeconds
+            var result = _unixBaseDate.AddSeconds(timestamp).AddSeconds
                 (DateTimeHelper.ConvertToTimeZoneTotalSecond(timeSetting.TimeZone));
             if (timeSetting.IsDaylightActive)
             {
@@ -1456,17 +1460,53 @@ namespace GuardianCommunication.Hardware.Shared.Helpers
 
         public static double ConvertToUnixTimestamp(DateTime date)
         {
-            var diff = date.ToUniversalTime() - UnixBaseDate.ToUniversalTime();
+            var diff = date.ToUniversalTime() - _unixBaseDate.ToUniversalTime();
             return Math.Floor(diff.TotalSeconds);
         }
-
-
+        
         public static double ConvertToUnixTimestampAndConsiderDateAsUtc(DateTime date)
         {
             var currDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, DateTimeKind.Utc);
-            return currDate.Subtract(UnixBaseDate).TotalSeconds;
+            return currDate.Subtract(_unixBaseDate).TotalSeconds;
         }
 
+        private static readonly DeviceTimeService TimeService = new DeviceTimeService();
+
+        public static DtoUserDeviceRelatedData WithDeviceLocalDates(
+            this DtoUserDeviceRelatedData userInfo, DtoDevice deviceInfo)
+        {
+            if (userInfo == null) throw new ArgumentNullException(nameof(userInfo));
+            if (deviceInfo == null) throw new ArgumentNullException(nameof(deviceInfo));
+
+            var startRaw = GetStartDate(userInfo.StartDateTime, deviceInfo);
+            var endRaw = GetEndDate(userInfo.EndDateTime, deviceInfo);
+
+            DateTime startForDevice;
+            DateTime endForDevice;
+
+            if (userInfo.StartAndEndHasTime)
+            {
+                startForDevice = TimeService.UtcToDeviceTime(
+                    startRaw.ToUniversalTime(), deviceInfo.IanaTimeZoneId);
+                endForDevice = TimeService.UtcToDeviceTime(
+                    endRaw.ToUniversalTime(), deviceInfo.IanaTimeZoneId);
+            }
+            else
+            {
+                var startDateOnly = DeviceTimeService.DateTimeToLocalDate(startRaw);
+                startForDevice = TimeService.DateToStartOfDayInZone(
+                    startDateOnly, deviceInfo.IanaTimeZoneId);
+
+                var endDateOnly = DeviceTimeService.DateTimeToLocalDate(endRaw);
+                endForDevice = TimeService.DateToEndOfDayInZone(
+                    endDateOnly, deviceInfo.IanaTimeZoneId);
+            }
+
+            var copy = userInfo.DeepClone();
+            copy.StartDateTime = startForDevice;
+            copy.EndDateTime = endForDevice;
+            return copy;
+        }
 
 
     }

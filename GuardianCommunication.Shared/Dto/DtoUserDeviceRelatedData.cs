@@ -34,9 +34,11 @@ namespace GuardianCommunication.Shared.Dto
 
         public string CabinetInfoInJsonFormat { get; set; }
 
-        public DateTime StartTime { get; set; }
+        public DateTime? StartDateTime { get; set; }
 
-        public DateTime? EndTime { get; set; }
+        public DateTime? EndDateTime { get; set; }
+
+        public bool StartAndEndHasTime { get; set; }
 
         public byte[] VisibleLightImage { get; set; }
 

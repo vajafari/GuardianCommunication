@@ -452,38 +452,5 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
         #endregion
 
 
-        #region Timezone
-
-        public static DateTime ToUtc(this DateTime dateTime)
-        {
-            return dateTime.ToUniversalTime();
-        }
-
-        public static DateTime? ToUtc(this DateTime? dateTime)
-        {
-            return dateTime?.ToUniversalTime();
-        }
-
-        public static string ConvertToTimeZoneString(TimeZonesEnumeration timeZone)
-        {
-            var timeZoneNumber = (int)timeZone;
-            if (timeZone == 0)
-            {
-                return "00:00";
-            }
-
-            return
-                $"{(timeZoneNumber < 0 ? "-" : "+")}{Math.Abs(timeZoneNumber / 100).ToString().PadLeft(2, '0')}:{Math.Abs(timeZoneNumber % 100).ToString().PadLeft(2, '0')}";
-        }
-
-
-        public static int ConvertToTimeZoneTotalSecond(TimeZonesEnumeration timeZone)
-        {
-            var timeZoneNumber = (int)timeZone;
-            return ((timeZoneNumber / 100) * 3600) + (timeZoneNumber % 100) * 60;
-        }
-
-        #endregion
-
     }
 }

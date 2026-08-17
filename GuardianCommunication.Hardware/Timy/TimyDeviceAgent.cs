@@ -1,14 +1,21 @@
-﻿using System;
+﻿using AccessControl.TimeHandling;
+using GuardianCommunication.Data.Logger;
+using GuardianCommunication.Hardware.Shared;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SharedSettings;
+using Newtonsoft.Json.Linq;
+using SuperWebSocket;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using GuardianCommunication.Data.Logger;
-using GuardianCommunication.Hardware.Shared;
-using Newtonsoft.Json.Linq;
-using SuperWebSocket;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
 
 namespace GuardianCommunication.Hardware.Timy
 {
@@ -26,7 +33,7 @@ namespace GuardianCommunication.Hardware.Timy
         private readonly object _sendLock = new object();
         //private DtoDeviceUnsentCommand _pendingCommand = null;
 
-        public DtoCommunicationDeviceData DeviceInfo { get; internal set; }
+        public DtoDevice DeviceInfo { get; internal set; }
         /// <summary>
         /// آیا این دستگاه الان آزاد است (منتظر جواب دستور قبلی نیست)؟
         /// TimyServer قبل از fetch از دیتابیس این را چک می‌کند تا فقط دستور دستگاه‌های آزاد را بخواند.
@@ -40,7 +47,7 @@ namespace GuardianCommunication.Hardware.Timy
 
         public TimyDeviceAgent(
             WebSocketSession socketSession
-            , DtoCommunicationDeviceData deviceInfo
+            , DtoDevice deviceInfo
             , TimyPushConfig pushConfig)
         {
             _socketSession = socketSession;
@@ -160,7 +167,7 @@ namespace GuardianCommunication.Hardware.Timy
         {
             try
             {
-                if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveAttendance)
                 {
                     return;
                 }
@@ -177,20 +184,21 @@ namespace GuardianCommunication.Hardware.Timy
                     var image = ss.Value<string>("image");
                     if (userId > 0)
                     {
-                        var timeConverted = DateTime.Parse(time, new CultureInfo("en-US"));
+                        var timeOriginal = DateTime.Parse(time, new CultureInfo("en-US"));
+                        var deviceTimeService = new DeviceTimeService();
+                        var dateTimeToSetFinal = deviceTimeService.DeviceTimeToUtc(timeOriginal.ToUniversalTime(), DeviceInfo.IanaTimeZoneId);
                         var attendance = new DtoAttendance
                         {
-                            EmployeeNumber = userId,
-                            AttendanceDateTime = timeConverted,
+                            UserIdOnDevice = userId,
+                            AttendanceDateTime = dateTimeToSetFinal,
                             VerificationStyle = (int)TimyUtils.GetVerificationStyle(mode),
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
-                            DeviceNumber = DeviceInfo.DeviceNumber,
+                            DeviceId = DeviceInfo.Id,
                             CameraId = null,
                             StatusCode = statusCode,
-                            IsSent = false,
-                            IsInvalid = false,
-                            Id = logIndex.ToInt64(),
+                            IsSentToGuardian = false,
+                            LogIdOnDevice = logIndex.ToInt64(),
                             RfCardNumber = null,
                         };
 
@@ -206,8 +214,8 @@ namespace GuardianCommunication.Hardware.Timy
                             {
                                 HardwareEventPublisher.Instance.PublishAttendanceImage(new DtoDeviceAttendanceImage
                                 {
-                                    DeviceNumber = DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = attendance.EmployeeNumber,
+                                    DeviceId = DeviceInfo.Id,
+                                    UserIdOnDevice = attendance.UserIdOnDevice,
                                     AttendanceDateTime = attendance.AttendanceDateTime,
                                     Image = Convert.FromBase64String(image)
                                 });
@@ -264,19 +272,21 @@ namespace GuardianCommunication.Hardware.Timy
                     var statusCode = ss.Value<int>("event");
                     var image = ss.Value<string>("image");
 
-                    var timeConverted = DateTime.Parse(time, new CultureInfo("en-US"));
+                    var timeOriginal = DateTime.Parse(time, new CultureInfo("en-US"));
+                    var deviceTimeService = new DeviceTimeService();
+                    var dateTimeToSetFinal = deviceTimeService.DeviceTimeToUtc(timeOriginal.ToUniversalTime(), DeviceInfo.IanaTimeZoneId);
+
                     var attendance = new DtoAttendance
                     {
-                        EmployeeNumber = userId,
-                        AttendanceDateTime = timeConverted,
+                        UserIdOnDevice= userId,
+                        AttendanceDateTime = dateTimeToSetFinal,
                         VerificationStyle = (int)TimyUtils.GetVerificationStyle(mode),
                         AttendanceSource = AttendanceSourceEnumeration.Device,
                         DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
-                        DeviceNumber = DeviceInfo.DeviceNumber,
+                        DeviceId = DeviceInfo.Id,
                         CameraId = null,
                         StatusCode = statusCode,
-                        IsSent = false,
-                        IsInvalid = false,
+                        IsSentToGuardian = false,
                         RfCardNumber = null,
                     };
 
@@ -285,7 +295,7 @@ namespace GuardianCommunication.Hardware.Timy
                         LoggingSystem.LogInfo("Timy Server Get Data Attendance:", attendance);
                     }
 
-                    if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                    if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveAttendance)
                     {
                         continue;
                     }
@@ -298,8 +308,8 @@ namespace GuardianCommunication.Hardware.Timy
                         {
                             HardwareEventPublisher.Instance.PublishAttendanceImage(new DtoDeviceAttendanceImage
                             {
-                                DeviceNumber = DeviceInfo.DeviceNumber,
-                                EmployeeNumber = attendance.EmployeeNumber,
+                                DeviceId = DeviceInfo.Id,
+                                UserIdOnDevice = attendance.UserIdOnDevice,
                                 AttendanceDateTime = attendance.AttendanceDateTime,
                                 Image = Convert.FromBase64String(image)
                             });
@@ -342,9 +352,9 @@ namespace GuardianCommunication.Hardware.Timy
                 backupNumber = jsonMessage.Value<int>("backupnum");
                 var username = jsonMessage.Value<string>("name");
                 var admin = jsonMessage.Value<int>("admin");
-                var userInfo = new DtoEmployeeDeviceRelatedData
+                var userInfo = new DtoUserDeviceRelatedData
                 {
-                    EmployeeNumber = userId,
+                    UserIdOnDevice = userId,
                     UserName = username,
                     Privilege = admin,
                     IsEnable = true,
@@ -354,9 +364,9 @@ namespace GuardianCommunication.Hardware.Timy
                 {
                     var fingerData = jsonMessage.Value<string>("record");
                     var bytes = Convert.FromBase64String(fingerData);
-                    var face = new DtoEmployeeFace
+                    var face = new DtoUserFace
                     {
-                        EmployeeNumber = userId,
+                        UserIdOnDevice = userId,
                         FaceIndex = backupNumber - 20,
                         TemplateData = bytes,
                         Length = bytes.Length,
@@ -369,9 +379,9 @@ namespace GuardianCommunication.Hardware.Timy
                     if (fingerData.IsNotNullOrEmpty())
                     {
                         var bytes = Encoding.UTF8.GetBytes(fingerData);
-                        var finger = new DtoEmployeeFinger
+                        var finger = new DtoUserFinger
                         {
-                            EmployeeNumber = userId,
+                            UserIdOnDevice = userId,
                             FingerIndex = backupNumber,
                             TemplateData = bytes
                         };
@@ -381,7 +391,7 @@ namespace GuardianCommunication.Hardware.Timy
                 else if (backupNumber == 10)
                 {
                     userInfo.Password = jsonMessage.Value<int>("record").ToString();
-                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoEmployeeEnrolledSetting
+                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoUserEnrolledSetting
                     {
                         OverwriteDevicePassword = true,
                         OverwriteIsEnabled = false,
@@ -393,7 +403,7 @@ namespace GuardianCommunication.Hardware.Timy
                 else if (backupNumber == 11)
                 {
                     userInfo.RfCardNumbers = new List<string> { jsonMessage.Value<string>("record") };
-                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoEmployeeEnrolledSetting
+                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoUserEnrolledSetting
                     {
                         OverwriteDevicePassword = false,
                         OverwriteIsEnabled = false,
@@ -407,9 +417,9 @@ namespace GuardianCommunication.Hardware.Timy
                     var palmBase64 = jsonMessage.Value<string>("record");
                     if (palmBase64.IsNotNullOrEmpty())
                     {
-                        var palm = new DtoEmployeePalm
+                        var palm = new DtoUserPalm
                         {
-                            EmployeeNumber = userId,
+                            UserIdOnDevice = userId,
                             TemplateData = Convert.FromBase64String(palmBase64),
                             Index = backupNumber,
                         };
@@ -421,9 +431,9 @@ namespace GuardianCommunication.Hardware.Timy
                     var visibleBase64 = jsonMessage.Value<string>("record");
                     if (visibleBase64.IsNotNullOrEmpty())
                     {
-                        var face = new DtoEmployeeFace
+                        var face = new DtoUserFace
                         {
-                            EmployeeNumber = userId,
+                            UserIdOnDevice = userId,
                             FaceIndex = backupNumber,
                             TemplateData = Convert.FromBase64String(visibleBase64)
                         };
@@ -432,7 +442,7 @@ namespace GuardianCommunication.Hardware.Timy
                 }
                 else
                 {
-                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoEmployeeEnrolledSetting
+                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoUserEnrolledSetting
                     {
                         OverwriteDevicePassword = false,
                         OverwriteIsEnabled = false,
@@ -502,7 +512,7 @@ namespace GuardianCommunication.Hardware.Timy
                 }
 
                 // اعلام به دیتابیس که دستور ارسال شد (قبل از اینکه بدانیم جوابش چیست)
-                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.Id });
+                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
             }
             catch (Exception exp)
             {
@@ -575,7 +585,7 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
                 {
-                    Id = command.Id,
+                    NumericId = command.NumericId,
                     CommandResponseTime = result.ResponseTime,
                     CommandResponseResult = "SUCCESS"
                 });
@@ -585,7 +595,7 @@ namespace GuardianCommunication.Hardware.Timy
                 HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(
                     new DtoDeviceCommandProcessingDescription
                     {
-                        Id = command.Id,
+                        NumericId = command.NumericId,
                         Description = result.ErrorMessage,
                     });
             }

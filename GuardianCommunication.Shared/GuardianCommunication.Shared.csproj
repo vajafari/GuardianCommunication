@@ -318,7 +318,6 @@
     <Compile Include="Filter\DeviceCommandSortEnumeration.cs" />
     <Compile Include="Filter\AttendanceSortEnumeration.cs" />
     <Compile Include="HardwareDefinition\InvalidAttendanceReasonEnumeration.cs" />
-    <Compile Include="HardwareDefinition\TimeZonesEnumeration.cs" />
     <Compile Include="HardwareDefinition\DeviceIoTypeEnumeration.cs" />
     <Compile Include="HardwareDefinition\AttendanceSourceEnumeration.cs" />
     <Compile Include="HardwareDefinition\DeviceLogTypeEnumeration.cs" />

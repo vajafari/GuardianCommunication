@@ -478,7 +478,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                         ? Convert.ToBase64String(inputItem.HardwareProfileImage)
                         : null,
                 Password = inputItem.Password,
-                EndDate = inputItem.EndTime.ToNumericDateTime(),
+                EndDate = inputItem.EndDateTime.ToNumericDateTime(),
                 FingerDataList = MapDtoEmployeeFingerToEmployeeFingerModel(inputItem.FingerDataList),
                 IsEnable = inputItem.IsEnable,
                 PalmDataList = MapDtoEmployeePalmToEmployeePalmModel(inputItem.PalmDataList),
@@ -487,7 +487,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 VisibleLightImage = inputItem.VisibleLightImage != null
                     ? Convert.ToBase64String(inputItem.VisibleLightImage)
                     : null,
-                StartDate = inputItem.StartTime.ToNumericDateTime(),
+                StartDate = inputItem.StartDateTime.ToNumericDateTime(),
                 UserName = inputItem.UserName,
             };
             return result;
@@ -532,7 +532,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                         ? Convert.FromBase64String(model.HardwareProfileImage)
                         : null,
                     Password = model.Password,
-                    EndTime = model.EndDate.FromNumericDateTime(),
+                    EndDateTime = model.EndDate.FromNumericDateTime(),
                     FingerDataList = MapToEmployeeFingerModelDtoEmployeeFinger(model.FingerDataList),
                     IsEnable = model.IsEnable,
                     PalmDataList = MapToEmployeePalmModelDtoEmployeePalm(model.PalmDataList),
@@ -541,7 +541,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                     VisibleLightImage = model.VisibleLightImage != null
                         ? Convert.FromBase64String(model.VisibleLightImage)
                         : null,
-                    StartTime = model.StartDate.FromNumericDateTime(),
+                    StartDateTime = model.StartDate.FromNumericDateTime(),
                     UserName = model.UserName,
                     UserType = model.UserType,
                 });

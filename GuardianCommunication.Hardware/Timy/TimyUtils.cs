@@ -1,4 +1,6 @@
-﻿namespace GuardianCommunication.Hardware.Timy
+﻿using GuardianCommunication.Shared.Definition;
+
+namespace GuardianCommunication.Hardware.Timy
 {
     public class TimyUtils
     {

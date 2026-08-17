@@ -51,8 +51,7 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 			return JsonConvert.DeserializeObject<T>(dataToDeserialize);
 		}
 
-
-		public static bool IsSimpleType(Type type)
+        public static bool IsSimpleType(Type type)
 		{
 			return
 				type.IsPrimitive ||
@@ -72,8 +71,7 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 
 		}
 
-
-		public static bool IsEmbeddedProperty(Type propertyType)
+        public static bool IsEmbeddedProperty(Type propertyType)
 		{
 
 			if ((propertyType.IsGenericType && propertyType.GetGenericTypeDefinition().UnderlyingSystemType == typeof(ICollection<>)))
@@ -86,16 +84,24 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 			}
 			return false;
 		}
+        
+        public static T DeepClone<T>(this T source)
+        {
+            if (source == null)
+                return default;
+
+            var json = ObjectHelper.SerializeAsJson(source);
+            return DeserializeAsJson<T>(json);
+        }
 
 
 
 
 
+        #region Overwrite
 
-		#region Overwrite
 
-
-		public static bool IsNavigationProperty(Type propertyType)
+        public static bool IsNavigationProperty(Type propertyType)
 		{
 
 			if ((propertyType.IsGenericType && propertyType.GetGenericTypeDefinition().UnderlyingSystemType == typeof(ICollection<>)))

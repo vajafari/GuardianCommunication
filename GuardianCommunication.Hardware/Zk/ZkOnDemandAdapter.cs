@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using AccessControl.TimeHandling;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Zk.ZkConcepts;
@@ -48,7 +49,7 @@ namespace GuardianCommunication.Hardware.Zk
         public bool CancelOperation()
         {
            
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -63,18 +64,20 @@ namespace GuardianCommunication.Hardware.Zk
             throw new OperationCannotBeDoneException(DeviceSharedHelperMethods.MapToOperationResult(errorCode, DeviceInfo));
         }
 
-        public bool SetDateTime(DateTime now)
+        public bool SetDateTime(DateTime dateTimeToSet)
         {
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandSetDateTime))
             {
                 LoggingSystem.LogInfo("ZK OnDemand SetDateTime", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
 
-            var result = _communicationOcx.SetDeviceTime2(DeviceInfo.DeviceNumber, now.Year, now.Month, now.Day, now.Hour, now.Minute, now.Second);
+            var deviceTimeService = new DeviceTimeService();
+            var dateTimeToSetFinal = deviceTimeService.UtcToDeviceTime(dateTimeToSet.ToUniversalTime(), DeviceInfo.IanaTimeZoneId);
+            var result = _communicationOcx.SetDeviceTime2(DeviceInfo.DeviceNumber, dateTimeToSetFinal.Year, dateTimeToSetFinal.Month, dateTimeToSetFinal.Day, dateTimeToSetFinal.Hour, dateTimeToSetFinal.Minute, dateTimeToSetFinal.Second);
             if (result)
             {
                 return true;
@@ -90,7 +93,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetDateTime", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -104,7 +107,9 @@ namespace GuardianCommunication.Hardware.Zk
             if (_communicationOcx.GetDeviceTime
                     (DeviceInfo.DeviceNumber, ref year, ref month, ref day, ref hour, ref minute, ref second))
             {
-                return new DateTime(year, month, day, hour, minute, second);
+                var dateTimeFromDevice = new DateTime(year, month, day, hour, minute, second);
+                var deviceTimeService = new DeviceTimeService();
+                return deviceTimeService.DeviceTimeToUtc(dateTimeFromDevice, DeviceInfo.IanaTimeZoneId);
             }
             var errorCode = 0;
             _communicationOcx.GetLastError(ref errorCode);
@@ -114,7 +119,7 @@ namespace GuardianCommunication.Hardware.Zk
         public void EnableDevice()
         {
 
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             _isDeviceEnable = _communicationOcx.EnableDevice(DeviceInfo.DeviceNumber, true);
         }
@@ -122,7 +127,7 @@ namespace GuardianCommunication.Hardware.Zk
         public void DisableDevice(int timeout)
         {
 
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             if (_communicationOcx.EnableDevice(DeviceInfo.DeviceNumber, false))
             {
@@ -154,7 +159,7 @@ namespace GuardianCommunication.Hardware.Zk
                     Titles = titles
                 });
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -217,7 +222,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand Disable Device Function Titles", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -293,7 +298,7 @@ namespace GuardianCommunication.Hardware.Zk
         public bool SetCommunicationPassword(int passwordKey)
         {
 
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var errorCode = 0;
             var result = _communicationOcx.SetDeviceCommPwd(DeviceInfo.DeviceNumber, passwordKey);
@@ -370,7 +375,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand Clear Data", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -385,6 +390,12 @@ namespace GuardianCommunication.Hardware.Zk
 
         public List<DtoAttendance> Readout(DateTime startDate, DateTime endDate)
         {
+            var deviceTimeService = new DeviceTimeService();
+            var startDateDevice =
+                deviceTimeService.UtcToDeviceTime(startDate.ToUniversalTime(), DeviceInfo.IanaTimeZoneId);
+            var endDateDevice =
+                deviceTimeService.UtcToDeviceTime(endDate.ToUniversalTime(), DeviceInfo.IanaTimeZoneId);
+
             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.OnDemandGetData))
             {
                 LoggingSystem.LogInfo("ZK OnDemand Readout is calling", DeviceInfo);
@@ -394,7 +405,7 @@ namespace GuardianCommunication.Hardware.Zk
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -404,7 +415,7 @@ namespace GuardianCommunication.Hardware.Zk
             var iGlCount = 0;
             var attRecords = new List<DtoAttendance>();
             if (_communicationOcx.ReadTimeGLogData(DeviceInfo.DeviceNumber,
-                startDate.ToString("yyyy-MM-dd HH:mm:ss", new CultureInfo("en-US")), endDate.ToString("yyyy-MM-dd HH:mm:ss", new CultureInfo("en-US"))))
+                    startDateDevice.ToString("yyyy-MM-dd HH:mm:ss", new CultureInfo("en-US")), endDateDevice.ToString("yyyy-MM-dd HH:mm:ss", new CultureInfo("en-US"))))
             {
 
                 while (_communicationOcx.SSR_GetGeneralLogData(DeviceInfo.DeviceNumber,
@@ -423,7 +434,9 @@ namespace GuardianCommunication.Hardware.Zk
                     {
                         iGlCount++;
                         var status = idwInOutMode & 0x7F;
-                        
+                        var attendanceDateTimeDevice =
+                            new DateTime(idwYear, idwMonth, idwDay, idwHour, idwMinute, idwSecond);
+                        var attendanceDateTimeUtc = deviceTimeService.DeviceTimeToUtc(attendanceDateTimeDevice, DeviceInfo.IanaTimeZoneId);
                         attRecords.Add(new DtoAttendance
                         {
                             LogIdOnDevice = iGlCount,
@@ -432,7 +445,7 @@ namespace GuardianCommunication.Hardware.Zk
                             StatusCode = status,
                             DeviceId = DeviceInfo.Id,
                             CameraId = null,
-                            AttendanceDateTime = new DateTime(idwYear, idwMonth, idwDay, idwHour, idwMinute, idwSecond),
+                            AttendanceDateTime = attendanceDateTimeUtc,
                             AttendanceSource = AttendanceSourceEnumeration.Device,
                             DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
                             RfCardNumber = null,
@@ -480,10 +493,11 @@ namespace GuardianCommunication.Hardware.Zk
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
+            var deviceTimeService = new DeviceTimeService();
             var errorCode = 0;
             var idwWorkCode = 0;
             var iGlCount = 0;
@@ -494,6 +508,10 @@ namespace GuardianCommunication.Hardware.Zk
                     out var idwYear, out var idwMonth, out var idwDay, out var idwHour, out var idwMinute, out var idwSecond, ref idwWorkCode))
                 {
                     iGlCount++;
+                    var attendanceDateTimeDevice =
+                        new DateTime(idwYear, idwMonth, idwDay, idwHour, idwMinute, idwSecond);
+                    var attendanceDateTimeUtc = deviceTimeService.DeviceTimeToUtc(attendanceDateTimeDevice, DeviceInfo.IanaTimeZoneId);
+
                     var att = new DtoAttendance
                     {
                         LogIdOnDevice = iGlCount,
@@ -502,7 +520,7 @@ namespace GuardianCommunication.Hardware.Zk
                         StatusCode = idwInOutMode,
                         DeviceId = DeviceInfo.Id,
                         CameraId = null,
-                        AttendanceDateTime = new DateTime(idwYear, idwMonth, idwDay, idwHour, idwMinute, idwSecond),
+                        AttendanceDateTime = attendanceDateTimeUtc,
                         AttendanceSource = AttendanceSourceEnumeration.Device,
                         DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
                         RfCardNumber = null,
@@ -530,7 +548,7 @@ namespace GuardianCommunication.Hardware.Zk
 
         public List<DtoAttendance> GetDataWithDefaultDates()
         {
-            return GetData(DateTime.Now.Date.AddDays(-5), DateTime.Now.Date.AddDays(3));
+            return GetData(DateTime.UtcNow.Date.AddDays(-5), DateTime.UtcNow.Date.AddDays(3));
         }
 
         public int GetRecordCount()
@@ -539,7 +557,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetRecordCount", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var recordCount = 0;
             var errorCode = 0;
@@ -632,7 +650,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetUserInfoByUserId is calling", new { DeviceInfo, UserId = userId, EnrollType = enrollType });
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var enrollNumber = userId.ToString();
             var result = new DtoUserDeviceRelatedData();
@@ -742,7 +760,7 @@ namespace GuardianCommunication.Hardware.Zk
                 LoggingSystem.LogInfo("ZK OnDemand SetUserInfoWithTemplate", new { DeviceInfo, User = userInfo });
             }
 
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -832,21 +850,20 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand SetUserInfo", new { DeviceInfo, User = userInfo });
             }
-            var startDate = userInfo.StartTime;
-            var endDate = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime, ProducerEnumeration.Zk, SdkVersionEnumeration.SdkVersion1);
-            var startDateString = startDate.ToString("yyyy-M-d HH:mm:ss");
-            var endDateString = endDate.ToString("yyyy-M-d HH:mm:ss");
-
-
+            var userInfoForDevice = userInfo.WithDeviceLocalDates(DeviceInfo);
+            // ReSharper disable PossibleInvalidOperationException
+            var startDateString = userInfoForDevice.StartDateTime.Value.ToString("yyyy-M-d HH:mm:ss");
+            var endDateString = userInfoForDevice.EndDateTime.Value.ToString("yyyy-M-d HH:mm:ss");
+            // ReSharper restore PossibleInvalidOperationException
             var culture = CultureInfo.CurrentCulture.Name;
             var uiCulture = CultureInfo.CurrentUICulture.Name;
             Thread.CurrentThread.CurrentUICulture = new CultureInfo("fa-IR");
             Thread.CurrentThread.CurrentCulture = CultureInfo.GetCultureInfo("fa-IR");
             try
             {
-                if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                 {
-                    if (!_communicationOcx.SetStrCardNumber(userInfo.RfCardNumbers[0]))
+                    if (!_communicationOcx.SetStrCardNumber(userInfoForDevice.RfCardNumbers[0]))
                     {
                         var errorCode = 0;
                         _communicationOcx.GetLastError(ref errorCode);
@@ -855,23 +872,23 @@ namespace GuardianCommunication.Hardware.Zk
                     }
                 }
 
-                var devicePassword = userInfo.Password.ToNotNullString();
-                var verificationStyle = (ZkVerificationStyleEnumeration)userInfo.VerificationStyle;
-                if (!userInfo.IsEnable)
+                var devicePassword = userInfoForDevice.Password.ToNotNullString();
+                var verificationStyle = (ZkVerificationStyleEnumeration)userInfoForDevice.VerificationStyle;
+                if (!userInfoForDevice.IsEnable)
                 {
                     devicePassword = ZkUtils.ZkForbiddenPassword;
                     verificationStyle = ZkVerificationStyleEnumeration.Pin;
                 }
 
-                var bytes = Encoding.Default.GetBytes(userInfo.UserName);
+                var bytes = Encoding.Default.GetBytes(userInfoForDevice.UserName);
                 var userNameUtf8 = Encoding.UTF8.GetString(bytes);
                 if (!_communicationOcx.SSR_SetUserInfo(DeviceInfo.DeviceNumber,
-                    userInfo.UserIdOnDevice.ToString()
+                    userInfoForDevice.UserIdOnDevice.ToString()
                     , DeviceInfo.DeviceSettings?.ZkDeviceSettings != null
-                      && DeviceInfo.DeviceSettings.ZkDeviceSettings.IsZkOldName ? userNameUtf8 : userInfo.UserName
+                      && DeviceInfo.DeviceSettings.ZkDeviceSettings.IsZkOldName ? userNameUtf8 : userInfoForDevice.UserName
                     , devicePassword
-                    , userInfo.Privilege > 0 ? 3 : 0
-                    , userInfo.IsEnable))
+                    , userInfoForDevice.Privilege > 0 ? 3 : 0
+                    , userInfoForDevice.IsEnable))
                 {
                     var errorCode = 0;
                     _communicationOcx.GetLastError(ref errorCode);
@@ -882,7 +899,7 @@ namespace GuardianCommunication.Hardware.Zk
                 if (DeviceInfo.DeviceSettings?.ZkDeviceSettings != null && !DeviceInfo.DeviceSettings.ZkDeviceSettings.IsOldVersion)
                 {
                     if (!_communicationOcx.SetUserValidDate(DeviceInfo.DeviceNumber,
-                            userInfo.UserIdOnDevice.ToString()
+                            userInfoForDevice.UserIdOnDevice.ToString()
                             , 1
                             , 0
                             , startDateString
@@ -898,7 +915,7 @@ namespace GuardianCommunication.Hardware.Zk
 
                 byte reserved = 0;
                 if (!_communicationOcx.SetUserInfoEx(DeviceInfo.DeviceNumber
-                    , Convert.ToInt32(userInfo.UserIdOnDevice)
+                    , Convert.ToInt32(userInfoForDevice.UserIdOnDevice)
                     , (int)verificationStyle
                     , ref reserved))
                 {
@@ -910,8 +927,8 @@ namespace GuardianCommunication.Hardware.Zk
 
                 SetUserPhoto(new DtoUserImage
                 {
-                    UserIdOnDevice = userInfo.UserIdOnDevice,
-                    PhotoData = userInfo.HardwareProfileImage
+                    UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
+                    PhotoData = userInfoForDevice.HardwareProfileImage
                 });
                 _communicationOcx.RefreshData(DeviceInfo.DeviceNumber);
 
@@ -959,7 +976,7 @@ namespace GuardianCommunication.Hardware.Zk
                 LoggingSystem.LogInfo("ZK OnDemand GetAllUserId is calling", DeviceInfo);
             }
 
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -991,7 +1008,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetUserCount is calling", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var userCount = 0;
             var errorCode = 0;
@@ -1017,7 +1034,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetFaceCount is calling", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var faceCount = 0;
             var errorCode = 0;
@@ -1045,7 +1062,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 LoggingSystem.LogInfo("ZK OnDemand GetFingerCount is calling", DeviceInfo);
             }
-            if (_isDeviceConnected == false)
+            if (!_isDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var fingerCount = 0;
             var errorCode = 0;
@@ -1201,7 +1218,7 @@ namespace GuardianCommunication.Hardware.Zk
             {
                 // COM teardown only on explicit Dispose — never on the finalizer thread
                 // (EnableDevice/Disconnect can throw, which would terminate the process).
-                if (_isDeviceConnected && _isDeviceEnable == false)
+                if (_isDeviceConnected && !_isDeviceEnable)
                 {
                     EnableDevice();
                 }

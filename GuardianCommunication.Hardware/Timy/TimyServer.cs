@@ -8,6 +8,12 @@ using System.Threading.Tasks;
 using System.Timers;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SharedSettings;
 using Newtonsoft.Json.Linq;
 using SuperSocket.SocketBase;
 using SuperSocket.SocketEngine;
@@ -25,8 +31,8 @@ namespace GuardianCommunication.Hardware.Timy
         private Timer _getCommandTimers;
         private TimyPushConfig _pushConfig;
         // لیست دستگاه‌هایی که اجازه‌ی push/online monitoring دارند (پیکربندی، نه اتصال زنده)
-        private readonly ConcurrentDictionary<string, DtoCommunicationDeviceData> _pushDevices =
-            new ConcurrentDictionary<string, DtoCommunicationDeviceData>();
+        private readonly ConcurrentDictionary<string, DtoDevice> _pushDevices =
+            new ConcurrentDictionary<string, DtoDevice>();
 
         // SessionId → TimyDeviceAgent  (اتصال‌های زنده‌ی فعلی)
         private readonly ConcurrentDictionary<string, TimyDeviceAgent> _connectedAgents =
@@ -54,7 +60,7 @@ namespace GuardianCommunication.Hardware.Timy
         #endregion
 
 
-        public void StartTimyServer(List<DtoCommunicationDeviceData> deviceInfos
+        public void StartTimyServer(List<DtoDevice> deviceInfos
             , TimyPushConfig pushConfig
             , Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> actionToGetCommands)
         {
@@ -73,7 +79,7 @@ namespace GuardianCommunication.Hardware.Timy
         }
 
 
-        public void DoStartServerProcess(List<DtoCommunicationDeviceData> deviceInfos)
+        public void DoStartServerProcess(List<DtoDevice> deviceInfos)
         {
             var setOnlineMonitoringMode = new Thread
                 (() => SetDeviceList(deviceInfos))
@@ -115,10 +121,10 @@ namespace GuardianCommunication.Hardware.Timy
             }
         }
 
-        public void SetDeviceList(List<DtoCommunicationDeviceData> deviceInfos)
+        public void SetDeviceList(List<DtoDevice> deviceInfos)
         {
             var timyPushDevicesInfo = deviceInfos.Where
-                (row => row.ProducerEnum == ProducerEnumeration.Timy
+                (row => row.ProducerNumber == ProducerEnumeration.Timy
                 && row.ConnectionMode == DeviceConnectionModeEnumeration.Push).ToList();
 
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.ServerSetDeviceList))
@@ -360,7 +366,7 @@ namespace GuardianCommunication.Hardware.Timy
                 {
                     new DtoDeviceConnectionStatus
                     {
-                        DeviceNumber = deviceData.DeviceNumber,
+                        DeviceId = deviceData.Id,
                         IsConnected = true
                     }
                 });
@@ -382,7 +388,7 @@ namespace GuardianCommunication.Hardware.Timy
                 {
                     new DtoDeviceConnectionStatus
                     {
-                        DeviceNumber = deviceAgent.DeviceInfo.DeviceNumber,
+                        DeviceId = deviceAgent.DeviceInfo.Id,
                         IsConnected = false
                     }
                 });

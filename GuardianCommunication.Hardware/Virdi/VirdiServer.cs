@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
+using AccessControl.TimeHandling;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Shared.Commands;
@@ -48,7 +49,6 @@ namespace GuardianCommunication.Hardware.Virdi
         private IAccessLogData _accessLogData;
         private IServerUserData _serverUserData;
         private IServerAuthentication _serverAuthentication;
-        private IAccessControlData _accessControlData;
         private const int NTemplateType400 = 400;
         private bool _isVirdiServerStarted;
         private VirdiServerConfig _config;
@@ -189,7 +189,6 @@ namespace GuardianCommunication.Hardware.Virdi
                     _accessLogData = _ucsApi.AccessLogData as IAccessLogData;
                     _serverUserData = _ucsApi.ServerUserData as IServerUserData;
                     _serverAuthentication = _ucsApi.ServerAuthentication as IServerAuthentication;
-                    _accessControlData = _ucsApi.AccessControlData as IAccessControlData;
 
                 }
 
@@ -329,13 +328,21 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 LoggingSystem.LogInfo($"Virdi Server Terminal {terminalId} get time");
             }
-            var now = DateTime.Now;
-            _ucsApi.SetTerminalTime((short)now.Year
-                , (byte)now.Month
-                , (byte)now.Day
-                , (byte)now.Hour
-                , (byte)now.Minute
-                , (byte)now.Second);
+
+            var deviceInfo = GetDeviceByTerminalId(terminalId);
+            if (deviceInfo == null)
+            {
+                return;
+            }
+
+            var timeService = new DeviceTimeService();
+            var deviceTime = timeService.UtcToDeviceTime(DateTime.UtcNow, deviceInfo.IanaTimeZoneId);
+            _ucsApi.SetTerminalTime((short)deviceTime.Year
+                , (byte)deviceTime.Month
+                , (byte)deviceTime.Day
+                , (byte)deviceTime.Hour
+                , (byte)deviceTime.Minute
+                , (byte)deviceTime.Second);
         }
 
         #endregion
@@ -517,7 +524,6 @@ namespace GuardianCommunication.Hardware.Virdi
                             if (virdiError != VirdiErrorEnum.Success)
                             {
                                 // دستگاه اعلام کرده است که عملیات ناموفق بوده پس باشد در توضیخات کامند ذکر شود
-
                                 HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription()
                                 {
                                     NumericId = command.NumericId,
@@ -534,7 +540,6 @@ namespace GuardianCommunication.Hardware.Virdi
                             {
                                 NumericId = command.NumericId,
                                 Description = $"Unknown Error. Message is {exp.GetFullExceptionMessage()}",
-                                Mode = CommandMode,
                             });
                             LoggingSystem.LogError(exp);
                         }
@@ -589,7 +594,19 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 LoggingSystem.LogInfo("Virdi Server device get data by date range", new { ClientId = clientId, TerminalId = terminalId, LogType = logType, StartDate = startDate, EndDate = endDate });
             }
-            _accessLogData.SetPeriod(startDate.Year, startDate.Month, startDate.Day, endDate.Year, endDate.Month, endDate.Day);
+
+            var deviceInfo = GetDeviceByTerminalId(terminalId);
+            if (deviceInfo == null)
+            {
+                return VirdiErrorEnum.NotConnected;
+            }
+            var timeService = new DeviceTimeService();
+            var startDateProcessed = timeService.UtcToDeviceTime
+                (startDate.ToUniversalTime(), deviceInfo.IanaTimeZoneId);
+            var endDateProcessed = timeService.UtcToDeviceTime
+                (endDate.ToUniversalTime(), deviceInfo.IanaTimeZoneId);
+
+            _accessLogData.SetPeriod(startDateProcessed.Year, startDateProcessed.Month, startDateProcessed.Day, endDateProcessed.Year, endDateProcessed.Month, endDateProcessed.Day);
             _accessLogData.GetAccessLogFromTerminal(ProcessClientIdBeforeSend(clientId), terminalId, (int)logType);
             return (VirdiErrorEnum)_ucsApi.ErrorCode;
         }
@@ -620,15 +637,18 @@ namespace GuardianCommunication.Hardware.Virdi
                     if (_accessLogData.IsAuthorized != 1)
                     {
                         // تردد نامجاز
-                        
+
                         if (deviceInList.DeviceSettings != null && deviceInList.DeviceSettings.DontSaveInvalidAttendance)
                         {
                             return;
                         }
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        var timeService = new DeviceTimeService();
+                        var attendanceDateProcessed = timeService.DeviceTimeToUtc(attendanceDate, deviceInList.IanaTimeZoneId);
+
                         var currentRecord = new DtoInvalidAttendance
                         {
-                            AttendanceDateTime = attendanceDate,
+                            AttendanceDateTime = attendanceDateProcessed,
                             UserIdOnDevice = _accessLogData.UserID,
                             StatusCode = _accessLogData.AuthMode,
                             DeviceId = deviceInList.Id,
@@ -652,11 +672,12 @@ namespace GuardianCommunication.Hardware.Virdi
                         {
                             return;
                         }
-
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        var timeService = new DeviceTimeService();
+                        var attendanceDateProcessed = timeService.DeviceTimeToUtc(attendanceDate, deviceInList.IanaTimeZoneId);
                         var currentRecord = new DtoAttendance
                         {
-                            AttendanceDateTime = attendanceDate,
+                            AttendanceDateTime = attendanceDateProcessed,
                             UserIdOnDevice = _accessLogData.UserID,
                             CameraId = null,
                             StatusCode = _accessLogData.AuthMode,
@@ -710,16 +731,17 @@ namespace GuardianCommunication.Hardware.Virdi
                     if (_accessLogData.IsAuthorized != 1)
                     {
                         // تردد نامجاز
-                        
+
                         if (deviceInList.DeviceSettings != null && deviceInList.DeviceSettings.DontSaveInvalidAttendance)
                         {
                             return;
                         }
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
-
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        var timeService = new DeviceTimeService();
+                        var attendanceDateProcessed = timeService.DeviceTimeToUtc(attendanceDate, deviceInList.IanaTimeZoneId);
                         var currentRecord = new DtoInvalidAttendance
                         {
-                            AttendanceDateTime = attendanceDate,
+                            AttendanceDateTime = attendanceDateProcessed,
                             UserIdOnDevice = _accessLogData.UserID,
                             StatusCode = _accessLogData.AuthMode,
                             DeviceId = deviceInList.Id,
@@ -744,11 +766,12 @@ namespace GuardianCommunication.Hardware.Virdi
                         {
                             return;
                         }
-
-                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US")).ToUtc();
+                        var attendanceDate = DateTime.Parse(_accessLogData.DateTime, new CultureInfo("en-US"));
+                        var timeService = new DeviceTimeService();
+                        var attendanceDateProcessed = timeService.DeviceTimeToUtc(attendanceDate, deviceInList.IanaTimeZoneId);
                         var currentRecord = new DtoAttendance
                         {
-                            AttendanceDateTime = attendanceDate,
+                            AttendanceDateTime = attendanceDateProcessed,
                             UserIdOnDevice = _accessLogData.UserID,
                             StatusCode = _accessLogData.AuthMode,
                             DeviceId = deviceInList.Id,
@@ -1046,23 +1069,30 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 LoggingSystem.LogInfo("Virdi Server all user command", new { ClientId = clientId, TerminalId = terminalId, DeviceNumber = device.DeviceNumber, User = userInfo });
             }
+            var userInfoForDevice = userInfo.WithDeviceLocalDates(device);
             lock (_serverUserData)
             {
                 _serverUserData.InitUserData();
-                _serverUserData.UserID = (int)userInfo.UserIdOnDevice;
-                _serverUserData.UniqueID = userInfo.UserIdOnDevice.ToString();
-                _serverUserData.UserName = Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(userInfo.UserName));
-                _serverUserData.IsAdmin = userInfo.Privilege;
+                _serverUserData.UserID = (int)userInfoForDevice.UserIdOnDevice;
+                _serverUserData.UniqueID = userInfoForDevice.UserIdOnDevice.ToString();
+                _serverUserData.UserName = Encoding.UTF8.GetString(Encoding.UTF8.GetBytes(userInfoForDevice.UserName));
+                _serverUserData.IsAdmin = userInfoForDevice.Privilege;
                 _serverUserData.IsIdentify = 1;
                 _serverUserData.IsFace1toN = 1;
                 _serverUserData.AuthType = 0;
-                _serverUserData.IsBlacklist = Convert.ToInt32(!userInfo.IsEnable);
-                var startDate = userInfo.StartTime;
-                var endDate = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime, ProducerEnumeration.Virdi, SdkVersionEnumeration.SdkVersion1);
+                _serverUserData.IsBlacklist = Convert.ToInt32(!userInfoForDevice.IsEnable);
+                // ReSharper disable PossibleInvalidOperationException
                 _serverUserData.SetAccessDate(1,
-                    startDate.Year, startDate.Month, startDate.Day,
-                    endDate.Year, endDate.Month, endDate.Day);
-                var verificationStyleEnum = (VirdiVerificationStyleEnumeration)userInfo.VerificationStyle;
+                    userInfoForDevice.StartDateTime.Value.Year
+                    , userInfoForDevice.StartDateTime.Value.Month
+                    , userInfoForDevice.StartDateTime.Value.Day
+                    ,userInfoForDevice.EndDateTime.Value.Year
+                    , userInfoForDevice.EndDateTime.Value.Month
+                    , userInfoForDevice.EndDateTime.Value.Day
+                    );
+                // ReSharper restore PossibleInvalidOperationException
+
+                var verificationStyleEnum = (VirdiVerificationStyleEnumeration)userInfoForDevice.VerificationStyle;
                 _serverUserData.SetAuthType(
                     Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsAndOperation)),
                     device.HasFingerPrint ? Convert.ToInt32(verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsFinger)) : 0,
@@ -1079,27 +1109,27 @@ namespace GuardianCommunication.Hardware.Virdi
                     , 0
                     , 0
                     , 0);
-                if (device.HasRfReader && userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                if (device.HasRfReader && userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                 {
-                    var rfCardNumbers = userInfo.RfCardNumbers.Distinct().ToList();
+                    var rfCardNumbers = userInfoForDevice.RfCardNumbers.Distinct().ToList();
                     for (var i = 0; i < rfCardNumbers.Count; i++)
                     {
                         _serverUserData.SetCardData(i == 0 ? 1 : 0, rfCardNumbers[i]);
                     }
                 }
                 if (verificationStyleEnum.HasFlag(VirdiVerificationStyleEnumeration.IsPassword)
-                    && userInfo.Password.IsNotNullOrEmpty())
+                    && userInfoForDevice.Password.IsNotNullOrEmpty())
                 {
-                    _serverUserData.Password = userInfo.Password;
+                    _serverUserData.Password = userInfoForDevice.Password;
                 }
 
                 // Set Iris data
                 if (device.HasIris)
                 {
-                    if (userInfo.IrisDataList.IsCollectionNotNullOrEmpty())
+                    if (userInfoForDevice.IrisDataList.IsCollectionNotNullOrEmpty())
                     {
                         _serverUserData.IsIris1toN = 1;
-                        var iris = userInfo.IrisDataList.First();
+                        var iris = userInfoForDevice.IrisDataList.First();
                         _serverUserData.SetIrisData(iris.TemplateData.Length, iris.TemplateData);
                     }
                 }
@@ -1107,11 +1137,11 @@ namespace GuardianCommunication.Hardware.Virdi
                 // Set Finger data
                 if (device.HasFingerPrint)
                 {
-                    if (userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
+                    if (userInfoForDevice.FingerDataList.IsCollectionNotNullOrEmpty())
                     {
 
                         _serverUserData.IsCheckSimilarFinger = 0;
-                        foreach (var currentFingerPrint in userInfo.FingerDataList)
+                        foreach (var currentFingerPrint in userInfoForDevice.FingerDataList)
                         {
                             var biFpData1 = new byte[NTemplateType400];
                             var biFpData2 = new byte[NTemplateType400];
@@ -1129,15 +1159,15 @@ namespace GuardianCommunication.Hardware.Virdi
                     if (device.HasVisiblelight)
                     {
                         var walkThroughTemplate =
-                            userInfo.FaceDataList.FirstOrDefault(f => f.FaceIndex == WalkThroughFaceIndex);
+                            userInfoForDevice.FaceDataList.FirstOrDefault(f => f.FaceIndex == WalkThroughFaceIndex);
                         if (walkThroughTemplate != null)
                         {
                             _serverUserData.SetWalkThroughData
                                 (WalkThroughTemplateType, walkThroughTemplate.Length, walkThroughTemplate.TemplateData);
                         }
-                        else if (userInfo.VisibleLightImage.IsCollectionNotNullOrEmpty())
+                        else if (userInfoForDevice.VisibleLightImage.IsCollectionNotNullOrEmpty())
                         {
-                            var imageForSend = userInfo.VisibleLightImage;
+                            var imageForSend = userInfoForDevice.VisibleLightImage;
                             imageForSend = ImageHelper.ResizeImageByDimensions(imageForSend, _config.MaxVisibleLightImageSizeWidth, _config.MaxVisibleLightImageSizeHeight);
                             imageForSend = ImageHelper.ReduceImageSize(imageForSend, _config.MaxVisibleLightImageSizeInKb);
                             _serverUserData.SetWalkThroughData
@@ -1146,10 +1176,10 @@ namespace GuardianCommunication.Hardware.Virdi
                     }
                     else
                     {
-                        if (userInfo.FaceDataList.IsCollectionNotNullOrEmpty())
+                        if (userInfoForDevice.FaceDataList.IsCollectionNotNullOrEmpty())
                         {
                             var firstFace =
-                                userInfo.FaceDataList.FirstOrDefault(f => f.FaceIndex != WalkThroughFaceIndex);
+                                userInfoForDevice.FaceDataList.FirstOrDefault(f => f.FaceIndex != WalkThroughFaceIndex);
                             if (firstFace != null)
                             {
                                 _serverUserData.FaceNumber = firstFace.FaceIndex;
@@ -1178,25 +1208,20 @@ namespace GuardianCommunication.Hardware.Virdi
                 //else 
 
                 if ((device.DeviceSettings == null || device.DeviceSettings.IsSendProfileImageActive)
-                    && userInfo.HardwareProfileImage.IsCollectionNotNullOrEmpty()
-                    && userInfo.HardwareProfileImage.Length <= MaxSizeForProfileImage)
+                    && userInfoForDevice.HardwareProfileImage.IsCollectionNotNullOrEmpty()
+                    && userInfoForDevice.HardwareProfileImage.Length <= MaxSizeForProfileImage)
                 {
                     var picture = new byte[MaxSizeForProfileImage];
-                    for (var i = 0; i < userInfo.HardwareProfileImage.Length; i++)
+                    for (var i = 0; i < userInfoForDevice.HardwareProfileImage.Length; i++)
                     {
-                        picture[i] = userInfo.HardwareProfileImage[i];
+                        picture[i] = userInfoForDevice.HardwareProfileImage[i];
                     }
-                    _serverUserData.SetPictureData(userInfo.HardwareProfileImage.Length, "JPG", picture);
+                    _serverUserData.SetPictureData(userInfoForDevice.HardwareProfileImage.Length, "JPG", picture);
                 }
 
                 const int isOverwrite = 1;
                 _serverUserData.AddUserToTerminal(ProcessClientIdBeforeSend(clientId), terminalId, isOverwrite);
                 var resultOfSetUser = (VirdiErrorEnum)_ucsApi.ErrorCode;
-                if (resultOfSetUser != VirdiErrorEnum.Success)
-                {
-                    return resultOfSetUser;
-                }
-
                 return resultOfSetUser;
             }
         }
@@ -1260,7 +1285,7 @@ namespace GuardianCommunication.Hardware.Virdi
             var newClientId = ProcessClientIdBeforeSend(clientId);
             _scanWalkThroughData.Add(new ScanWalkThroughData
             {
-                Date = DateTime.Now,
+                Date = DateTime.UtcNow,
                 UserIdOnDevice = userId,
                 ClientId = newClientId,
             });
@@ -1323,7 +1348,7 @@ namespace GuardianCommunication.Hardware.Virdi
             }
             finally
             {
-                _scanFaceCommands.RemoveAll(row => row.Date <= DateTime.Now.AddHours(-6));
+                _scanFaceCommands.RemoveAll(row => row.Date <= DateTime.UtcNow.AddHours(-6));
             }
 
         }
@@ -1338,7 +1363,7 @@ namespace GuardianCommunication.Hardware.Virdi
             var newClientId = ProcessClientIdBeforeSend(clientId);
             _scanFaceCommands.Add(new ScanFaceData
             {
-                Date = DateTime.Now,
+                Date = DateTime.UtcNow,
                 UserIdOnDevice = userId,
                 ClientId = newClientId,
             });
@@ -1404,7 +1429,7 @@ namespace GuardianCommunication.Hardware.Virdi
             }
             finally
             {
-                _scanFaceCommands.RemoveAll(row => row.Date <= DateTime.Now.AddHours(-6));
+                _scanFaceCommands.RemoveAll(row => row.Date <= DateTime.UtcNow.AddHours(-6));
             }
         }
 
@@ -1419,7 +1444,7 @@ namespace GuardianCommunication.Hardware.Virdi
             var newClientId = ProcessClientIdBeforeSend(clientId);
             _scanIrisCommands.Add(new ScanIrisData
             {
-                Date = DateTime.Now,
+                Date = DateTime.UtcNow,
                 UserIdOnDevice = userId,
                 ClientId = newClientId,
             });
@@ -1455,7 +1480,7 @@ namespace GuardianCommunication.Hardware.Virdi
             }
             finally
             {
-                _scanIrisCommands.RemoveAll(row => row.Date <= DateTime.Now.AddHours(-6));
+                _scanIrisCommands.RemoveAll(row => row.Date <= DateTime.UtcNow.AddHours(-6));
             }
         }
 
@@ -1550,7 +1575,7 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 return;
             }
-            var now = DateTime.Now;
+            var now = DateTime.UtcNow;
 
             var authorizationResult = _serverMatchProcessor(new DtoServerMatchData
             {
@@ -1598,7 +1623,7 @@ namespace GuardianCommunication.Hardware.Virdi
             HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
             {
                 CommandResponseResult = commandResponse,
-                CommandResponseTime = DateTime.Now,
+                CommandResponseTime = DateTime.UtcNow,
                 NumericId = commandId,
                 Mode = CommandMode,
             });
@@ -1615,7 +1640,7 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 return _deviceList.FirstOrDefault(d => d.DeviceNumber == terminalId);
             }
-            
+
         }
 
         private InvalidAttendanceReasonEnumeration GetAuthFailReason(int authResult)

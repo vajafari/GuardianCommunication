@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text;
+using AccessControl.TimeHandling;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Zk.ZkConcepts;
 using GuardianCommunication.Shared.Definition;
@@ -44,7 +45,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = Command_ControlReboot,
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = null,
@@ -55,11 +56,11 @@ namespace GuardianCommunication.Hardware.Zk
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
@@ -78,7 +79,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = Command_ControlUnLock,
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = null,
@@ -89,11 +90,11 @@ namespace GuardianCommunication.Hardware.Zk
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
@@ -110,13 +111,14 @@ namespace GuardianCommunication.Hardware.Zk
             Guid? commandIdentifier = null
             )
         {
+            var userInfoForDevice = userInfo.WithDeviceLocalDates(deviceInfo);
             var result = new List<DtoDeviceCommand>();
-            var password = userInfo.Password.IsNotNullOrEmpty() ? userInfo.Password : string.Empty;
-            var rfCardNumber = userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty() ? userInfo.RfCardNumbers[0] : string.Empty;
+            var password = userInfoForDevice.Password.IsNotNullOrEmpty() ? userInfoForDevice.Password : string.Empty;
+            var rfCardNumber = userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty() ? userInfoForDevice.RfCardNumbers[0] : string.Empty;
             var verificationStyle = string.Empty;
-            if (userInfo.IsEnable)
+            if (userInfoForDevice.IsEnable)
             {
-                var mappedVerification = ZkCommunicationHelpers.MapSdkVerificationStyleToPush((ZkVerificationStyleEnumeration)userInfo.VerificationStyle);
+                var mappedVerification = ZkCommunicationHelpers.MapSdkVerificationStyleToPush((ZkVerificationStyleEnumeration)userInfoForDevice.VerificationStyle);
                 if (mappedVerification != ZkPushVerificationStyleEnumeration.GroupVerify)
                 {
                     verificationStyle = $"\tVerify={(int)mappedVerification}";
@@ -130,17 +132,13 @@ namespace GuardianCommunication.Hardware.Zk
                     verificationStyle = $"\tVerify={(int)mappedVerification}";
                 }
             }
-
-
-            var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime, ProducerEnumeration.Zk, SdkVersionEnumeration.SdkVersion1);
-
             result.Add(new DtoDeviceCommand
             {
-                CommandContent = $"DATA UPDATE USERINFO PIN={userInfo.UserIdOnDevice}\tName={userInfo.UserName}\tPri={userInfo.Privilege}\tPasswd={(userInfo.IsEnable ? password : ZkUtils.ZkForbiddenPassword)}\tCard={rfCardNumber}\tGrp={0}\tTZ={0}{verificationStyle}\tStartDatetime={userInfo.StartTime:yyyy-MM-dd}\tEndDatetime={endTime:yyyy-MM-dd}\tViceCard=\tUserValidTimeFun=1",
-                CommitTime = DateTime.Now,
+                CommandContent = $"DATA UPDATE USERINFO PIN={userInfoForDevice.UserIdOnDevice}\tName={userInfoForDevice.UserName}\tPri={userInfoForDevice.Privilege}\tPasswd={(userInfoForDevice.IsEnable ? password : ZkUtils.ZkForbiddenPassword)}\tCard={rfCardNumber}\tGrp={0}\tTZ={0}{verificationStyle}\tStartDatetime={startDateProcessed:yyyy-MM-dd}\tEndDatetime={endDateProcessed:yyyy-MM-dd}\tViceCard=\tUserValidTimeFun=1",
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                UserIdOnDevice = userInfo.UserIdOnDevice,
+                UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
                 CommandType = DeviceCommandTypeEnumeration.SetUserInfo,
                 Priority = priority ?? CommandPriorityEnumeration.Medium,
                 MaxRetry = maxRetry,
@@ -148,28 +146,28 @@ namespace GuardianCommunication.Hardware.Zk
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             });
 
 
 
-            if (deviceInfo.HasFingerPrint && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
+            if (deviceInfo.HasFingerPrint && userInfoForDevice.FingerDataList.IsCollectionNotNullOrEmpty())
             {
-                foreach (var fingerData in userInfo.FingerDataList)
+                foreach (var fingerData in userInfoForDevice.FingerDataList)
                 {
                     result.Add(new DtoDeviceCommand
                     {
                         CommandContent =
-                            $"DATA UPDATE FINGERTMP PIN={userInfo.UserIdOnDevice}\tFID={fingerData.FingerIndex}\tSize={fingerData.TemplateData.Length}\tValid={1}\tTMP={Encoding.UTF8.GetString(fingerData.TemplateData)}",
-                        CommitTime = DateTime.Now,
+                            $"DATA UPDATE FINGERTMP PIN={userInfoForDevice.UserIdOnDevice}\tFID={fingerData.FingerIndex}\tSize={fingerData.TemplateData.Length}\tValid={1}\tTMP={Encoding.UTF8.GetString(fingerData.TemplateData)}",
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
-                        UserIdOnDevice = userInfo.UserIdOnDevice,
+                        UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
                         CommandType = DeviceCommandTypeEnumeration.SetFinger,
                         Priority = priority ?? CommandPriorityEnumeration.Medium,
                         MaxRetry = maxRetry,
@@ -177,11 +175,11 @@ namespace GuardianCommunication.Hardware.Zk
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = deviceInfo.ProducerNumber,
                         SdkVersion = deviceInfo.SdkVersion,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     });
                 }
@@ -189,16 +187,16 @@ namespace GuardianCommunication.Hardware.Zk
 
             if (deviceInfo.HasVisiblelight)
             {
-                if (userInfo.VisibleLightImage.IsCollectionNotNullOrEmpty())
+                if (userInfoForDevice.VisibleLightImage.IsCollectionNotNullOrEmpty())
                 {
                     result.Add(new DtoDeviceCommand
                     {
                         CommandContent =
-                            $"DATA UPDATE BIOPHOTO PIN={userInfo.UserIdOnDevice}\tType={9}\tSize={userInfo.VisibleLightImage.Length}\tContent={Convert.ToBase64String(userInfo.VisibleLightImage)}\tFormat={0}\tUrl={string.Empty}\tPostBackTmpFlag={0}",
-                        CommitTime = DateTime.Now,
+                            $"DATA UPDATE BIOPHOTO PIN={userInfoForDevice.UserIdOnDevice}\tType={9}\tSize={userInfoForDevice.VisibleLightImage.Length}\tContent={Convert.ToBase64String(userInfoForDevice.VisibleLightImage)}\tFormat={0}\tUrl={string.Empty}\tPostBackTmpFlag={0}",
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
-                        UserIdOnDevice = userInfo.UserIdOnDevice,
+                        UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
                         Priority = priority ?? CommandPriorityEnumeration.Medium,
                         CommandType = DeviceCommandTypeEnumeration.SetFace,
                         MaxRetry = maxRetry,
@@ -206,29 +204,29 @@ namespace GuardianCommunication.Hardware.Zk
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = deviceInfo.ProducerNumber,
                         SdkVersion = deviceInfo.SdkVersion,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     });
                 }
             }
             else
             {
-                if (deviceInfo.HasFace && userInfo.FaceDataList.IsCollectionNotNullOrEmpty())
+                if (deviceInfo.HasFace && userInfoForDevice.FaceDataList.IsCollectionNotNullOrEmpty())
                 {
-                    foreach (var faceData in userInfo.FaceDataList)
+                    foreach (var faceData in userInfoForDevice.FaceDataList)
                     {
                         result.Add(new DtoDeviceCommand
                         {
                             CommandContent =
-                                $"DATA UPDATE FACE PIN={userInfo.UserIdOnDevice}\tFID={50}\tValid={1}\tSize={faceData.Length}\tTMP={Encoding.UTF8.GetString(faceData.TemplateData)}",
-                            CommitTime = DateTime.Now,
+                                $"DATA UPDATE FACE PIN={userInfoForDevice.UserIdOnDevice}\tFID={50}\tValid={1}\tSize={faceData.Length}\tTMP={Encoding.UTF8.GetString(faceData.TemplateData)}",
+                            CommitTime = DateTime.Now.ToUniversalTime(),
                             DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                             RetryCount = 0,
-                            UserIdOnDevice = userInfo.UserIdOnDevice,
+                            UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
                             CommandType = DeviceCommandTypeEnumeration.SetFace,
                             Priority = priority ?? CommandPriorityEnumeration.Medium,
                             MaxRetry = maxRetry,
@@ -236,29 +234,29 @@ namespace GuardianCommunication.Hardware.Zk
                             SendTime = null,
                             ResponseTime = null,
                             DeviceNumber = deviceInfo.DeviceNumber,
-                            Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                            Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                             DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                             ProducerNumber = deviceInfo.ProducerNumber,
                             SdkVersion = deviceInfo.SdkVersion,
-                            VisiblilityTime = visibilityTime,
+                            VisiblilityTime = visibilityTime?.ToUniversalTime(),
                             CommandIdentifier = commandIdentifier
                         });
                     }
                 }
             }
 
-            if (deviceInfo.HasPalm && userInfo.PalmDataList.IsCollectionNotNullOrEmpty())
+            if (deviceInfo.HasPalm && userInfoForDevice.PalmDataList.IsCollectionNotNullOrEmpty())
             {
-                var orderedList = userInfo.PalmDataList.OrderBy(row => row.Index).ToList();
+                var orderedList = userInfoForDevice.PalmDataList.OrderBy(row => row.Index).ToList();
                 foreach (var palm in orderedList)
                 {
                     result.Add(new DtoDeviceCommand
                     {
-                        CommandContent = $"DATA UPDATE BIODATA Pin={userInfo.UserIdOnDevice}\tNo={0}\tIndex={palm.Index}\tValid={1}\tDuress={0}\tType={8}\tMajorVer={12}\tMinorVer ={0}\tFormat={0}\tTmp={Convert.ToBase64String(palm.TemplateData)}",
-                        CommitTime = DateTime.Now,
+                        CommandContent = $"DATA UPDATE BIODATA Pin={userInfoForDevice.UserIdOnDevice}\tNo={0}\tIndex={palm.Index}\tValid={1}\tDuress={0}\tType={8}\tMajorVer={12}\tMinorVer ={0}\tFormat={0}\tTmp={Convert.ToBase64String(palm.TemplateData)}",
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
-                        UserIdOnDevice = userInfo.UserIdOnDevice,
+                        UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
                         CommandType = DeviceCommandTypeEnumeration.SetPalm,
                         Priority = priority ?? CommandPriorityEnumeration.Medium,
                         MaxRetry = maxRetry,
@@ -266,28 +264,27 @@ namespace GuardianCommunication.Hardware.Zk
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = deviceInfo.ProducerNumber,
                         SdkVersion = deviceInfo.SdkVersion,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     });
                 }
             }
 
-            if (deviceInfo.DeviceSettings != null
-                && deviceInfo.DeviceSettings.IsSendProfileImageActive
-                && userInfo.HardwareProfileImage.IsCollectionNotNullOrEmpty())
+            if ((deviceInfo.DeviceSettings == null || deviceInfo.DeviceSettings.IsAutomaticDataCollectActive)
+                && userInfoForDevice.HardwareProfileImage.IsCollectionNotNullOrEmpty())
             {
                 result.Add(new DtoDeviceCommand
                 {
                     CommandContent =
-                        $"DATA UPDATE USERPIC PIN={userInfo.UserIdOnDevice}\tSize={userInfo.HardwareProfileImage.Length}\tContent={Convert.ToBase64String(userInfo.HardwareProfileImage)}",
-                    CommitTime = DateTime.Now,
+                        $"DATA UPDATE USERPIC PIN={userInfoForDevice.UserIdOnDevice}\tSize={userInfoForDevice.HardwareProfileImage.Length}\tContent={Convert.ToBase64String(userInfoForDevice.HardwareProfileImage)}",
+                    CommitTime = DateTime.Now.ToUniversalTime(),
                     DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                     RetryCount = 0,
-                    UserIdOnDevice = userInfo.UserIdOnDevice,
+                    UserIdOnDevice = userInfoForDevice.UserIdOnDevice,
                     CommandType = DeviceCommandTypeEnumeration.SetPhoto,
                     Priority = priority ?? CommandPriorityEnumeration.Medium,
                     MaxRetry = maxRetry,
@@ -295,11 +292,11 @@ namespace GuardianCommunication.Hardware.Zk
                     SendTime = null,
                     ResponseTime = null,
                     DeviceNumber = deviceInfo.DeviceNumber,
-                    Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                    Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                     DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                     ProducerNumber = deviceInfo.ProducerNumber,
                     SdkVersion = deviceInfo.SdkVersion,
-                    VisiblilityTime = visibilityTime,
+                    VisiblilityTime = visibilityTime?.ToUniversalTime(),
                     CommandIdentifier = commandIdentifier
                 });
             }
@@ -322,7 +319,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = $"DATA DELETE USERINFO PIN={employeeNumber}",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = employeeNumber,
@@ -333,11 +330,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
@@ -355,10 +352,15 @@ namespace GuardianCommunication.Hardware.Zk
             Guid? commandIdentifier = null
             )
         {
+            var timeService = new DeviceTimeService();
+            var startDateProcessed = timeService.UtcToDeviceTime
+                (startDate.ToUniversalTime(), deviceInfo.IanaTimeZoneId);
+            var endDateProcessed = timeService.UtcToDeviceTime
+                (endDate.ToUniversalTime(), deviceInfo.IanaTimeZoneId);
             return new DtoDeviceCommand
             {
-                CommandContent = $"DATA QUERY ATTLOG StartTime={startDate:yyyy-MM-dd HH:mm:ss}\tEndTime={endDate:yyyy-MM-dd HH:mm:ss}",
-                CommitTime = DateTime.Now,
+                CommandContent = $"DATA QUERY ATTLOG StartTime={startDateProcessed:yyyy-MM-dd HH:mm:ss}\tEndTime={endDateProcessed:yyyy-MM-dd HH:mm:ss}",
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = null,
@@ -369,11 +371,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
@@ -396,7 +398,7 @@ namespace GuardianCommunication.Hardware.Zk
                 result.Add(new DtoDeviceCommand
                 {
                     CommandContent = $"DATA QUERY USERINFO PIN={employeeNumber}",
-                    CommitTime = DateTime.Now,
+                    CommitTime = DateTime.Now.ToUniversalTime(),
                     DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                     RetryCount = 0,
                     UserIdOnDevice = employeeNumber,
@@ -407,11 +409,11 @@ namespace GuardianCommunication.Hardware.Zk
                     SendTime = null,
                     ResponseTime = null,
                     DeviceNumber = deviceInfo.DeviceNumber,
-                    Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                    Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                     DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                     ProducerNumber = deviceInfo.ProducerNumber,
                     SdkVersion = deviceInfo.SdkVersion,
-                    VisiblilityTime = visibilityTime,
+                    VisiblilityTime = visibilityTime?.ToUniversalTime(),
                     CommandIdentifier = commandIdentifier
                 });
             }
@@ -420,7 +422,7 @@ namespace GuardianCommunication.Hardware.Zk
                 result.Add(new DtoDeviceCommand
                 {
                     CommandContent = $"DATA QUERY USERINFO PIN={employeeNumber}",
-                    CommitTime = DateTime.Now,
+                    CommitTime = DateTime.Now.ToUniversalTime(),
                     DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                     RetryCount = 0,
                     UserIdOnDevice = employeeNumber,
@@ -431,11 +433,11 @@ namespace GuardianCommunication.Hardware.Zk
                     SendTime = null,
                     ResponseTime = null,
                     DeviceNumber = deviceInfo.DeviceNumber,
-                    Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                    Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                     DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                     ProducerNumber = deviceInfo.ProducerNumber,
                     SdkVersion = deviceInfo.SdkVersion,
-                    VisiblilityTime = visibilityTime,
+                    VisiblilityTime = visibilityTime?.ToUniversalTime(),
                     CommandIdentifier = commandIdentifier
                 });
                 if (templateType.HasFlag(TemplateTypeEnumeration.FingerPrint))
@@ -445,7 +447,7 @@ namespace GuardianCommunication.Hardware.Zk
                         result.Add(new DtoDeviceCommand
                         {
                             CommandContent = $"DATA QUERY FINGERTMP PIN={employeeNumber}\tFID={i}",
-                            CommitTime = DateTime.Now,
+                            CommitTime = DateTime.Now.ToUniversalTime(),
                             DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                             RetryCount = 0,
                             UserIdOnDevice = employeeNumber,
@@ -456,11 +458,11 @@ namespace GuardianCommunication.Hardware.Zk
                             SendTime = null,
                             ResponseTime = null,
                             DeviceNumber = deviceInfo.DeviceNumber,
-                            Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                            Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                             DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                             ProducerNumber = deviceInfo.ProducerNumber,
                             SdkVersion = deviceInfo.SdkVersion,
-                            VisiblilityTime = visibilityTime,
+                            VisiblilityTime = visibilityTime?.ToUniversalTime(),
                             CommandIdentifier = commandIdentifier
                         });
                     }
@@ -485,7 +487,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = Command_CancelOperation,
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 CommandType = DeviceCommandTypeEnumeration.CancelOperation,
@@ -495,11 +497,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
@@ -525,7 +527,7 @@ namespace GuardianCommunication.Hardware.Zk
                     return new DtoDeviceCommand
                     {
                         CommandContent = Command_ClearLog,
-                        CommitTime = DateTime.Now,
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
                         CommandType = DeviceCommandTypeEnumeration.ClearData,
@@ -535,18 +537,18 @@ namespace GuardianCommunication.Hardware.Zk
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = deviceInfo.ProducerNumber,
                         SdkVersion = deviceInfo.SdkVersion,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     };
                 case DeviceLogTypeEnumeration.Users:
                     return new DtoDeviceCommand
                     {
                         CommandContent = Command_ClearData,
-                        CommitTime = DateTime.Now,
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
                         CommandType = DeviceCommandTypeEnumeration.ClearUser,
@@ -556,11 +558,11 @@ namespace GuardianCommunication.Hardware.Zk
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = deviceInfo.ProducerNumber,
                         SdkVersion = deviceInfo.SdkVersion,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     };
                 default:
@@ -583,7 +585,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = Command_Check,
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 CommandType = DeviceCommandTypeEnumeration.Check,
@@ -593,11 +595,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
@@ -617,7 +619,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = $"ENROLL_FP PIN={employeeNumber}\tFID={111}\tRETRY={2}\tOVERWRITE={3}",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = employeeNumber,
@@ -628,11 +630,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
@@ -652,7 +654,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = $"ENROLL_FP PIN={employeeNumber}\tFID={fingerIndex}\tRETRY={3}\tOVERWRITE={1}",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = employeeNumber,
@@ -663,11 +665,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
@@ -685,7 +687,7 @@ namespace GuardianCommunication.Hardware.Zk
             return new DtoDeviceCommand
             {
                 CommandContent = "INFO",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
                 UserIdOnDevice = null,
@@ -696,11 +698,11 @@ namespace GuardianCommunication.Hardware.Zk
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = deviceInfo.ProducerNumber,
                 SdkVersion = deviceInfo.SdkVersion,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 

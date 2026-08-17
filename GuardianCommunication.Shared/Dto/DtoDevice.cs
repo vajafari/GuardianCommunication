@@ -22,7 +22,6 @@ namespace GuardianCommunication.Shared.Dto
         public int ConnectTimeout { get; set; }
         public ModuleEnumeration ModuleId { get; set; }
         public DeviceIoTypeEnumeration IoType { get; set; }
-        public TimeZonesEnumeration TimeZone { get; set; }
         public int DeviceTypeNumber { get; set; }
         public ProducerEnumeration ProducerNumber { get; set; }
         public SdkVersionEnumeration SdkVersion { get; set; }
@@ -34,12 +33,10 @@ namespace GuardianCommunication.Shared.Dto
         public bool HasRfReader { get; set; }
         public bool HasPalm { get; set; }
         public bool HasIris { get; set; }
-        public bool IsDaylightActive { get; set; }
-        public int DaylightStart { get; set; }
-        public int DaylightEnd { get; set; }
-        public int DaylightChangeTimeInSeconds { get; set; }
         public int LocationNumber { get; set; }
         public string DeviceDescription { get; set; }
+        public string IanaTimeZoneId { get; set; }
+
 
         private DtoDeviceSettings _deviceSettings;
 
@@ -57,12 +54,6 @@ namespace GuardianCommunication.Shared.Dto
             }
             set => _deviceSettings = value;
         }
-
-
-        public DateTime CurrentYearDaylightStart => new DateTime(DateTime.Now.Year, DaylightStart / 100, DaylightStart % 100);
-        public DateTime CurrentYearDaylightEnd => new DateTime(DateTime.Now.Year, DaylightEnd / 100, DaylightEnd % 100);
-
-
 
     }
 }

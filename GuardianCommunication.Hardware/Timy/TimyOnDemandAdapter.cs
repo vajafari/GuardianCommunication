@@ -3,10 +3,17 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
+using AccessControl.TimeHandling;
 using FP_CLOCKLib;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Timy.TimyConcepts;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Hardware.Timy
 {
@@ -16,7 +23,7 @@ namespace GuardianCommunication.Hardware.Timy
         private const int EMachineNumber = 0;
         private const int VisibleLightImageLength = 400800;
 
-        public DtoCommunicationDeviceData DeviceInfo { get; set; }
+        public DtoDevice DeviceInfo { get; set; }
 
 
         #region Private Fields
@@ -28,7 +35,7 @@ namespace GuardianCommunication.Hardware.Timy
         #endregion
 
 
-        public TimyOnDemandAdapter(DtoCommunicationDeviceData deviceInfo)
+        public TimyOnDemandAdapter(DtoDevice deviceInfo)
         {
             DeviceInfo = deviceInfo;
         }
@@ -100,11 +107,13 @@ namespace GuardianCommunication.Hardware.Timy
             }
 
             var result = new DateTime(year, month, day, hour, minute, 0);
+            var timeService = new DeviceTimeService();
+            var processedResult = timeService.DeviceTimeToUtc(result, DeviceInfo.IanaTimeZoneId);
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.GetDateTime))
             {
-                LoggingSystem.LogInfo("Timy OnDemand GetDateTime", new { DeviceInfo, Time = result });
+                LoggingSystem.LogInfo("Timy OnDemand GetDateTime", new { DeviceInfo, Time = result, UtcTime = processedResult });
             }
-            return result;
+            return processedResult;
         }
 
         public string GetSerialNumber()
@@ -163,10 +172,10 @@ namespace GuardianCommunication.Hardware.Timy
             // can never flip the property after we've already reported failure.
             var connectTask = Task.Run(() =>
             {
-                var ipAddress = DeviceInfo.Ip;
+                var ipAddress = DeviceInfo.DeviceIp;
                 // ReSharper disable PossibleInvalidOperationException
                 var resultConnectionTry = _communicationOcx.SetIPAddress(ref ipAddress,
-                    DeviceInfo.TcpPort.Value, DeviceInfo.CommunicationPassword.ToInt32());
+                    DeviceInfo.TcpPort.Value, DeviceInfo.DevicePassword.ToInt32());
                 // ReSharper restore PossibleInvalidOperationException
                 if (!resultConnectionTry)
                 {
@@ -220,7 +229,8 @@ namespace GuardianCommunication.Hardware.Timy
 
         public List<DtoAttendance> GetData()
         {
-            return DeviceInfo.IsOldVersion
+            return DeviceInfo.DeviceSettings?.TimyDeviceSettings != null 
+                   && DeviceInfo.DeviceSettings.TimyDeviceSettings.IsUserId32Bit
                 ? GetDataOldVersion()
                 : GetDataLongVersion();
         }
@@ -232,14 +242,15 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetDataLongVersion is calling", new { DeviceInfo });
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+            if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveAttendance)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
             {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
+                throw new OperationCannotBeDoneException(
+                    OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
 
             try
@@ -249,7 +260,8 @@ namespace GuardianCommunication.Hardware.Timy
                 DisableDevice();
 
                 var count = 0;
-                var result = _communicationOcx.GetDeviceStatus(DeviceInfo.DeviceNumber, 6, ref count);
+                var result = _communicationOcx.GetDeviceStatus(
+                    DeviceInfo.DeviceNumber, 6, ref count);
                 if (!result)
                 {
                     ThrowLastError();
@@ -286,23 +298,26 @@ namespace GuardianCommunication.Hardware.Timy
                     );
                     if (result)
                     {
+                        var timeService = new DeviceTimeService();
+
                         var returnedUserIdString = userIdObject.ToString();
                         if (returnedUserIdString.IsNotNullOrEmpty() && returnedUserIdString.CanConvertToInt64())
                         {
+                            var attendanceDateTime = new DateTime(gLogInfo.dwYear, gLogInfo.dwMonth, gLogInfo.dwDay,
+                                gLogInfo.dwHour, gLogInfo.dwMinute, gLogInfo.dwSecond);
+                            var processedAttendanceDateTime = timeService.DeviceTimeToUtc(attendanceDateTime, DeviceInfo.IanaTimeZoneId);
                             iGlCount++;
                             var att = new DtoAttendance
                             {
-                                Id = iGlCount,
-                                EmployeeNumber = returnedUserIdString.ToInt64(),
+                                LogIdOnDevice = iGlCount,
+                                UserIdOnDevice = returnedUserIdString.ToInt64(),
                                 VerificationStyle = (int)TimyUtils.GetVerificationStyle(gLogInfo.dwVerifyMode),
                                 StatusCode = gLogInfo.dwInout,
-                                DeviceNumber = DeviceInfo.DeviceNumber,
+                                DeviceId = DeviceInfo.Id,
                                 CameraId = null,
-                                AttendanceDateTime = new DateTime(gLogInfo.dwYear, gLogInfo.dwMonth, gLogInfo.dwDay,
-                                    gLogInfo.dwHour, gLogInfo.dwMinute, gLogInfo.dwSecond),
+                                AttendanceDateTime = processedAttendanceDateTime,
                                 AttendanceSource = AttendanceSourceEnumeration.Device,
                                 DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
-                                IsInvalid = false,
                                 RfCardNumber = null,
                             };
                             attRecords.Add(att);
@@ -331,12 +346,12 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetDataOldVersion is calling", new { DeviceInfo });
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+            if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveAttendance)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -385,25 +400,28 @@ namespace GuardianCommunication.Hardware.Timy
                         ref gLogInfo.dwMinute,
                         ref gLogInfo.dwSecond
                     );
+                    var timeService = new DeviceTimeService();
 
                     if (result)
                     {
                         if (gLogInfo.dwEnrollNumber > 0)
                         {
+                            var attendanceDateTime = new DateTime(gLogInfo.dwYear, gLogInfo.dwMonth, gLogInfo.dwDay,
+                                gLogInfo.dwHour, gLogInfo.dwMinute, gLogInfo.dwSecond);
+                            var processedAttendanceDateTime = timeService.DeviceTimeToUtc(attendanceDateTime, DeviceInfo.IanaTimeZoneId);
+
                             iGlCount++;
                             var att = new DtoAttendance
                             {
-                                Id = iGlCount,
-                                EmployeeNumber = gLogInfo.dwEnrollNumber,
+                                LogIdOnDevice = iGlCount,
+                                UserIdOnDevice = gLogInfo.dwEnrollNumber,
                                 VerificationStyle = (int)TimyUtils.GetVerificationStyle(gLogInfo.dwVerifyMode),
                                 StatusCode = gLogInfo.dwInout,
-                                DeviceNumber = DeviceInfo.DeviceNumber,
+                                DeviceId = DeviceInfo.Id,
                                 CameraId = null,
-                                AttendanceDateTime = new DateTime(gLogInfo.dwYear, gLogInfo.dwMonth, gLogInfo.dwDay,
-                                    gLogInfo.dwHour, gLogInfo.dwMinute, gLogInfo.dwSecond),
+                                AttendanceDateTime = processedAttendanceDateTime,
                                 AttendanceSource = AttendanceSourceEnumeration.Device,
                                 DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
-                                IsInvalid = false,
                                 RfCardNumber = null,
                             };
                             attRecords.Add(att);
@@ -430,7 +448,6 @@ namespace GuardianCommunication.Hardware.Timy
             // به دلیل اینکه فعلا نباید داده ها را حذف کنیم 
             // این متد را return کرده ایم
             // چون اگر داده ها را پاک کنیم دیگر با هیچ متدی قابل بازیابی نیستند
-            return;
             //try
             //{
 
@@ -452,19 +469,19 @@ namespace GuardianCommunication.Hardware.Timy
         #region Usering And Finger
 
 
-        public void DeleteUserById(long userId)
+        public void DeleteUserById(long userIdOnDevice)
         {
-            if (DeviceInfo.IsOldVersion)
+            if (DeviceInfo.DeviceSettings?.TimyDeviceSettings != null && DeviceInfo.DeviceSettings.TimyDeviceSettings.IsUserId32Bit)
             {
-                DeleteUserByIdOldVersion(userId);
+                DeleteUserByIdOldVersion(userIdOnDevice);
             }
             else
             {
-                DeleteUserByIdLongVersion(userId);
+                DeleteUserByIdLongVersion(userIdOnDevice);
             }
         }
 
-        private void DeleteUserByIdLongVersion(long userId)
+        private void DeleteUserByIdLongVersion(long userIdOnDevice)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.DeleteUser))
             {
@@ -484,8 +501,8 @@ namespace GuardianCommunication.Hardware.Timy
                     ThrowLastError();
                 }
 
-                object userIdObj = new VariantWrapper(userId.ToString());
-                result = _communicationOcx.DeleteUserInfoLongID(DeviceInfo.DeviceNumber, ref userIdObj);
+                object userIdOnDeviceObj = new VariantWrapper(userIdOnDevice.ToString());
+                result = _communicationOcx.DeleteUserInfoLongID(DeviceInfo.DeviceNumber, ref userIdOnDeviceObj);
                 if (!result)
                 {
                     ThrowLastError();
@@ -498,7 +515,7 @@ namespace GuardianCommunication.Hardware.Timy
 
         }
 
-        private void DeleteUserByIdOldVersion(long userId)
+        private void DeleteUserByIdOldVersion(long userIdOnDevice)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.DeleteUser))
             {
@@ -518,12 +535,12 @@ namespace GuardianCommunication.Hardware.Timy
                     ThrowLastError();
                 }
                 result = _communicationOcx.DeleteEnrollData
-                    (DeviceInfo.DeviceNumber, (int)userId, EMachineNumber, 12);
+                    (DeviceInfo.DeviceNumber, (int)userIdOnDevice, EMachineNumber, 12);
                 if (!result)
                 {
                     ThrowLastError();
                 }
-                result = _communicationOcx.DeleteEnrollData(DeviceInfo.DeviceNumber, (int)userId, EMachineNumber, 50);
+                result = _communicationOcx.DeleteEnrollData(DeviceInfo.DeviceNumber, (int)userIdOnDevice, EMachineNumber, 50);
                 if (!result)
                 {
                     ThrowLastError();
@@ -569,24 +586,26 @@ namespace GuardianCommunication.Hardware.Timy
         }
 
 
-        public DtoEmployeeDeviceRelatedData GetUserInfoByUserId(long userId, TemplateTypeEnumeration enrollType)
+        public DtoUserDeviceRelatedData GetUserInfoByUserId(long userIdOnDevice, TemplateTypeEnumeration enrollType)
         {
-            return DeviceInfo.IsOldVersion
-                ? GetUserInfoByUserIdOldVersion(userId, enrollType)
-                : GetUserInfoByUserIdLongVersion(userId, enrollType);
+            return DeviceInfo.DeviceSettings?.TimyDeviceSettings != null 
+                   && DeviceInfo.DeviceSettings.TimyDeviceSettings.IsUserId32Bit
+            
+                ? GetUserInfoByUserIdOldVersion(userIdOnDevice, enrollType)
+                : GetUserInfoByUserIdLongVersion(userIdOnDevice, enrollType);
         }
 
-        private DtoEmployeeDeviceRelatedData GetUserInfoByUserIdLongVersion(long userId, TemplateTypeEnumeration enrollType)
+        private DtoUserDeviceRelatedData GetUserInfoByUserIdLongVersion(long userIdOnDevice, TemplateTypeEnumeration enrollType)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.GetUser))
             {
-                LoggingSystem.LogInfo("Timy OnDemand GetUserInfoByUserIdLongVersion is calling", new { DeviceInfo, UserId = userId, EnrollType = enrollType });
+                LoggingSystem.LogInfo("Timy OnDemand GetUserInfoByUserIdLongVersion is calling", new { DeviceInfo, UserId = userIdOnDevice, EnrollType = enrollType });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
-            var finalResult = new DtoEmployeeDeviceRelatedData()
+            var finalResult = new DtoUserDeviceRelatedData()
             {
-                EmployeeNumber = userId,
+                UserIdOnDevice = userIdOnDevice,
             };
 
             try
@@ -598,7 +617,7 @@ namespace GuardianCommunication.Hardware.Timy
                 }
 
 
-                object userIdObject = new VariantWrapper(userId.ToString());
+                object userIdOnDeviceObject = new VariantWrapper(userIdOnDevice.ToString());
                 var username = string.Empty;
                 object usernameObject = new VariantWrapper(username);
                 var card = "";
@@ -619,7 +638,7 @@ namespace GuardianCommunication.Hardware.Timy
                 var endTime = 0;
                 var birthDay = 0;
                 result = _communicationOcx.GetUserInfoLongID(DeviceInfo.DeviceNumber,
-                    ref userIdObject,
+                    ref userIdOnDeviceObject,
                     ref usernameObject,
                     ref password,
                     ref cardObject,
@@ -651,15 +670,12 @@ namespace GuardianCommunication.Hardware.Timy
                 }
 
                 finalResult.Privilege = privilege;
-                finalResult.StartTime = TimyHelpers.GetDateTime(startTime);
-                finalResult.EndTime = TimyHelpers.GetDateTime(endTime);
-
                 if (enrollType.HasFlag(TemplateTypeEnumeration.FingerPrint))
                 {
-                    finalResult.FingerDataList = new List<DtoEmployeeFinger>();
+                    finalResult.FingerDataList = new List<DtoUserFinger>();
                     for (var index = 0; index < 10; index++)
                     {
-                        object userIdObjectFingerPrint = new VariantWrapper(userId.ToString());
+                        object userIdObjectFingerPrint = new VariantWrapper(userIdOnDevice.ToString());
                         var fingerArray = new int[1888 / 4];
                         object fingerObj = new VariantWrapper(fingerArray);
                         result = _communicationOcx.GetFPDataLongID(
@@ -682,10 +698,10 @@ namespace GuardianCommunication.Hardware.Timy
                             ptrIndex = Marshal.AllocHGlobal(indexData.Length);
                             Marshal.Copy(fingerData, 0, ptrIndex, 1420 / 4);
                             Marshal.Copy(ptrIndex, indexData, 0, 1420);
-                            finalResult.FingerDataList.Add(new DtoEmployeeFinger
+                            finalResult.FingerDataList.Add(new DtoUserFinger
                             {
                                 FingerIndex = index,
-                                EmployeeNumber = userId,
+                                UserIdOnDevice = userIdOnDevice,
                                 TemplateData = indexData
                             });
 
@@ -702,7 +718,7 @@ namespace GuardianCommunication.Hardware.Timy
 
                 if (enrollType.HasFlag(TemplateTypeEnumeration.Face))
                 {
-                    if (DeviceInfo.HasVisibleLight)
+                    if (DeviceInfo.HasVisiblelight)
                     {
 
                         // ReSharper disable CollectionNeverQueried.Local
@@ -713,7 +729,7 @@ namespace GuardianCommunication.Hardware.Timy
                         {
                             ptrIndexFacePhoto = Marshal.AllocHGlobal(indexDataFacePhoto.Length);
                             var vPhotoSize = 0;
-                            object userIdFacePhoto = new VariantWrapper(userId.ToString());
+                            object userIdFacePhoto = new VariantWrapper(userIdOnDevice.ToString());
                             result = _communicationOcx.GetEnrollPhotoCSLongID
                                 (DeviceInfo.DeviceNumber, userIdFacePhoto, ref vPhotoSize, ptrIndexFacePhoto);
                             if (!result)
@@ -736,7 +752,7 @@ namespace GuardianCommunication.Hardware.Timy
                     {
                         for (var index = 20; index < 28; index++)
                         {
-                            object userIdObjectFingerPrint = new VariantWrapper(userId.ToString());
+                            object userIdObjectFingerPrint = new VariantWrapper(userIdOnDevice.ToString());
                             var faceArray = new int[1888 / 4];
                             object faceObj = new VariantWrapper(faceArray);
                             result = _communicationOcx.GetFPDataLongID(
@@ -760,10 +776,10 @@ namespace GuardianCommunication.Hardware.Timy
                                 Marshal.Copy(faceDataInt, 0, ptrIndexFace, 1888 / 4); //be careful
                                 Marshal.Copy(ptrIndexFace, indexDataFace, 0, 1888);
 
-                                finalResult.FaceDataList.Add(new DtoEmployeeFace()
+                                finalResult.FaceDataList.Add(new DtoUserFace()
                                 {
                                     FaceIndex = index - 20,
-                                    EmployeeNumber = userId,
+                                    UserIdOnDevice = userIdOnDevice,
                                     TemplateData = indexDataFace,
                                     Length = indexDataFace.Length,
                                 });
@@ -791,17 +807,17 @@ namespace GuardianCommunication.Hardware.Timy
             return finalResult;
         }
 
-        private DtoEmployeeDeviceRelatedData GetUserInfoByUserIdOldVersion(long userId, TemplateTypeEnumeration enrollType)
+        private DtoUserDeviceRelatedData GetUserInfoByUserIdOldVersion(long userId, TemplateTypeEnumeration enrollType)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.GetUser))
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetUserInfoByUserIdOldVersion is calling", new { DeviceInfo, UserId = userId, EnrollType = enrollType });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
-            var finalResult = new DtoEmployeeDeviceRelatedData()
+            var finalResult = new DtoUserDeviceRelatedData()
             {
-                EmployeeNumber = userId,
+                UserIdOnDevice = userId,
             };
 
             try
@@ -873,7 +889,7 @@ namespace GuardianCommunication.Hardware.Timy
 
                 if (enrollType.HasFlag(TemplateTypeEnumeration.FingerPrint))
                 {
-                    finalResult.FingerDataList = new List<DtoEmployeeFinger>();
+                    finalResult.FingerDataList = new List<DtoUserFinger>();
                     for (var index = 0; index < 10; index++)
                     {
                         var fingerArray = new int[1888 / 4];
@@ -901,10 +917,10 @@ namespace GuardianCommunication.Hardware.Timy
                             ptrIndex = Marshal.AllocHGlobal(indexData.Length);
                             Marshal.Copy(fingerData, 0, ptrIndex, 1420 / 4);
                             Marshal.Copy(ptrIndex, indexData, 0, 1420);
-                            finalResult.FingerDataList.Add(new DtoEmployeeFinger
+                            finalResult.FingerDataList.Add(new DtoUserFinger
                             {
                                 FingerIndex = index,
-                                EmployeeNumber = userId,
+                                UserIdOnDevice = userId,
                                 TemplateData = indexData
                             });
                         }
@@ -921,7 +937,7 @@ namespace GuardianCommunication.Hardware.Timy
 
                 if (enrollType.HasFlag(TemplateTypeEnumeration.Face))
                 {
-                    if (DeviceInfo.HasVisibleLight)
+                    if (DeviceInfo.HasVisiblelight)
                     {
                         // ReSharper disable CollectionNeverQueried.Local
                         var indexDataFacePhoto = new int[VisibleLightImageLength];
@@ -979,10 +995,10 @@ namespace GuardianCommunication.Hardware.Timy
                                 ptrIndexFace = Marshal.AllocHGlobal(indexDataFace.Length);
                                 Marshal.Copy(faceDataInt, 0, ptrIndexFace, 1888 / 4); //be careful
                                 Marshal.Copy(ptrIndexFace, indexDataFace, 0, 1888);
-                                finalResult.FaceDataList.Add(new DtoEmployeeFace()
+                                finalResult.FaceDataList.Add(new DtoUserFace()
                                 {
                                     FaceIndex = index - 20,
-                                    EmployeeNumber = userId,
+                                    UserIdOnDevice = userId,
                                     TemplateData = indexDataFace,
                                     Length = indexDataFace.Length,
                                 });
@@ -1013,11 +1029,11 @@ namespace GuardianCommunication.Hardware.Timy
 
 
 
-        public void SetUserInfoWithTemplate(DtoEmployeeDeviceRelatedData userInfo)
+        public void SetUserInfoWithTemplate(DtoUserDeviceRelatedData userInfo)
         {
             if (userInfo.IsEnable)
             {
-                if (DeviceInfo.IsOldVersion)
+                if (DeviceInfo.DeviceSettings?.TimyDeviceSettings != null && DeviceInfo.DeviceSettings.TimyDeviceSettings.IsUserId32Bit)
                 {
                     SetUserInfoWithTemplateOldVersion(userInfo);
                 }
@@ -1028,17 +1044,17 @@ namespace GuardianCommunication.Hardware.Timy
             }
             else
             {
-                DeleteUserById(userInfo.EmployeeNumber);
+                DeleteUserById(userInfo.UserIdOnDevice);
             }
         }
 
-        private void SetUserInfoWithTemplateLongVersion(DtoEmployeeDeviceRelatedData userInfo)
+        private void SetUserInfoWithTemplateLongVersion(DtoUserDeviceRelatedData userInfo)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.SetUser))
             {
                 LoggingSystem.LogInfo("Timy OnDemand SetUserInfoWithTemplateLongVersion is calling", new { DeviceInfo, User = userInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -1056,11 +1072,11 @@ namespace GuardianCommunication.Hardware.Timy
                 }
 
                 SetUserInfo(userInfo, false);
-                if (DeviceInfo.HasFinger && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
+                if (DeviceInfo.HasFingerPrint && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
                 {
                     foreach (var fingerData in userInfo.FingerDataList)
                     {
-                        object userIdObj = new VariantWrapper(userInfo.EmployeeNumber.ToString());
+                        object userIdObj = new VariantWrapper(userInfo.UserIdOnDevice.ToString());
                         object fingerObject = new VariantWrapper(fingerData.TemplateData);
                         result = _communicationOcx.SetFPDataLongID(DeviceInfo.DeviceNumber,
                             ref userIdObj,
@@ -1073,14 +1089,14 @@ namespace GuardianCommunication.Hardware.Timy
                     }
                 }
 
-                if (DeviceInfo.HasVisibleLight)
+                if (DeviceInfo.HasVisiblelight)
                 {
                     if (userInfo.VisibleLightImage.IsCollectionNotNullOrEmpty())
                     {
                         if (userInfo.VisibleLightImage.Length <= VisibleLightImageLength)
                         {
 
-                            object userIdObj = new VariantWrapper(userInfo.EmployeeNumber.ToString());
+                            object userIdObj = new VariantWrapper(userInfo.UserIdOnDevice.ToString());
                             // ReSharper disable CollectionNeverQueried.Local
                             var indexDataFacePhoto = new int[VisibleLightImageLength];
                             // ReSharper restore CollectionNeverQueried.Local
@@ -1117,7 +1133,7 @@ namespace GuardianCommunication.Hardware.Timy
                     {
                         foreach (var faceData in userInfo.FaceDataList)
                         {
-                            object userIdObj = new VariantWrapper(userInfo.EmployeeNumber.ToString());
+                            object userIdObj = new VariantWrapper(userInfo.UserIdOnDevice.ToString());
                             object faceObject = new VariantWrapper(faceData.TemplateData);
                             result = _communicationOcx.SetFPDataLongID(DeviceInfo.DeviceNumber,
                                 ref userIdObj,
@@ -1148,13 +1164,13 @@ namespace GuardianCommunication.Hardware.Timy
 
         }
 
-        private void SetUserInfoWithTemplateOldVersion(DtoEmployeeDeviceRelatedData userInfo)
+        private void SetUserInfoWithTemplateOldVersion(DtoUserDeviceRelatedData userInfo)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.SetUser))
             {
                 LoggingSystem.LogInfo("Timy OnDemand SetUserInfoWithTemplateOldVersion is calling", new { DeviceInfo, User = userInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -1172,12 +1188,12 @@ namespace GuardianCommunication.Hardware.Timy
                 }
 
                 SetUserInfo(userInfo, false);
-                if (DeviceInfo.HasFinger && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
+                if (DeviceInfo.HasFingerPrint && userInfo.FingerDataList.IsCollectionNotNullOrEmpty())
                 {
                     foreach (var fingerData in userInfo.FingerDataList)
                     {
                         result = _communicationOcx.SetEnrollData(DeviceInfo.DeviceNumber,
-                            (int)userInfo.EmployeeNumber,
+                            (int)userInfo.UserIdOnDevice,
                             EMachineNumber,
                             fingerData.FingerIndex,
                             userInfo.Privilege,
@@ -1190,7 +1206,7 @@ namespace GuardianCommunication.Hardware.Timy
                     }
                 }
 
-                if (DeviceInfo.HasVisibleLight)
+                if (DeviceInfo.HasVisiblelight)
                 {
                     if (userInfo.VisibleLightImage.IsCollectionNotNullOrEmpty())
                     {
@@ -1206,7 +1222,7 @@ namespace GuardianCommunication.Hardware.Timy
                                 Marshal.Copy(userInfo.VisibleLightImage, 0, ptrIndexFacePhoto,
                                     userInfo.VisibleLightImage.Length);
                                 result = _communicationOcx.SetEnrollPhotoCS
-                                (DeviceInfo.DeviceNumber, (int)userInfo.EmployeeNumber,
+                                (DeviceInfo.DeviceNumber, (int)userInfo.UserIdOnDevice,
                                     userInfo.VisibleLightImage.Length, ptrIndexFacePhoto);
                                 if (!result)
                                 {
@@ -1234,7 +1250,7 @@ namespace GuardianCommunication.Hardware.Timy
                         foreach (var faceData in userInfo.FaceDataList)
                         {
                             result = _communicationOcx.SetEnrollData(DeviceInfo.DeviceNumber,
-                                (int)userInfo.EmployeeNumber,
+                                (int)userInfo.UserIdOnDevice,
                                 EMachineNumber,
                                 20 + faceData.FaceIndex,
                                 userInfo.Privilege,
@@ -1266,11 +1282,11 @@ namespace GuardianCommunication.Hardware.Timy
 
 
 
-        public void SetUserInfo(DtoEmployeeDeviceRelatedData userInfo, bool disableDevice)
+        public void SetUserInfo(DtoUserDeviceRelatedData userInfo, bool disableDevice)
         {
             if (userInfo.IsEnable)
             {
-                if (DeviceInfo.IsOldVersion)
+                if (DeviceInfo.DeviceSettings?.TimyDeviceSettings != null && DeviceInfo.DeviceSettings.TimyDeviceSettings.IsUserId32Bit)
                 {
                     SetUserInfoOldVersion(userInfo, disableDevice);
                 }
@@ -1281,11 +1297,11 @@ namespace GuardianCommunication.Hardware.Timy
             }
             else
             {
-                DeleteUserById(userInfo.EmployeeNumber);
+                DeleteUserById(userInfo.UserIdOnDevice);
             }
         }
 
-        private void SetUserInfoLongVersion(DtoEmployeeDeviceRelatedData userInfo, bool disableDevice)
+        private void SetUserInfoLongVersion(DtoUserDeviceRelatedData userInfo, bool disableDevice)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.SetUser))
             {
@@ -1307,24 +1323,26 @@ namespace GuardianCommunication.Hardware.Timy
                         ThrowLastError();
                     }
                 }
-                object userIdObj = new VariantWrapper(userInfo.EmployeeNumber.ToString());
-                object userNameObject = new VariantWrapper(userInfo.UserName.ToNotNullString());
-                var cardString = userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty() ? userInfo.RfCardNumbers.First() : string.Empty;
+                var userInfoForDevice = userInfo.WithDeviceLocalDates(DeviceInfo);
+
+                object userIdObj = new VariantWrapper(userInfoForDevice.UserIdOnDevice.ToString());
+                object userNameObject = new VariantWrapper(userInfoForDevice.UserName.ToNotNullString());
+                var cardString = userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty() ? userInfoForDevice.RfCardNumbers.First() : string.Empty;
                 object cardObj = new VariantWrapper(cardString);
-                var password = userInfo.Password.IsNotNullOrEmpty() ? userInfo.Password.ToInt32() : 0;
+                var password = userInfoForDevice.Password.IsNotNullOrEmpty() ? userInfoForDevice.Password.ToInt32() : 0;
                 const int postId = 0;
-                var privilege = userInfo.Privilege;
-                var enabled = userInfo.IsEnable ? 1 : 0;
+                var privilege = userInfoForDevice.Privilege;
+                var enabled = userInfoForDevice.IsEnable ? 1 : 0;
                 const int shiftId = 0;
                 const int zoneId = 0;
                 const int groupId = 0;
                 const int userCtrl = 0;
-                var startDateTime = userInfo.StartTime;
-                var endDateTime = DateTimeHelper.GetEndOf(
-                    userInfo.EndTime ?? DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime, ProducerEnumeration.Timy,
-                        SdkVersionEnumeration.SdkVersion1), DateTimeHelper.DateInterval.Day);
-                var startTime = TimyHelpers.GetTimeStamp(startDateTime);
-                var endTime = TimyHelpers.GetTimeStamp(endDateTime);
+
+
+                // ReSharper disable PossibleInvalidOperationException
+                var startTime = TimyHelpers.GetTimeStamp(userInfoForDevice.StartDateTime.Value);
+                var endTime = TimyHelpers.GetTimeStamp(userInfoForDevice.EndDateTime.Value);
+                // ReSharper restore PossibleInvalidOperationException
                 const int birthDay = 0;
 
 
@@ -1350,11 +1368,11 @@ namespace GuardianCommunication.Hardware.Timy
                     ThrowLastError();
                 }
 
-                if (DeviceInfo.ApplicationId.HasFlag(ApplicationTypeEnumeration.Elevator)
-                    && ApplicationEmbeddedInfo.ValidApplication.HasFlag(ApplicationTypeEnumeration.Elevator)
-                    && userInfo.ElevatorInfoInJsonFormat.IsNotNullOrEmpty())
+                if (DeviceInfo.ModuleId.HasFlag(ModuleEnumeration.Elevator)
+                    && ApplicationEmbeddedInfo.Modules.HasFlag(ModuleEnumeration.Elevator)
+                    && userInfoForDevice.ElevatorInfoInJsonFormat.IsNotNullOrEmpty())
                 {
-                    var elevatorFloorNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfo.ElevatorInfoInJsonFormat);
+                    var elevatorFloorNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfoForDevice.ElevatorInfoInJsonFormat);
                     if (elevatorFloorNumbers.IsCollectionNotNullOrEmpty())
                     {
                         var elevatorFloorObject = new VariantWrapper(elevatorFloorNumbers.JoinWithComma());
@@ -1365,27 +1383,27 @@ namespace GuardianCommunication.Hardware.Timy
                         }
                     }
                 }
-                if (DeviceInfo.ApplicationId.HasFlag(ApplicationTypeEnumeration.Cabinet)
-                                    && ApplicationEmbeddedInfo.ValidApplication.HasFlag(ApplicationTypeEnumeration.Cabinet)
-                                    && userInfo.CabinetInfoInJsonFormat.IsNotNullOrEmpty()
-                                    && userInfo.EmployeeNumber <= int.MaxValue)
+                if (DeviceInfo.ModuleId.HasFlag(ModuleEnumeration.Cabinet)
+                                    && ApplicationEmbeddedInfo.Modules.HasFlag(ModuleEnumeration.Cabinet)
+                                    && userInfoForDevice.CabinetInfoInJsonFormat.IsNotNullOrEmpty()
+                                    && userInfoForDevice.UserIdOnDevice <= int.MaxValue)
                 {
-                    var cabinetNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfo.CabinetInfoInJsonFormat);
+                    var cabinetNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfoForDevice.CabinetInfoInJsonFormat);
                     if (cabinetNumbers.IsCollectionNotNullOrEmpty())
                     {
                         result = _communicationOcx.SetUserCtrlEx(DeviceInfo.DeviceNumber
-                            , (int)userInfo.EmployeeNumber
+                            , (int)userInfoForDevice.UserIdOnDevice
                             , 0
                             , 0
                             , 0
                             , 0
                             , cabinetNumbers.First()
-                            , startDateTime.Year
-                            , startDateTime.Month
-                            , startDateTime.Day
-                            , endDateTime.Year
-                            , endDateTime.Month
-                            , endDateTime.Day
+                            , userInfoForDevice.StartDateTime.Value.Year
+                            , userInfoForDevice.StartDateTime.Value.Month
+                            , userInfoForDevice.StartDateTime.Value.Day
+                            , userInfoForDevice.EndDateTime.Value.Year
+                            , userInfoForDevice.EndDateTime.Value.Month
+                            , userInfoForDevice.EndDateTime.Value.Day
 
                             );
                         if (!result)
@@ -1408,7 +1426,7 @@ namespace GuardianCommunication.Hardware.Timy
 
         }
 
-        private void SetUserInfoOldVersion(DtoEmployeeDeviceRelatedData userInfo, bool disableDevice)
+        private void SetUserInfoOldVersion(DtoUserDeviceRelatedData userInfo, bool disableDevice)
         {
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.SetUser))
             {
@@ -1430,83 +1448,81 @@ namespace GuardianCommunication.Hardware.Timy
                         ThrowLastError();
                     }
                 }
-                var startDateTime = userInfo.StartTime;
-                var endDateTime = DateTimeHelper.GetEndOf(
-                    userInfo.EndTime ?? DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime, ProducerEnumeration.Timy,
-                        SdkVersionEnumeration.SdkVersion1), DateTimeHelper.DateInterval.Day);
 
+                var userInfoForDevice = userInfo.WithDeviceLocalDates(DeviceInfo);
+                
                 result = _communicationOcx.SetUserNameUTF8(0,
                     DeviceInfo.DeviceNumber,
-                    (int)userInfo.EmployeeNumber,
+                    (int)userInfoForDevice.UserIdOnDevice,
                         EMachineNumber,
-                     new VariantWrapper(userInfo.UserName)
+                     new VariantWrapper(userInfoForDevice.UserName)
                 );
                 if (!result)
                 {
                     ThrowLastError();
                 }
 
-                if (userInfo.Password.IsCollectionNotNullOrEmpty())
+                if (userInfoForDevice.Password.IsCollectionNotNullOrEmpty())
                 {
                     var objUserPasswordData = new int[1888 / 4];
                     object objUserPassword = new VariantWrapper(objUserPasswordData);
 
                     result = _communicationOcx.SetEnrollData(DeviceInfo.DeviceNumber,
-                        (int)userInfo.EmployeeNumber,
+                        (int)userInfoForDevice.UserIdOnDevice,
                         EMachineNumber,
                         10,
-                        userInfo.Privilege,
+                        userInfoForDevice.Privilege,
                         ref objUserPassword,
-                        userInfo.Password.IsNotNullOrEmpty() ? userInfo.Password.ToInt32() : 0);
+                        userInfoForDevice.Password.IsNotNullOrEmpty() ? userInfoForDevice.Password.ToInt32() : 0);
                     if (!result)
                     {
                         ThrowLastError();
                     }
                 }
 
-                if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                 {
                     var objUserCardNumberData = new int[1888 / 4];
                     object objUserCardNumber = new VariantWrapper(objUserCardNumberData);
 
                     result = _communicationOcx.SetEnrollData(DeviceInfo.DeviceNumber,
-                        (int)userInfo.EmployeeNumber,
+                        (int)userInfoForDevice.UserIdOnDevice,
                         EMachineNumber,
                         11,
-                        userInfo.Privilege,
+                        userInfoForDevice.Privilege,
                         ref objUserCardNumber,
-                        userInfo.RfCardNumbers.First().ToInt32());
+                        userInfoForDevice.RfCardNumbers.First().ToInt32());
                     if (!result)
                     {
                         ThrowLastError();
                     }
                 }
 
-                if (userInfo.Password.IsCollectionNullOrEmpty() && userInfo.RfCardNumbers.IsCollectionNullOrEmpty())
+                if (userInfoForDevice.Password.IsCollectionNullOrEmpty() && userInfoForDevice.RfCardNumbers.IsCollectionNullOrEmpty())
                 {
 
                     result = _communicationOcx.ModifyPrivilege(DeviceInfo.DeviceNumber,
-                        (int)userInfo.EmployeeNumber,
+                        (int)userInfoForDevice.UserIdOnDevice,
                         EMachineNumber,
                         0,
-                        userInfo.Privilege);
+                        userInfoForDevice.Privilege);
                     if (!result)
                     {
                         ThrowLastError();
                     }
                 }
 
-                if (DeviceInfo.ApplicationId.HasFlag(ApplicationTypeEnumeration.Elevator)
-                    && ApplicationEmbeddedInfo.ValidApplication.HasFlag(ApplicationTypeEnumeration.Elevator)
-                    && userInfo.ElevatorInfoInJsonFormat.IsNotNullOrEmpty())
+                if (DeviceInfo.ModuleId.HasFlag(ModuleEnumeration.Elevator)
+                    && ApplicationEmbeddedInfo.Modules.HasFlag(ModuleEnumeration.Elevator)
+                    && userInfoForDevice.ElevatorInfoInJsonFormat.IsNotNullOrEmpty())
                 {
-                    var elevatorFloorNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfo.ElevatorInfoInJsonFormat);
+                    var elevatorFloorNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfoForDevice.ElevatorInfoInJsonFormat);
                     if (elevatorFloorNumbers.IsCollectionNotNullOrEmpty())
                     {
                         var elevatorFloorObject = new VariantWrapper(elevatorFloorNumbers.JoinWithComma());
                         result = _communicationOcx.SetUserProfile(0
                             , DeviceInfo.DeviceNumber
-                            , (int)userInfo.EmployeeNumber
+                            , (int)userInfoForDevice.UserIdOnDevice
                             , EMachineNumber
                             , elevatorFloorObject);
                         if (!result)
@@ -1516,25 +1532,27 @@ namespace GuardianCommunication.Hardware.Timy
                     }
                 }
 
-                if (DeviceInfo.ApplicationId.HasFlag(ApplicationTypeEnumeration.Cabinet)
-                    && ApplicationEmbeddedInfo.ValidApplication.HasFlag(ApplicationTypeEnumeration.Cabinet)
-                    && userInfo.CabinetInfoInJsonFormat.IsNotNullOrEmpty())
+                if (DeviceInfo.ModuleId.HasFlag(ModuleEnumeration.Cabinet)
+                    && ApplicationEmbeddedInfo.Modules.HasFlag(ModuleEnumeration.Cabinet)
+                    && userInfoForDevice.CabinetInfoInJsonFormat.IsNotNullOrEmpty())
                 {
-                    var cabinetNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfo.CabinetInfoInJsonFormat);
+                    var cabinetNumbers = ObjectHelper.DeserializeAsJson<int[]>(userInfoForDevice.CabinetInfoInJsonFormat);
                     if (cabinetNumbers.IsCollectionNotNullOrEmpty())
                     {
+                        // ReSharper disable PossibleInvalidOperationException
                         result = _communicationOcx.SetUserCtrl(DeviceInfo.DeviceNumber
-                            , (int)userInfo.EmployeeNumber
+                            , (int)userInfoForDevice.UserIdOnDevice
                             , 0
                             , cabinetNumbers.First()
-                            , startDateTime.Year
-                            , startDateTime.Month
-                            , startDateTime.Day
-                            , endDateTime.Year
-                            , endDateTime.Month
-                            , endDateTime.Day
-
+                            , userInfoForDevice.StartDateTime.Value.Year
+                            , userInfoForDevice.StartDateTime.Value.Month
+                            , userInfoForDevice.StartDateTime.Value.Day
+                            , userInfoForDevice.EndDateTime.Value.Year
+                            , userInfoForDevice.EndDateTime.Value.Month
+                            , userInfoForDevice.EndDateTime.Value.Day
                         );
+                        // ReSharper restore PossibleInvalidOperationException
+
                         if (!result)
                         {
                             ThrowLastError();
@@ -1557,7 +1575,13 @@ namespace GuardianCommunication.Hardware.Timy
 
         public List<DtoUserInfoDefinedOnDevice> GetAllUsersInfo()
         {
-            return DeviceInfo.IsOldVersion ? GetAllUsersInfoOldVersion() : GetAllUsersInfoLongVersion();
+
+            if (DeviceInfo.DeviceSettings?.TimyDeviceSettings != null &&
+                DeviceInfo.DeviceSettings.TimyDeviceSettings.IsUserId32Bit)
+            {
+                return GetAllUsersInfoOldVersion();
+            }
+            return GetAllUsersInfoLongVersion();
         }
 
         private List<DtoUserInfoDefinedOnDevice> GetAllUsersInfoLongVersion()
@@ -1566,7 +1590,7 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetAllUserIdLongVersion is calling", new { DeviceInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -1602,11 +1626,11 @@ namespace GuardianCommunication.Hardware.Timy
                         ref dwEnable
                         );
                     var userId = ((string)userIdStringObject).ToInt64();
-                    if (usersInfo.All(ui => ui.EmployeeNumber != userId))
+                    if (usersInfo.All(ui => ui.UserIdOnDevice != userId))
                     {
                         usersInfo.Add(new DtoUserInfoDefinedOnDevice
                         {
-                            EmployeeNumber = userId,
+                            UserIdOnDevice = userId,
                             Name = string.Empty,
                             Privilege = dwPrivilegeNum,
                         });
@@ -1634,7 +1658,7 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetAllUserIdOldVersion is calling", new { DeviceInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             }
@@ -1671,11 +1695,11 @@ namespace GuardianCommunication.Hardware.Timy
                         ref dwPrivilegeNum,
                         ref dwEnable
                     );
-                    if (usersInfo.All(ui => ui.EmployeeNumber != dwEnrollNumber))
+                    if (usersInfo.All(ui => ui.UserIdOnDevice != dwEnrollNumber))
                     {
                         usersInfo.Add(new DtoUserInfoDefinedOnDevice
                         {
-                            EmployeeNumber = dwEnrollNumber,
+                            UserIdOnDevice = dwEnrollNumber,
                             Name = string.Empty,
                             Privilege = dwPrivilegeNum,
                         });
@@ -1705,7 +1729,7 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetUserCount is calling", new { DeviceInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var count = 0;
 
@@ -1734,7 +1758,7 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetFingerCount is calling", new { DeviceInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var count = 0;
 
@@ -1763,13 +1787,13 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetFaceCount is calling", new { DeviceInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var count = 0;
 
             try
             {
-                if (DeviceInfo.HasVisibleLight)
+                if (DeviceInfo.HasVisiblelight)
                 {
                     var result = _communicationOcx.GetDeviceStatus(DeviceInfo.DeviceNumber, 9, ref count);
                     if (!result)
@@ -1804,7 +1828,7 @@ namespace GuardianCommunication.Hardware.Timy
             {
                 LoggingSystem.LogInfo("Timy OnDemand GetRecordCount is calling", new { DeviceInfo });
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var count = 0;
 
@@ -1833,9 +1857,9 @@ namespace GuardianCommunication.Hardware.Timy
 
 
 
-        public void ScanFace(DtoEmployeeDeviceRelatedData userInfo)
+        public void ScanFace(DtoUserDeviceRelatedData userInfo)
         {
-            object employeeNumberObject = new VariantWrapper(userInfo.EmployeeNumber);
+            object employeeNumberObject = new VariantWrapper(userInfo.UserIdOnDevice);
             object nameObject = new VariantWrapper(userInfo.UserName);
 
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.Scan))
@@ -1845,7 +1869,7 @@ namespace GuardianCommunication.Hardware.Timy
 
             var result = !_communicationOcx.AddUser(DeviceInfo.DeviceNumber,
                 ref employeeNumberObject,
-                DeviceInfo.HasVisibleLight ? 50 : 20,
+                DeviceInfo.HasVisiblelight ? 50 : 20,
                 userInfo.Privilege,
                 ref nameObject
             );
@@ -1856,9 +1880,9 @@ namespace GuardianCommunication.Hardware.Timy
         }
 
 
-        public void ScanFinger(DtoEmployeeDeviceRelatedData userInfo, int fingerIndex)
+        public void ScanFinger(DtoUserDeviceRelatedData userInfo, int fingerIndex)
         {
-            object employeeNumberObject = new VariantWrapper(userInfo.EmployeeNumber);
+            object employeeNumberObject = new VariantWrapper(userInfo.UserIdOnDevice);
             object nameObject = new VariantWrapper(userInfo.UserName);
 
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.Scan))
@@ -1879,9 +1903,9 @@ namespace GuardianCommunication.Hardware.Timy
         }
 
 
-        public void ScanCard(DtoEmployeeDeviceRelatedData userInfo)
+        public void ScanCard(DtoUserDeviceRelatedData userInfo)
         {
-            object employeeNumberObject = new VariantWrapper(userInfo.EmployeeNumber);
+            object employeeNumberObject = new VariantWrapper(userInfo.UserIdOnDevice);
             object nameObject = new VariantWrapper(userInfo.UserName);
 
             if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.Scan))
