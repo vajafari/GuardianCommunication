@@ -1,6 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using GuardianCommunication.Hardware.Shared.Commands;
+using GuardianCommunication.Hardware.Shared.Helpers;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Hardware.Suprema
 {
@@ -18,8 +23,8 @@ namespace GuardianCommunication.Hardware.Suprema
 
 
         public static DtoDeviceCommand GetEnrollUserCommand(
-            DtoCommunicationDeviceData deviceInfo,
-            DtoEmployeeDeviceRelatedData userInfo,
+            DtoDevice deviceInfo,
+            DtoUserDeviceRelatedData userInfo,
             int maxRetry,
             int? deadline,
             DateTime? visibilityTime,
@@ -27,13 +32,15 @@ namespace GuardianCommunication.Hardware.Suprema
             Guid? commandIdentifier = null
             )
         {
+            var userInfoForDevice = userInfo.WithDeviceLocalDates(deviceInfo);
+
             return new DtoDeviceCommand
             {
-                CommandContent = ObjectHelper.SerializeAsJson(userInfo),
-                CommitTime = DateTime.Now,
+                CommandContent = ObjectHelper.SerializeAsJson(userInfoForDevice),
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = userInfo.EmployeeNumber,
+                UserIdOnDevice = userInfo.UserIdOnDevice,
                 CommandType = DeviceCommandTypeEnumeration.EnrollUserWithTemplate,
                 Priority = priority ?? CommandPriorityEnumeration.Medium,
                 MaxRetry = maxRetry,
@@ -41,17 +48,17 @@ namespace GuardianCommunication.Hardware.Suprema
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
         public static DtoDeviceCommand GetDeleteUserCommand(
-            DtoCommunicationDeviceData deviceInfo,
+            DtoDevice deviceInfo,
             long employeeNumber,
             int maxRetry,
             int? deadline,
@@ -63,10 +70,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandUserId { UserId = employeeNumber }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = employeeNumber,
+                UserIdOnDevice = employeeNumber,
                 CommandType = DeviceCommandTypeEnumeration.DeleteUser,
                 Priority = priority ?? CommandPriorityEnumeration.Medium,
                 MaxRetry = maxRetry,
@@ -74,17 +81,17 @@ namespace GuardianCommunication.Hardware.Suprema
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
         public static DtoDeviceCommand GetRebootCommand
-            (DtoCommunicationDeviceData deviceInfo,
+            (DtoDevice deviceInfo,
             int maxRetry,
             int? deadline,
             DateTime? visibilityTime,
@@ -95,10 +102,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = "REBOOT",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.Reboot,
                 Priority = priority ?? CommandPriorityEnumeration.VeryHigh,
                 MaxRetry = maxRetry,
@@ -106,18 +113,18 @@ namespace GuardianCommunication.Hardware.Suprema
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
         }
 
         public static DtoDeviceCommand GetDataCommand
-            (DtoCommunicationDeviceData deviceInfo,
+            (DtoDevice deviceInfo,
             DateTime startDate,
             DateTime endDate,
             int maxRetry,
@@ -130,10 +137,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandStartAndEndDate { StartDate = startDate, EndDate = endDate }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.ReadAttendance,
                 Priority = priority ?? CommandPriorityEnumeration.Low,
                 MaxRetry = maxRetry,
@@ -141,17 +148,17 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
         public static DtoDeviceCommand GetReadoutFromDeviceCommand
-            (DtoCommunicationDeviceData deviceInfo,
+            (DtoDevice deviceInfo,
             DateTime startDate,
             DateTime endDate,
             int maxRetry,
@@ -164,10 +171,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandStartAndEndDate { StartDate = startDate, EndDate = endDate }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.ReadoutAttendance,
                 Priority = priority ?? CommandPriorityEnumeration.Low,
                 MaxRetry = maxRetry,
@@ -175,17 +182,17 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
         public static DtoDeviceCommand GetUserInfoCommand
-            (DtoCommunicationDeviceData deviceInfo,
+            (DtoDevice deviceInfo,
             long employeeNumber,
             TemplateTypeEnumeration templateType,
             int maxRetry,
@@ -198,10 +205,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandReadUser { TemplateType = templateType, UserId = employeeNumber }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = employeeNumber,
+                UserIdOnDevice = employeeNumber,
                 CommandType = DeviceCommandTypeEnumeration.ReadUser,
                 Priority = priority ?? CommandPriorityEnumeration.Medium,
                 MaxRetry = maxRetry,
@@ -209,7 +216,7 @@ namespace GuardianCommunication.Hardware.Suprema
                 ResponseValue = null,
                 SendTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
@@ -219,7 +226,7 @@ namespace GuardianCommunication.Hardware.Suprema
         }
 
         public static DtoDeviceCommand GetClearDataCommand
-            (DtoCommunicationDeviceData deviceInfo,
+            (DtoDevice deviceInfo,
             DeviceLogTypeEnumeration logType,
             int maxRetry,
             int? deadline,
@@ -234,7 +241,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     return new DtoDeviceCommand
                     {
                         CommandContent = "CLEAR ALL DATA",
-                        CommitTime = DateTime.Now,
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
                         CommandType = DeviceCommandTypeEnumeration.ClearData,
@@ -244,18 +251,18 @@ namespace GuardianCommunication.Hardware.Suprema
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = ProducerEnumeration.Suprema,
                         SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     };
                 case DeviceLogTypeEnumeration.Users:
                     return new DtoDeviceCommand
                     {
                         CommandContent = "CLEAR ALL USERS",
-                        CommitTime = DateTime.Now,
+                        CommitTime = DateTime.Now.ToUniversalTime(),
                         DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                         RetryCount = 0,
                         CommandType = DeviceCommandTypeEnumeration.ClearUser,
@@ -265,11 +272,11 @@ namespace GuardianCommunication.Hardware.Suprema
                         SendTime = null,
                         ResponseTime = null,
                         DeviceNumber = deviceInfo.DeviceNumber,
-                        Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                        Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                         DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                         ProducerNumber = ProducerEnumeration.Suprema,
                         SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                        VisiblilityTime = visibilityTime,
+                        VisiblilityTime = visibilityTime?.ToUniversalTime(),
                         CommandIdentifier = commandIdentifier
                     };
                 default:
@@ -279,7 +286,7 @@ namespace GuardianCommunication.Hardware.Suprema
         }
 
         public static DtoDeviceCommand GetFaceCount
-            (DtoCommunicationDeviceData deviceInfo,
+            (DtoDevice deviceInfo,
             int maxRetry,
             int? deadline,
             DateTime? visibilityTime,
@@ -290,10 +297,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = "FACE COUNT",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.FaceCount,
                 Priority = priority ?? CommandPriorityEnumeration.Low,
                 MaxRetry = maxRetry,
@@ -301,18 +308,18 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
         }
 
         public static DtoDeviceCommand GetFingerCount(
-            DtoCommunicationDeviceData deviceInfo,
+            DtoDevice deviceInfo,
             int maxRetry,
             int? deadline,
             DateTime? visibilityTime,
@@ -323,10 +330,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = "FINGER COUNT",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.FingerCount,
                 Priority = priority ?? CommandPriorityEnumeration.Low,
                 MaxRetry = maxRetry,
@@ -334,18 +341,18 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
         }
 
         public static DtoDeviceCommand GetUserCount(
-            DtoCommunicationDeviceData deviceInfo,
+            DtoDevice deviceInfo,
             int maxRetry,
             int? deadline,
             DateTime? visibilityTime,
@@ -356,10 +363,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = "USER COUNT",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.UserCount,
                 Priority = priority ?? CommandPriorityEnumeration.Low,
                 MaxRetry = maxRetry,
@@ -367,18 +374,18 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
         }
 
         public static DtoDeviceCommand GetAttendanceLogCount(
-            DtoCommunicationDeviceData deviceInfo,
+            DtoDevice deviceInfo,
             DateTime startDate,
             DateTime endDate,
             int maxRetry,
@@ -391,10 +398,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandStartAndEndDate { StartDate = startDate, EndDate = endDate }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.AttendanceLogCount,
                 Priority = priority ?? CommandPriorityEnumeration.Low,
                 MaxRetry = maxRetry,
@@ -402,18 +409,18 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
 
         }
 
         public static List<DtoDeviceCommand> GetDeviceStatistics
-           (DtoCommunicationDeviceData deviceInfo,
+           (DtoDevice deviceInfo,
            int maxRetry,
            int? deadline,
            DateTime? visibilityTime,
@@ -432,7 +439,7 @@ namespace GuardianCommunication.Hardware.Suprema
         }
 
         public static DtoDeviceCommand SetDateAndTimeCommand
-           (DtoCommunicationDeviceData deviceInfo,
+           (DtoDevice deviceInfo,
            int maxRetry,
            int? deadline,
            DateTime? visibilityTime,
@@ -443,10 +450,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = "SET DATE AND TIME",
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = null,
+                UserIdOnDevice = null,
                 CommandType = DeviceCommandTypeEnumeration.SetDateAndTime,
                 Priority = priority ?? CommandPriorityEnumeration.VeryHigh,
                 MaxRetry = maxRetry,
@@ -454,18 +461,18 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
 
         public static DtoDeviceCommand ScanFace
-          (DtoCommunicationDeviceData deviceInfo,
+          (DtoDevice deviceInfo,
           long employeeNumber,
           int maxRetry,
           int? deadline,
@@ -477,10 +484,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandUserId { UserId = employeeNumber }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = employeeNumber,
+                UserIdOnDevice = employeeNumber,
                 CommandType = DeviceCommandTypeEnumeration.ScanFace,
                 Priority = priority ?? CommandPriorityEnumeration.VeryHigh,
                 MaxRetry = maxRetry,
@@ -488,17 +495,17 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
         public static DtoDeviceCommand ScanFinger
-          (DtoCommunicationDeviceData deviceInfo,
+          (DtoDevice deviceInfo,
           long employeeNumber,
           int fingerIndex,
           int maxRetry,
@@ -511,10 +518,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandScanFinger { UserId = employeeNumber, FingerIndex = fingerIndex }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = employeeNumber,
+                UserIdOnDevice = employeeNumber,
                 CommandType = DeviceCommandTypeEnumeration.ScanFinger,
                 Priority = priority ?? CommandPriorityEnumeration.VeryHigh,
                 MaxRetry = maxRetry,
@@ -522,17 +529,17 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }
 
         public static DtoDeviceCommand ScanCard
-          (DtoCommunicationDeviceData deviceInfo,
+          (DtoDevice deviceInfo,
           long employeeNumber,
           int maxRetry,
           int? deadline,
@@ -544,10 +551,10 @@ namespace GuardianCommunication.Hardware.Suprema
             return new DtoDeviceCommand
             {
                 CommandContent = ObjectHelper.SerializeAsJson(new CommandUserId { UserId = employeeNumber }),
-                CommitTime = DateTime.Now,
+                CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,
-                EmployeeNumber = employeeNumber,
+                UserIdOnDevice = employeeNumber,
                 CommandType = DeviceCommandTypeEnumeration.ScanCard,
                 Priority = priority ?? CommandPriorityEnumeration.VeryHigh,
                 MaxRetry = maxRetry,
@@ -555,139 +562,11 @@ namespace GuardianCommunication.Hardware.Suprema
                 SendTime = null,
                 ResponseTime = null,
                 DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
+                Deadline = deadline.HasValue ? DateTime.Now.ToUniversalTime().AddMinutes(deadline.Value) : (DateTime?)null,
                 DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
                 ProducerNumber = ProducerEnumeration.Suprema,
                 SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
-                CommandIdentifier = commandIdentifier
-            };
-        }
-
-        public static DtoDeviceCommand SendHolidays(DtoCommunicationDeviceData deviceInfo,
-                List<DtoSupremaSdk1DeviceHolidayGroup> holidayGroups,
-                int maxRetry,
-                int? deadline,
-                DateTime? visibilityTime,
-                CommandPriorityEnumeration? priority,
-                Guid? commandIdentifier = null
-            )
-        {
-            return new DtoDeviceCommand
-            {
-                CommandContent = ObjectHelper.SerializeAsJson(holidayGroups),
-                CommitTime = DateTime.Now,
-                DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
-                RetryCount = 0,
-                EmployeeNumber = null,
-                CommandType = DeviceCommandTypeEnumeration.SendHolidays,
-                Priority = priority ?? CommandPriorityEnumeration.Medium,
-                MaxRetry = maxRetry,
-                ResponseValue = null,
-                SendTime = null,
-                ResponseTime = null,
-                DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
-                DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
-                ProducerNumber = ProducerEnumeration.Suprema,
-                SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
-                CommandIdentifier = commandIdentifier
-            };
-        }
-
-        public static DtoDeviceCommand SendTimezones(DtoCommunicationDeviceData deviceInfo,
-            List<DtoSupremaSdk1Timezone> timezones,
-            int maxRetry,
-            int? deadline,
-            DateTime? visibilityTime,
-            CommandPriorityEnumeration? priority,
-            Guid? commandIdentifier = null
-        )
-        {
-            return new DtoDeviceCommand
-            {
-                CommandContent = ObjectHelper.SerializeAsJson(timezones),
-                CommitTime = DateTime.Now,
-                DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
-                RetryCount = 0,
-                EmployeeNumber = null,
-                CommandType = DeviceCommandTypeEnumeration.SetTimeZone,
-                Priority = priority ?? CommandPriorityEnumeration.Medium,
-                MaxRetry = maxRetry,
-                ResponseValue = null,
-                SendTime = null,
-                ResponseTime = null,
-                DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
-                DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
-                ProducerNumber = ProducerEnumeration.Suprema,
-                SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
-                CommandIdentifier = commandIdentifier
-            };
-        }
-
-        public static DtoDeviceCommand SendAccessGroups(DtoCommunicationDeviceData deviceInfo,
-            List<DtoSupremaSdk1AccessGroup> accessGroups,
-            int maxRetry,
-            int? deadline,
-            DateTime? visibilityTime,
-            CommandPriorityEnumeration? priority,
-            Guid? commandIdentifier = null
-        )
-        {
-            return new DtoDeviceCommand
-            {
-                CommandContent = ObjectHelper.SerializeAsJson(accessGroups),
-                CommitTime = DateTime.Now,
-                DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
-                RetryCount = 0,
-                EmployeeNumber = null,
-                CommandType = DeviceCommandTypeEnumeration.SendAccessGroup,
-                Priority = priority ?? CommandPriorityEnumeration.Medium,
-                MaxRetry = maxRetry,
-                ResponseValue = null,
-                SendTime = null,
-                ResponseTime = null,
-                DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
-                DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
-                ProducerNumber = ProducerEnumeration.Suprema,
-                SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
-                CommandIdentifier = commandIdentifier
-            };
-        }
-
-        public static DtoDeviceCommand SetDoorInfo(DtoCommunicationDeviceData deviceInfo,
-            DtoSupremaSdk1DeviceDoor doorInfo,
-            int maxRetry,
-            int? deadline,
-            DateTime? visibilityTime,
-            CommandPriorityEnumeration? priority,
-            Guid? commandIdentifier = null
-        )
-        {
-            return new DtoDeviceCommand
-            {
-                CommandContent = ObjectHelper.SerializeAsJson(doorInfo),
-                CommitTime = DateTime.Now,
-                DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
-                RetryCount = 0,
-                EmployeeNumber = null,
-                CommandType = DeviceCommandTypeEnumeration.SetDoorInfo,
-                Priority = priority ?? CommandPriorityEnumeration.Medium,
-                MaxRetry = maxRetry,
-                ResponseValue = null,
-                SendTime = null,
-                ResponseTime = null,
-                DeviceNumber = deviceInfo.DeviceNumber,
-                Deadline = deadline.HasValue ? DateTime.Now.AddMinutes(deadline.Value) : (DateTime?)null,
-                DeviceContent = ObjectHelper.SerializeAsJson(deviceInfo),
-                ProducerNumber = ProducerEnumeration.Suprema,
-                SdkVersion = SdkVersionEnumeration.SdkVersion1,
-                VisiblilityTime = visibilityTime,
+                VisiblilityTime = visibilityTime?.ToUniversalTime(),
                 CommandIdentifier = commandIdentifier
             };
         }

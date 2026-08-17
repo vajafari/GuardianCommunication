@@ -4,10 +4,15 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V1;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Hardware.Suprema
 {
@@ -27,12 +32,12 @@ namespace GuardianCommunication.Hardware.Suprema
 
         public int DeviceHandle => _deviceHandle;
         public bool IsDeviceConnected { get; set; }
-        public DtoCommunicationDeviceData DeviceInfo { get; }
+        public DtoDevice DeviceInfo { get; }
         public bool IsInPushMode { get; }
         public uint DeviceId { get; private set; }
         public uint ProductCode { get; private set; }
 
-        public SupremaSdk1OnDemandAdapter(DtoCommunicationDeviceData deviceInfo)
+        public SupremaSdk1OnDemandAdapter(DtoDevice deviceInfo)
         {
             DeviceInfo = deviceInfo;
             ProductCode = (uint)DeviceInfo.DeviceTypeCode;
@@ -43,7 +48,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         }
 
-        internal SupremaSdk1OnDemandAdapter(DtoCommunicationDeviceData deviceInfo, int handle, uint deviceId, uint productCode)
+        internal SupremaSdk1OnDemandAdapter(DtoDevice deviceInfo, int handle, uint deviceId, uint productCode)
         {
             IsDeviceConnected = true;
             IsInPushMode = true;
@@ -82,7 +87,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         private void DisableClock(int inactivationTime)
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
 
             switch (ProductCode)
@@ -107,7 +112,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         private void EnableClock()
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             switch (ProductCode)
             {
@@ -153,11 +158,11 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 SetDateTime is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
-            var localTime = (int)((DateTime.Now.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+            var timestamp = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(DateTime.UtcNow);
             DisableClock(10);
-            var result = BSSDK.BS_SetTime(DeviceHandle, localTime);
+            var result = BSSDK.BS_SetTime(DeviceHandle, timestamp);
             EnableClock();
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.SetDateTime))
             {
@@ -178,12 +183,12 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 GetDateTime is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
-            var time = 0;
-            var result = BSSDK.BS_GetTime(DeviceHandle, ref time);
+            var timestamp = 0;
+            var result = BSSDK.BS_GetTime(DeviceHandle, ref timestamp);
             RaiseErrorIfRequired(result);
-            var resultFinal = new DateTime(1970, 1, 1).AddSeconds(time);
+            var resultFinal = DateTimeHelper.ConvertUnixTimestampToUtc((uint)timestamp);
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetDateTime))
             {
                 LoggingSystem.LogInfo("Suprema 1 GetDateTime result", new
@@ -224,7 +229,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 RebootDevice is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var result = BSSDK.BS_Reset(DeviceHandle);
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.Reboot))
@@ -244,7 +249,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 GetSerialNumber", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             return DeviceId.ToString();
         }
@@ -321,12 +326,12 @@ namespace GuardianCommunication.Hardware.Suprema
         public void Connect()
         {
 
-            if (DeviceInfo.ConnectionTypeEnum != ConnectionTypeEnumeration.Ethernet) return;
+            if (DeviceInfo.ConnectionType != ConnectionTypeEnumeration.Ethernet) return;
             if (IsDeviceConnected)
             {
                 return;
             }
-            if (string.IsNullOrEmpty(DeviceInfo.Ip))
+            if (string.IsNullOrEmpty(DeviceInfo.DeviceIp))
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusSupremaSdk1ErrorIpIsNotValid);
             if (!DeviceInfo.TcpPort.HasValue || DeviceInfo.TcpPort.Value <= 0)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusSupremaSdk1ErrorTcpPortIsNotValid);
@@ -337,7 +342,7 @@ namespace GuardianCommunication.Hardware.Suprema
             //};
             //var resultAsync = action.BeginInvoke(null, null);
             //resultAsync.AsyncWaitHandle.WaitOne(DeviceInfo.ConnectTimeout * 1000);
-            var result = BSSDK.BS_OpenSocket(DeviceInfo.Ip, DeviceInfo.TcpPort.Value, ref _deviceHandle);
+            var result = BSSDK.BS_OpenSocket(DeviceInfo.DeviceIp, DeviceInfo.TcpPort.Value, ref _deviceHandle);
             RaiseErrorIfRequired(result);
             uint deviceId = 0;
             uint productCode = 0;
@@ -367,7 +372,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 ClearData", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var deletedCount = 0;
             var result = BSSDK.BS_DeleteLog(DeviceHandle, 0, ref deletedCount);
@@ -381,7 +386,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 GetRecordCountWithDefaultDates is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var result = GetDataWithDefaultDates().Count;
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.ClearData))
@@ -395,14 +400,14 @@ namespace GuardianCommunication.Hardware.Suprema
             return result;
         }
 
-        public int GetRecordCount(DateTime? startDate, DateTime? endDate)
+        public int GetRecordCount(DateTime startDate, DateTime endDate)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.ClearData))
             {
                 LoggingSystem.LogInfo("Suprema 1 GetRecordCount is calling", DeviceInfo);
             }
 
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var result = ReadLogAttendance(startDate, endDate).Count;
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.ClearData))
@@ -418,7 +423,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         public List<DtoAttendance> GetDataWithDefaultDates()
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             switch (ProductCode)
             {
@@ -440,9 +445,9 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        public List<DtoAttendance> GetData(DateTime? startDate, DateTime? endDate)
+        public List<DtoAttendance> GetData(DateTime startDate, DateTime endDate)
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             switch (ProductCode)
             {
@@ -466,7 +471,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         public List<DtoAttendance> Readout(DateTime startDate, DateTime endDate)
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             if (startDate.Date > endDate.Date)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusGeneralEndDateMustBeGreaterThanOrEqualStartDate);
@@ -494,7 +499,7 @@ namespace GuardianCommunication.Hardware.Suprema
         /// <param name="endDate">زمان پایان بازخوانی</param>
         /// <returns></returns>
         // ReSharper restore CommentTypo
-        private List<DtoAttendance> ReadLogAttendance(DateTime? startDate, DateTime? endDate)
+        private List<DtoAttendance> ReadLogAttendance(DateTime startDate, DateTime endDate)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetData))
             {
@@ -505,7 +510,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     EndDate = endDate,
                 });
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+            if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveAttendance)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
@@ -520,8 +525,8 @@ namespace GuardianCommunication.Hardware.Suprema
             var nMaxLogPerTrial = ProductCode == BSSDK.BS_DEVICE_BIOSTATION ? 32768 : 8192;
             try
             {
-                var start = startDate == null ? 0 : Convert.ToInt32(startDate.Value.ConvertToTimestamp());
-                var end = endDate == null ? 0 : Convert.ToInt32(endDate.Value.ConvertToTimestamp());
+                var start = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(startDate.ToUniversalTime());
+                var end = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(endDate.ToUniversalTime());
                 do
                 {
                     var buf = new IntPtr(logRecord.ToInt32() + logTotalCount * Marshal.SizeOf(typeof(BSLogRecord)));
@@ -538,20 +543,20 @@ namespace GuardianCommunication.Hardware.Suprema
                 {
                     var record = (BSLogRecord)Marshal.PtrToStructure(new IntPtr(logRecord.ToInt32() + i * Marshal.SizeOf(typeof(BSLogRecord))), typeof(BSLogRecord));
                     if ((record.eventType != BSSDK.BE_EVENT_IDENTIFY_SUCCESS && record.eventType != BSSDK.BE_EVENT_VERIFY_SUCCESS) || record.userID <= 0) continue;
-                    var eventTime = new DateTime(1970, 1, 1).AddSeconds(record.eventTime);
+                    var eventTime = DateTimeHelper.ConvertUnixTimestampToUtc((uint)record.eventTime);
                     var attendanceRecord = new DtoAttendance
                     {
-                        Id = 0,
-                        EmployeeNumber = record.userID,
+                        LogIdOnDevice = 0,
+                        UserIdOnDevice = record.userID,
                         AttendanceSource = AttendanceSourceEnumeration.Device,
                         DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
                         AttendanceDateTime = eventTime,
                         VerificationStyle = record.subEvent,
-                        DeviceNumber = DeviceInfo.DeviceNumber,
+                        DeviceId = DeviceInfo.Id,
                         CameraId = null,
                         StatusCode = record.tnaEvent,
-                        IsInvalid = false,
                         RfCardNumber = null,
+                        IsSentToGuardian = false,
                     };
                     attendanceRecords.Add(attendanceRecord);
                 }
@@ -582,7 +587,7 @@ namespace GuardianCommunication.Hardware.Suprema
         /// <param name="endDate">زمان پایان بازخوانی</param>
         /// <returns></returns>
         // ReSharper restore CommentTypo
-        private List<DtoAttendance> ReadLogExAttendance(DateTime? startDate, DateTime? endDate)
+        private List<DtoAttendance> ReadLogExAttendance(DateTime startDate, DateTime endDate)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetData))
             {
@@ -593,7 +598,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     EndDate = endDate,
                 });
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+            if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveAttendance)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
@@ -608,8 +613,8 @@ namespace GuardianCommunication.Hardware.Suprema
                 var logTotalCount = 0;
                 var logCount = 0;
                 var nMaxLogPerTrial = ProductCode == BSSDK.BS_DEVICE_BIOSTATION ? 32768 : 8192;
-                var start = startDate == null ? 0 : Convert.ToInt32(startDate.Value.ConvertToTimestamp());
-                var end = endDate == null ? 0 : Convert.ToInt32(endDate.Value.ConvertToTimestamp());
+                var start = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(startDate.ToUniversalTime());
+                var end = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(endDate.ToUniversalTime());
                 do
                 {
                     var buf = new IntPtr(logRecord.ToInt32() + logTotalCount * Marshal.SizeOf(typeof(BSLogRecordEx)));
@@ -624,20 +629,20 @@ namespace GuardianCommunication.Hardware.Suprema
                 {
                     var record = (BSLogRecordEx)Marshal.PtrToStructure(new IntPtr(logRecord.ToInt32() + i * Marshal.SizeOf(typeof(BSLogRecordEx))), typeof(BSLogRecordEx));
                     if ((record.eventType != BSSDK.BE_EVENT_IDENTIFY_SUCCESS && record.eventType != BSSDK.BE_EVENT_VERIFY_SUCCESS) || record.userID <= 0) continue;
-                    var eventTime = new DateTime(1970, 1, 1).AddSeconds(record.eventTime);
+                    var eventTime = DateTimeHelper.ConvertUnixTimestampToUtc((uint)record.eventTime);
                     var attendanceRecord = new DtoAttendance
                     {
-                        Id = 0,
-                        EmployeeNumber = record.userID,
+                        LogIdOnDevice = 0,
+                        UserIdOnDevice = record.userID,
                         AttendanceSource = AttendanceSourceEnumeration.Device,
                         DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.OnDemand,
                         AttendanceDateTime = eventTime,
                         VerificationStyle = record.subEvent,
-                        DeviceNumber = DeviceInfo.DeviceNumber,
+                        DeviceId = DeviceInfo.Id,
                         CameraId = null,
                         StatusCode = record.tnaEvent,
-                        IsInvalid = false,
                         RfCardNumber = null,
+                        IsSentToGuardian = false,
                     };
 
                     attendanceRecords.Add(attendanceRecord);
@@ -666,7 +671,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         public List<DtoDeviceEventLog> GetLogWithDefaultDates()
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             switch (ProductCode)
             {
@@ -688,9 +693,9 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        public List<DtoDeviceEventLog> GetLog(DateTime? startDate, DateTime? endDate)
+        public List<DtoDeviceEventLog> GetLog(DateTime startDate, DateTime endDate)
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             switch (ProductCode)
             {
@@ -712,7 +717,7 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        private List<DtoDeviceEventLog> ReadLog(DateTime? startDate, DateTime? endDate)
+        private List<DtoDeviceEventLog> ReadLog(DateTime startDate, DateTime endDate)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetData))
             {
@@ -723,7 +728,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     EndDate = endDate,
                 });
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveEvents))
+            if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveEvents)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceAttendanceCollectionIsNotActive);
@@ -738,8 +743,8 @@ namespace GuardianCommunication.Hardware.Suprema
             var nMaxLogPerTrial = ProductCode == BSSDK.BS_DEVICE_BIOSTATION ? 32768 : 8192;
             try
             {
-                var start = startDate == null ? 0 : Convert.ToInt32(startDate.Value.ConvertToTimestamp());
-                var end = endDate == null ? 0 : Convert.ToInt32(endDate.Value.ConvertToTimestamp());
+                var start = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(startDate.ToUniversalTime());
+                var end = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(endDate.ToUniversalTime());
                 do
                 {
                     var buf = new IntPtr(logRecord.ToInt32() + logTotalCount * Marshal.SizeOf(typeof(BSLogRecord)));
@@ -764,13 +769,13 @@ namespace GuardianCommunication.Hardware.Suprema
                     var currentLogRecord = new DtoDeviceEventLog
                     {
                         Id = 0,
-                        EmployeeNumber = record.userID,
+                        UserIdOnDevice = record.userID,
                         EventDateTime = eventTime,
                         EventCode = record.eventType,
-                        DeviceNumber = DeviceInfo.DeviceNumber,
+                        DeviceId = DeviceInfo.Id,
                         IsFromDevice = false,
-                        Producer = DeviceInfo.ProducerEnum,
-                        SdkVersion = DeviceInfo.SdkVersionEnum,
+                        Producer = DeviceInfo.ProducerNumber,
+                        SdkVersion = DeviceInfo.SdkVersion,
                     };
                     logsRecords.Add(currentLogRecord);
                 }
@@ -799,7 +804,7 @@ namespace GuardianCommunication.Hardware.Suprema
         /// <param name="endDate">زمان پایان بازخوانی</param>
         /// <returns></returns>
         // ReSharper restore CommentTypo
-        private List<DtoDeviceEventLog> ReadLogEx(DateTime? startDate, DateTime? endDate)
+        private List<DtoDeviceEventLog> ReadLogEx(DateTime startDate, DateTime endDate)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetData))
             {
@@ -810,7 +815,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     EndDate = endDate,
                 });
             }
-            if (DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveEvents))
+            if (DeviceInfo.DeviceSettings != null && DeviceInfo.DeviceSettings.DontSaveEvents)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusDeviceEventCollectionIsNotActive);
@@ -825,8 +830,8 @@ namespace GuardianCommunication.Hardware.Suprema
                 var logTotalCount = 0;
                 var logCount = 0;
                 var nMaxLogPerTrial = ProductCode == BSSDK.BS_DEVICE_BIOSTATION ? 32768 : 8192;
-                var start = startDate == null ? 0 : Convert.ToInt32(startDate.Value.ConvertToTimestamp());
-                var end = endDate == null ? 0 : Convert.ToInt32(endDate.Value.ConvertToTimestamp());
+                var start = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(startDate.ToUniversalTime());
+                var end = (int)DateTimeHelper.ConvertUtcToUnixTimestamp(endDate.ToUniversalTime());
                 do
                 {
                     var buf = new IntPtr(logRecord.ToInt32() + logTotalCount * Marshal.SizeOf(typeof(BSLogRecordEx)));
@@ -846,13 +851,13 @@ namespace GuardianCommunication.Hardware.Suprema
                     var currentLogRecord = new DtoDeviceEventLog
                     {
                         Id = 0,
-                        EmployeeNumber = record.userID,
+                        UserIdOnDevice = record.userID,
                         EventDateTime = eventTime,
                         EventCode = record.eventType,
-                        DeviceNumber = DeviceInfo.DeviceNumber,
+                        DeviceId = DeviceInfo.Id,
                         IsFromDevice = false,
-                        Producer = DeviceInfo.ProducerEnum,
-                        SdkVersion = DeviceInfo.SdkVersionEnum,
+                        Producer = DeviceInfo.ProducerNumber,
+                        SdkVersion = DeviceInfo.SdkVersion,
                     };
 
                     logRecords.Add(currentLogRecord);
@@ -884,7 +889,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 DeleteUserById is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var result = BSSDK.BS_DeleteUser(DeviceHandle, (uint)userId);
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetData))
@@ -904,7 +909,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 DeleteAllUsers is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var result = BSSDK.BS_DeleteAllUser(DeviceHandle);
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetData))
@@ -918,25 +923,25 @@ namespace GuardianCommunication.Hardware.Suprema
             RaiseErrorIfRequired(result);
         }
 
-        public void SetUserInfoWithTemplate(DtoEmployeeDeviceRelatedData userInfo)
+        public void SetUserInfoWithTemplate(DtoUserDeviceRelatedData userInfo)
         {
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             SetUserWithMode(userInfo, true);
         }
 
-        public void SetUserInfo(DtoEmployeeDeviceRelatedData userInfo)
+        public void SetUserInfo(DtoUserDeviceRelatedData userInfo)
         {
             SetUserWithMode(userInfo, false);
         }
 
-        public DtoEmployeeDeviceRelatedData GetUserInfoByUserId(long userId, TemplateTypeEnumeration enrollType)
+        public DtoUserDeviceRelatedData GetUserInfoByUserId(long userId, TemplateTypeEnumeration enrollType)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.GetUser))
             {
                 LoggingSystem.LogInfo("Suprema 1 GetUserInfoByUserId is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var user = ReadUser(userId);
             if (!enrollType.HasFlag(TemplateTypeEnumeration.Face))
@@ -954,7 +959,7 @@ namespace GuardianCommunication.Hardware.Suprema
             return user;
         }
 
-        //public List<DtoEmployeeDeviceRelatedData> GetAllUserInfo(TemplateTypeEnumeration enrollType)
+        //public List<DtoUserDeviceRelatedData> GetAllUserInfo(TemplateTypeEnumeration enrollType)
         //{
         //    if (IsDeviceConnected == false)
         //        throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
@@ -994,7 +999,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr[i] = (BEUserHdr)Marshal.PtrToStructure(new IntPtr(userInfo.ToInt32() + i * Marshal.SizeOf(typeof(BEUserHdr))), typeof(BEUserHdr));
                             usersInfo.Add(new DtoUserInfoDefinedOnDevice
                             {
-                                EmployeeNumber = userHdr[i].userID,
+                                UserIdOnDevice = userHdr[i].userID,
                                 Privilege = userHdr[i].adminLevel,
                                 Name = string.Empty,
                             });
@@ -1026,7 +1031,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr[i] = (BSUserHdrEx)Marshal.PtrToStructure(new IntPtr(userInfo.ToInt32() + i * Marshal.SizeOf(typeof(BSUserHdrEx))), typeof(BSUserHdrEx));
                             usersInfo.Add(new DtoUserInfoDefinedOnDevice
                             {
-                                EmployeeNumber = userHdr[i].ID,
+                                UserIdOnDevice = userHdr[i].ID,
                                 Privilege = userHdr[i].adminLevel,
                                 Name = string.Empty,
                             });
@@ -1057,7 +1062,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr[i] = (DSUserHdr)Marshal.PtrToStructure(new IntPtr(userInfo.ToInt32() + i * Marshal.SizeOf(typeof(DSUserHdr))), typeof(DSUserHdr));
                             usersInfo.Add(new DtoUserInfoDefinedOnDevice
                             {
-                                EmployeeNumber = userHdr[i].ID,
+                                UserIdOnDevice = userHdr[i].ID,
                                 Privilege = userHdr[i].adminLevel,
                                 Name = string.Empty,
                             });
@@ -1086,7 +1091,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr[i] = (XSUserHdr)Marshal.PtrToStructure(new IntPtr(userInfo.ToInt32() + i * Marshal.SizeOf(typeof(XSUserHdr))), typeof(XSUserHdr));
                             usersInfo.Add(new DtoUserInfoDefinedOnDevice
                             {
-                                EmployeeNumber = userHdr[i].ID,
+                                UserIdOnDevice = userHdr[i].ID,
                                 Privilege = userHdr[i].adminLevel,
                                 Name = string.Empty,
                             });
@@ -1115,7 +1120,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr[i] = (BS2UserHdr)Marshal.PtrToStructure(new IntPtr(userInfo.ToInt32() + i * Marshal.SizeOf(typeof(BS2UserHdr))), typeof(BS2UserHdr));
                             usersInfo.Add(new DtoUserInfoDefinedOnDevice
                             {
-                                EmployeeNumber = userHdr[i].ID,
+                                UserIdOnDevice = userHdr[i].ID,
                                 Privilege = userHdr[i].adminLevel,
                                 Name = string.Empty,
                             });
@@ -1144,7 +1149,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr[i] = (FSUserHdr)Marshal.PtrToStructure(new IntPtr(userInfo.ToInt32() + i * Marshal.SizeOf(typeof(FSUserHdr))), typeof(FSUserHdr));
                             usersInfo.Add(new DtoUserInfoDefinedOnDevice
                             {
-                                EmployeeNumber = userHdr[i].ID,
+                                UserIdOnDevice = userHdr[i].ID,
                                 Privilege = userHdr[i].adminLevel,
                                 Name = string.Empty,
                             });
@@ -1236,7 +1241,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 GetUserCount is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var mNumOfUser = 0;
             var mNumOfTemplate = 0;
@@ -1259,7 +1264,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 GetFingerCount is calling", DeviceInfo);
             }
-            if (IsDeviceConnected == false)
+            if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
             var mNumOfUser = 0;
             var mNumOfTemplate = 0;
@@ -1282,7 +1287,7 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 LoggingSystem.LogInfo("Suprema 1 ScanCard is calling", DeviceInfo);
             }
-            if (!DeviceInfo.HasRfCard)
+            if (!DeviceInfo.HasRfReader)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -1301,13 +1306,13 @@ namespace GuardianCommunication.Hardware.Suprema
             return cardId.ToString();
         }
 
-        public DtoEmployeeFinger ScanFinger(long userId, int fingerIndex)
+        public DtoUserFinger ScanFinger(long userId, int fingerIndex)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.Scan))
             {
                 LoggingSystem.LogInfo("Suprema 1 ScanFinger is calling", new { DeviceInfo, UserId = userId, FingerIndex = fingerIndex });
             }
-            if (!DeviceInfo.HasFinger)
+            if (!DeviceInfo.HasFingerPrint)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -1343,10 +1348,10 @@ namespace GuardianCommunication.Hardware.Suprema
                             fingerChecksum += templateData[j];
                         }
 
-                        var result = new DtoEmployeeFinger
+                        var result = new DtoUserFinger
                         {
                             CheckSum = fingerChecksum,
-                            EmployeeNumber = userId,
+                            UserIdOnDevice = userId,
                             FingerIndex = fingerIndex,
                             TemplateData = templateData
                         };
@@ -1366,7 +1371,7 @@ namespace GuardianCommunication.Hardware.Suprema
             throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
         }
 
-        public DtoEmployeeFace ScanFace(long userId)
+        public DtoUserFace ScanFace(long userId)
         {
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.Scan))
             {
@@ -1395,10 +1400,10 @@ namespace GuardianCommunication.Hardware.Suprema
                 offset2 += userTemplateHdr.faceLen[i];
             }
 
-            var result = new DtoEmployeeFace
+            var result = new DtoUserFace
             {
                 Length = userTemplateHdr.faceLen[0],
-                EmployeeNumber = userId,
+                UserIdOnDevice = userId,
                 FaceIndex = 1,
                 TemplateData = userTemplateHdr.faceTemp,
             };
@@ -1413,20 +1418,20 @@ namespace GuardianCommunication.Hardware.Suprema
             return result;
         }
 
-        private void SetUserWithMode(DtoEmployeeDeviceRelatedData userInfo, bool setTemplate)
+        private void SetUserWithMode(DtoUserDeviceRelatedData userInfo1, bool setTemplate)
         {
-
+            var userInfoForDevice = userInfo1.WithDeviceLocalDates(DeviceInfo);
 
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.SetUser))
             {
                 LoggingSystem.LogInfo("Suprema 1 ScanFace is calling",
-                    new { DeviceInfo, User = userInfo, SetTemplate = setTemplate });
+                    new { DeviceInfo, User = userInfoForDevice, SetTemplate = setTemplate });
             }
 
             if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.SetUser))
             {
                 LoggingSystem.LogInfo("Suprema 1 SetUserWithMode is calling",
-                    new { DeviceInfo, User = userInfo, SetTemplate = setTemplate });
+                    new { DeviceInfo, User = userInfoForDevice, SetTemplate = setTemplate });
             }
 
             var faceTemplate = new byte[FaceTemplateSize * BsFstMaxFaceTemplate];
@@ -1447,54 +1452,55 @@ namespace GuardianCommunication.Hardware.Suprema
                         {
                             fingerChecksum = new ushort[2],
                             isDuress = new byte[2],
-                            numOfFinger = Math.Min((ushort)userInfo.FingerDataList.Count, (ushort)2),
-                            disabled = userInfo.IsEnable ? 0 : 1,
+                            numOfFinger = Math.Min((ushort)userInfoForDevice.FingerDataList.Count, (ushort)2),
+                            disabled = userInfoForDevice.IsEnable ? 0 : 1,
                         };
                         if (userHdr.numOfFinger > 0)
-                            userHdr.fingerChecksum[0] = (ushort)userInfo.FingerDataList[0].CheckSum;
+                            userHdr.fingerChecksum[0] = (ushort)userInfoForDevice.FingerDataList[0].CheckSum;
                         if (userHdr.numOfFinger > 1)
-                            userHdr.fingerChecksum[1] = (ushort)userInfo.FingerDataList[1].CheckSum;
-                        if (userInfo.Password.IsNotNullOrEmpty())
+                            userHdr.fingerChecksum[1] = (ushort)userInfoForDevice.FingerDataList[1].CheckSum;
+                        if (userInfoForDevice.Password.IsNotNullOrEmpty())
                         {
 
-                            var tmpPw = Encoding.ASCII.GetBytes(userInfo.Password);
+                            var tmpPw = Encoding.ASCII.GetBytes(userInfoForDevice.Password);
                             userHdr.password = new byte[16];
                             Buffer.BlockCopy(tmpPw, 0, userHdr.password, 0, tmpPw.Length);
                         }
 
-                        userHdr.userID = (uint)userInfo.EmployeeNumber;
-                        userHdr.adminLevel = (ushort)userInfo.Privilege;
+                        userHdr.userID = (uint)userInfoForDevice.UserIdOnDevice;
+                        userHdr.adminLevel = (ushort)userInfoForDevice.Privilege;
                         userHdr.securityLevel = (ushort)(userHdr.adminLevel == 1 ? 5 : 3);
                         userHdr.cardFlag = 0;
-                        var startTime = userInfo.StartTime;
-                        var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                            ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
-                        userHdr.startTime = (int)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                        userHdr.expiryTime = (int)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+                        // ReSharper disable PossibleInvalidOperationException
+                        userHdr.startTime =
+                            (int)DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                        userHdr.expiryTime =
+                            (int)DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                        // ReSharper restore PossibleInvalidOperationException
                         userHdr.isDuress[0] = 0;
                         userHdr.isDuress[1] = 0;
-                        if (userInfo.VerificationStyle == (short)SupremaVerificationStyleEnumeration.Disabled || !userInfo.IsEnable)
+                        if (userInfoForDevice.VerificationStyle == (short)SupremaVerificationStyleEnumeration.Disabled || !userInfoForDevice.IsEnable)
                         {
                             userHdr.opMode = 0;
                         }
                         else
                         {
-                            userHdr.opMode = (ushort)(userInfo.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
+                            userHdr.opMode = (ushort)(userInfoForDevice.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
                         }
 
 
-                        //if (userInfo.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfo.IsEnable)
+                        //if (userInfoForDevice.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfoForDevice.IsEnable)
                         //{
                         //    userHdr.opMode = 0;
                         //}
                         //else
                         //{
-                        //    userHdr.opMode = (ushort)(userInfo.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
+                        //    userHdr.opMode = (ushort)(userInfoForDevice.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
                         //}
 
-                        if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                        if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                         {
-                            userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                            userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                         }
 
                         userHdr.cardCustomID = 0;
@@ -1505,15 +1511,15 @@ namespace GuardianCommunication.Hardware.Suprema
                         Marshal.StructureToPtr(userHdr, userInfoStruct, true);
                         var finalTemplateData = new byte[TemplateSize * 2 * 2];
 
-                        if (userInfo.FingerDataList.Count == 1)
+                        if (userInfoForDevice.FingerDataList.Count == 1)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
                             Buffer.BlockCopy(a1, 0, finalTemplateData, 0, a1.Length);
                         }
-                        else if (userInfo.FingerDataList.Count >= 2)
+                        else if (userInfoForDevice.FingerDataList.Count >= 2)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
-                            var a2 = userInfo.FingerDataList[1].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
+                            var a2 = userInfoForDevice.FingerDataList[1].TemplateData;
                             finalTemplateData = a1.Concat(a2).ToArray();
                         }
 
@@ -1537,52 +1543,53 @@ namespace GuardianCommunication.Hardware.Suprema
                             authLimitCount = 0,
                             timedAntiPassback = 0,
                             disabled = 0,
-                            numOfFinger = (Math.Min((ushort)userInfo.FingerDataList.Count, (ushort)2))
+                            numOfFinger = (Math.Min((ushort)userInfoForDevice.FingerDataList.Count, (ushort)2))
                         };
                         if (userHdr.numOfFinger > 0)
-                            userHdr.checksum[0] = (ushort)userInfo.FingerDataList[0].CheckSum;
+                            userHdr.checksum[0] = (ushort)userInfoForDevice.FingerDataList[0].CheckSum;
                         if (userHdr.numOfFinger > 1)
-                            userHdr.checksum[1] = (ushort)userInfo.FingerDataList[1].CheckSum;
+                            userHdr.checksum[1] = (ushort)userInfoForDevice.FingerDataList[1].CheckSum;
                         // name 
-                        var username = userInfo.UserName;
+                        var username = userInfoForDevice.UserName;
                         var nameBytes = Encoding.ASCII.GetBytes(username); // UTF8
                         Buffer.BlockCopy(nameBytes, 0, userHdr.name, 0, nameBytes.Length);
                         // pwd
-                        if (userInfo.Password.IsNotNullOrEmpty())
+                        if (userInfoForDevice.Password.IsNotNullOrEmpty())
                         {
                             userHdr.password = new byte[17];
-                            var tmpPw = Encoding.ASCII.GetBytes(userInfo.Password);
+                            var tmpPw = Encoding.ASCII.GetBytes(userInfoForDevice.Password);
                             Buffer.BlockCopy(tmpPw, 0, userHdr.password, 0, tmpPw.Length);
                         }
 
-                        userHdr.ID = (uint)userInfo.EmployeeNumber;
+                        userHdr.ID = (uint)userInfoForDevice.UserIdOnDevice;
                         userHdr.adminLevel =
-                            (ushort)(userInfo.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator
+                            (ushort)(userInfoForDevice.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator
                                 ? BSSDK.BS_USER_ADMIN
                                 : BSSDK.BS_USER_NORMAL);
                         userHdr.securityLevel = (ushort)(userHdr.adminLevel == 0
                             ? BSSDK.BS_USER_SECURITY_DEFAULT
                             : BSSDK.BS_USER_SECURITY_HIGHER);
                         userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
-                        var startTime = userInfo.StartTime;
-                        var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                            ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
 
-                        userHdr.startDateTime = (uint)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                        userHdr.expireDateTime = (uint)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                        userHdr.duressMask = 0;
-                        if (userInfo.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfo.IsEnable)
+                        // ReSharper disable PossibleInvalidOperationException
+                        userHdr.startDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                        userHdr.expireDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                        // ReSharper restore PossibleInvalidOperationException
+
+                        if (userInfoForDevice.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfoForDevice.IsEnable)
                         {
                             userHdr.authMode = 0;
                         }
                         else
                         {
-                            userHdr.authMode = (ushort)(userInfo.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
+                            userHdr.authMode = (ushort)(userInfoForDevice.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
                         }
 
-                        if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                        if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                         {
-                            userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                            userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                         }
 
                         userHdr.customID = 0;
@@ -1590,15 +1597,15 @@ namespace GuardianCommunication.Hardware.Suprema
                         userHdr.accessGroupMask = 0xffffffff;
                         // ---finger 
                         var finalTemplateData = new byte[TemplateSize * 2 * 2];
-                        if (userInfo.FingerDataList.Count == 1)
+                        if (userInfoForDevice.FingerDataList.Count == 1)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
                             Buffer.BlockCopy(a1, 0, finalTemplateData, 0, a1.Length);
                         }
-                        else if (userInfo.FingerDataList.Count == 2)
+                        else if (userInfoForDevice.FingerDataList.Count == 2)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
-                            var a2 = userInfo.FingerDataList[1].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
+                            var a2 = userInfoForDevice.FingerDataList[1].TemplateData;
                             finalTemplateData = a1.Concat(a2).ToArray();
                         }
 
@@ -1628,33 +1635,33 @@ namespace GuardianCommunication.Hardware.Suprema
                             faceChecksum = new uint[5],
                             reserved2 = new uint[10],
                             disabled = 0,
-                            numOfFinger = (Math.Min((ushort)userInfo.FingerDataList.Count, (ushort)2))
+                            numOfFinger = (Math.Min((ushort)userInfoForDevice.FingerDataList.Count, (ushort)2))
                         };
                         if (userHdr.numOfFinger > 0)
-                            userHdr.fingerChecksum[0] = (ushort)userInfo.FingerDataList[0].CheckSum;
+                            userHdr.fingerChecksum[0] = (ushort)userInfoForDevice.FingerDataList[0].CheckSum;
                         if (userHdr.numOfFinger > 1)
-                            userHdr.fingerChecksum[1] = (ushort)userInfo.FingerDataList[1].CheckSum;
+                            userHdr.fingerChecksum[1] = (ushort)userInfoForDevice.FingerDataList[1].CheckSum;
                         var finalTemplateData = new byte[TemplateSize * 2 * 2];
-                        if (userInfo.FingerDataList.Count == 1)
+                        if (userInfoForDevice.FingerDataList.Count == 1)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
                             Buffer.BlockCopy(a1, 0, finalTemplateData, 0, a1.Length);
                         }
-                        else if (userInfo.FingerDataList.Count == 2)
+                        else if (userInfoForDevice.FingerDataList.Count == 2)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
-                            var a2 = userInfo.FingerDataList[1].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
+                            var a2 = userInfoForDevice.FingerDataList[1].TemplateData;
                             finalTemplateData = a1.Concat(a2).ToArray();
                         }
 
-                        if (userInfo.FaceDataList.Count > 0)
+                        if (userInfoForDevice.FaceDataList.Count > 0)
                         {
                             // face template's checksum
                             var offset = 0;
                             userHdr.numOfFace = 1;
                             userHdr.faceChecksum[0] = 0;
                             var templateData = new byte[FaceTemplateSize];
-                            faceTemplate = userInfo.FaceDataList[0].TemplateData;
+                            faceTemplate = userInfoForDevice.FaceDataList[0].TemplateData;
                             Buffer.BlockCopy(faceTemplate, offset, templateData, 0, FaceTemplateSize);
                             for (var j = 0; j < FaceTemplateSize; j++)
                             {
@@ -1666,45 +1673,45 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr.numOfFace = 0;
 
                         // name 
-                        var username = userInfo.UserName;
+                        var username = userInfoForDevice.UserName;
                         var nameBytes = Encoding.Unicode.GetBytes(username); // UTF16
                         Buffer.BlockCopy(nameBytes, 0, userHdr.name, 0, nameBytes.Length);
-                        if (userInfo.Password.IsNotNullOrEmpty())
+                        if (userInfoForDevice.Password.IsNotNullOrEmpty())
                         {
-                            var tmpPw = Encoding.Unicode.GetBytes(userInfo.Password);
+                            var tmpPw = Encoding.Unicode.GetBytes(userInfoForDevice.Password);
                             Buffer.BlockCopy(tmpPw, 0, userHdr.password, 0, tmpPw.Length);
                         }
 
-                        userHdr.ID = (uint)userInfo.EmployeeNumber;
+                        userHdr.ID = (uint)userInfoForDevice.UserIdOnDevice;
                         userHdr.adminLevel =
-                            (ushort)(userInfo.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator
+                            (ushort)(userInfoForDevice.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator
                                 ? DSUserHdr.ENUM.USER_ADMIN
                                 : DSUserHdr.ENUM.USER_NORMAL);
                         userHdr.securityLevel = (ushort)(userHdr.adminLevel == 0
                             ? BSSDK.BS_USER_SECURITY_DEFAULT
                             : BSSDK.BS_USER_SECURITY_HIGHER);
                         userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
-                        var startTime = userInfo.StartTime;
-                        var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                            ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
-
-                        userHdr.startDateTime = (uint)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                        userHdr.expireDateTime = (uint)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+                        // ReSharper disable PossibleInvalidOperationException
+                        userHdr.startDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                        userHdr.expireDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                        // ReSharper restore PossibleInvalidOperationException
                         userHdr.duress[0] = 0;
                         userHdr.duress[1] = 0;
 
-                        if (userInfo.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfo.IsEnable)
+                        if (userInfoForDevice.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfoForDevice.IsEnable)
                         {
                             userHdr.authMode = 0;
                         }
                         else
                         {
-                            userHdr.authMode = (ushort)(userInfo.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
+                            userHdr.authMode = (ushort)(userInfoForDevice.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
                         }
 
-                        if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                        if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                         {
-                            userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                            userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                         }
 
                         userHdr.customID = 0;
@@ -1737,43 +1744,44 @@ namespace GuardianCommunication.Hardware.Suprema
                             reserved2 = new uint[10],
                             disabled = 0
                         };
-                        var username = userInfo.UserName;
+                        var username = userInfoForDevice.UserName;
                         var nameBytes = Encoding.Unicode.GetBytes(username); // UTF16
                         Buffer.BlockCopy(nameBytes, 0, userHdr.name, 0, nameBytes.Length);
-                        if (userInfo.Password.IsNotNullOrEmpty())
+                        if (userInfoForDevice.Password.IsNotNullOrEmpty())
                         {
-                            var tmpPw = Encoding.Unicode.GetBytes(userInfo.Password);
+                            var tmpPw = Encoding.Unicode.GetBytes(userInfoForDevice.Password);
                             Buffer.BlockCopy(tmpPw, 0, userHdr.password, 0, tmpPw.Length);
                         }
 
-                        userHdr.ID = (uint)userInfo.EmployeeNumber;
-                        var startTime = userInfo.StartTime;
-                        var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                            ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
+                        userHdr.ID = (uint)userInfoForDevice.UserIdOnDevice;
 
-                        userHdr.startDateTime = (uint)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                        userHdr.expireDateTime = (uint)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+                        // ReSharper disable PossibleInvalidOperationException
+                        userHdr.startDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                        userHdr.expireDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                        // ReSharper restore PossibleInvalidOperationException
 
                         userHdr.adminLevel =
-                            (ushort)(userInfo.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator
+                            (ushort)(userInfoForDevice.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator
                                 ? XSUserHdr.ENUM.USER_ADMIN
                                 : XSUserHdr.ENUM.USER_NORMAL);
                         userHdr.securityLevel = (ushort)(userHdr.adminLevel == 0
                             ? BSSDK.BS_USER_SECURITY_DEFAULT
                             : BSSDK.BS_USER_SECURITY_HIGHER);
                         userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
-                        if (userInfo.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfo.IsEnable)
+                        if (userInfoForDevice.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfoForDevice.IsEnable)
                         {
                             userHdr.authMode = 0;
                         }
                         else
                         {
-                            userHdr.authMode = (ushort)(userInfo.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
+                            userHdr.authMode = (ushort)(userInfoForDevice.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
                         }
 
-                        if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                        if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                         {
-                            userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                            userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                         }
 
                         userHdr.customID = 0;
@@ -1804,56 +1812,56 @@ namespace GuardianCommunication.Hardware.Suprema
                             faceChecksum = new uint[5],
                             reserved2 = new uint[10],
                             disabled = 0,
-                            numOfFinger = (Math.Min((ushort)userInfo.FingerDataList.Count, (ushort)2))
+                            numOfFinger = (Math.Min((ushort)userInfoForDevice.FingerDataList.Count, (ushort)2))
                         };
                         if (userHdr.numOfFinger > 0)
-                            userHdr.fingerChecksum[0] = (ushort)userInfo.FingerDataList[0].CheckSum;
+                            userHdr.fingerChecksum[0] = (ushort)userInfoForDevice.FingerDataList[0].CheckSum;
                         if (userHdr.numOfFinger > 1)
-                            userHdr.fingerChecksum[1] = (ushort)userInfo.FingerDataList[1].CheckSum;
-                        userHdr.ID = (uint)userInfo.EmployeeNumber;
+                            userHdr.fingerChecksum[1] = (ushort)userInfoForDevice.FingerDataList[1].CheckSum;
+                        userHdr.ID = (uint)userInfoForDevice.UserIdOnDevice;
                         userHdr.adminLevel =
-                            (userInfo.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator)
+                            (userInfoForDevice.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator)
                                 ? (ushort)BS2UserHdr.ENUM.USER_ADMIN
                                 : (ushort)BS2UserHdr.ENUM.USER_NORMAL;
                         userHdr.securityLevel = (ushort)(userHdr.adminLevel == 0
                             ? BSSDK.BS_USER_SECURITY_DEFAULT
                             : BSSDK.BS_USER_SECURITY_HIGHER);
                         userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
-                        var startTime = userInfo.StartTime;
-                        var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                            ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
-
-                        userHdr.startDateTime = (uint)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                        userHdr.expireDateTime = (uint)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+                        // ReSharper disable PossibleInvalidOperationException
+                        userHdr.startDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                        userHdr.expireDateTime =
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                        // ReSharper restore PossibleInvalidOperationException
                         userHdr.duress[0] = 0;
                         userHdr.duress[1] = 0;
-                        if (userInfo.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfo.IsEnable)
+                        if (userInfoForDevice.VerificationStyle == (int)SupremaVerificationStyleEnumeration.Disabled || !userInfoForDevice.IsEnable)
                         {
                             userHdr.authMode = 0;
                         }
                         else
                         {
-                            userHdr.authMode = (ushort)(userInfo.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
+                            userHdr.authMode = (ushort)(userInfoForDevice.VerificationStyle + BSSDK.BS_AUTH_FINGER_ONLY - 1);
                         }
 
-                        if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                        if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                         {
-                            userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                            userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                         }
 
                         userHdr.customID = 0;
                         userHdr.accessGroupMask = 0xffffffff;
                         // ---finger 
                         var finalTemplateData = new byte[TemplateSize * 2 * 2];
-                        if (userInfo.FingerDataList.Count == 1)
+                        if (userInfoForDevice.FingerDataList.Count == 1)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
                             Buffer.BlockCopy(a1, 0, finalTemplateData, 0, a1.Length);
                         }
-                        else if (userInfo.FingerDataList.Count == 2)
+                        else if (userInfoForDevice.FingerDataList.Count == 2)
                         {
-                            var a1 = userInfo.FingerDataList[0].TemplateData;
-                            var a2 = userInfo.FingerDataList[1].TemplateData;
+                            var a1 = userInfoForDevice.FingerDataList[0].TemplateData;
+                            var a2 = userInfoForDevice.FingerDataList[1].TemplateData;
                             finalTemplateData = a1.Concat(a2).ToArray();
                         }
 
@@ -1884,8 +1892,8 @@ namespace GuardianCommunication.Hardware.Suprema
                             Array.Clear(bytes, 0, nSize);
                             Marshal.Copy(bytes, 0, userInfoPtr, nSize);
                             var userHdr = (FSUserHdrEx)Marshal.PtrToStructure(userInfoPtr, typeof(FSUserHdrEx));
-                            userHdr.ID = (uint)userInfo.EmployeeNumber;
-                            if (userInfo.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator)
+                            userHdr.ID = (uint)userInfoForDevice.UserIdOnDevice;
+                            if (userInfoForDevice.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator)
                                 userHdr.adminLevel = (ushort)FSUserHdr.ENUM.USER_ADMIN;
                             else userHdr.adminLevel = (ushort)FSUserHdr.ENUM.USER_NORMAL;
                             userHdr.securityLevel = (ushort)(userHdr.adminLevel == 0
@@ -1893,34 +1901,32 @@ namespace GuardianCommunication.Hardware.Suprema
                                 : BSSDK.BS_USER_SECURITY_HIGHER);
                             userHdr.disabled = 0;
                             userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
-                            var startTime = userInfo.StartTime;
-                            var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                                ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
-
+                            // ReSharper disable PossibleInvalidOperationException
                             userHdr.startDateTime =
-                                (uint)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
                             userHdr.expireDateTime =
-                                (uint)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                            userHdr.authMode = (ushort)userInfo.VerificationStyle;
-                            if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                            // ReSharper restore PossibleInvalidOperationException
+                            userHdr.authMode = (ushort)userInfoForDevice.VerificationStyle;
+                            if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                             {
-                                userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                                userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                             }
 
                             userHdr.customID = 0;
                             // name 
-                            var username = userInfo.UserName;
+                            var username = userInfoForDevice.UserName;
                             var nameBytes = Encoding.Unicode.GetBytes(username); // UTF16
                             Buffer.BlockCopy(nameBytes, 0, userHdr.name, 0, nameBytes.Length);
                             // pwd
-                            if (userInfo.Password.IsNotNullOrEmpty())
+                            if (userInfoForDevice.Password.IsNotNullOrEmpty())
                             {
-                                var pwdBytes = Encoding.ASCII.GetBytes(userInfo.Password);
+                                var pwdBytes = Encoding.ASCII.GetBytes(userInfoForDevice.Password);
                                 var pwdOut = new byte[32];
                                 BSSDK.BS_EncryptSHA256(pwdBytes, pwdBytes.Length, pwdOut);
                                 Buffer.BlockCopy(pwdOut, 0, userHdr.password, 0, pwdOut.Length);
 
-                                var tmpPw = Encoding.Unicode.GetBytes(userInfo.Password);
+                                var tmpPw = Encoding.Unicode.GetBytes(userInfoForDevice.Password);
                                 Buffer.BlockCopy(tmpPw, 0, userHdr.password, 0, tmpPw.Length);
                             }
 
@@ -1934,7 +1940,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             var bufferUserInfo = new byte[1112];
                             if (setTemplate)
                             {
-                                Buffer.BlockCopy(userInfo.FaceDataList[0].TemplateData, 250000, bufferUserInfo, 0,
+                                Buffer.BlockCopy(userInfoForDevice.FaceDataList[0].TemplateData, 250000, bufferUserInfo, 0,
                                     1112);
                             }
 
@@ -1951,12 +1957,12 @@ namespace GuardianCommunication.Hardware.Suprema
                             var bufferImageUser = new byte[512000]; //buffer image with 512000
                             if (setTemplate)
                             {
-                                if (userInfo.HardwareProfileImage != null)
-                                    Buffer.BlockCopy(userInfo.HardwareProfileImage, 0, bufferImageUser, 0,
-                                        userInfo.HardwareProfileImage.Length);
+                                if (userInfoForDevice.HardwareProfileImage != null)
+                                    Buffer.BlockCopy(userInfoForDevice.HardwareProfileImage, 0, bufferImageUser, 0,
+                                        userInfoForDevice.HardwareProfileImage.Length);
                                 //----------- Read Face Template -------------
                                 //fetch buffer face data 
-                                Buffer.BlockCopy(userInfo.FaceDataList[0].TemplateData, 0, tmpFaceTemplate, 0, 250000);
+                                Buffer.BlockCopy(userInfoForDevice.FaceDataList[0].TemplateData, 0, tmpFaceTemplate, 0, 250000);
                             }
 
                             #endregion
@@ -1996,10 +2002,10 @@ namespace GuardianCommunication.Hardware.Suprema
                             #region Codes [ Face ] Note : Dige Support Nemishavad.................. 1394-10-18
 
                             var userTemplateHdr = new FSUserTemplateHdr();
-                            if (userInfo.FaceDataList.Count > 0)
+                            if (userInfoForDevice.FaceDataList.Count > 0)
                             {
-                                var handle = GCHandle.Alloc(userInfo.FaceDataList[0].TemplateData, GCHandleType.Pinned);
-                                faceTemplateFst = userInfo.FaceDataList[0].TemplateData;
+                                var handle = GCHandle.Alloc(userInfoForDevice.FaceDataList[0].TemplateData, GCHandleType.Pinned);
+                                faceTemplateFst = userInfoForDevice.FaceDataList[0].TemplateData;
                                 userTemplateHdr =
                                     (FSUserTemplateHdr)
                                     Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(FSUserTemplateHdr));
@@ -2049,34 +2055,33 @@ namespace GuardianCommunication.Hardware.Suprema
                             // face temp data
                             Buffer.BlockCopy(userTemplateHdr.faceTemp, 0, userHdr.faceTemp, 0, 256);
                             // name 
-                            var username = userInfo.UserName;
+                            var username = userInfoForDevice.UserName;
                             var nameBytes = Encoding.Unicode.GetBytes(username); // UTF16
                             Buffer.BlockCopy(nameBytes, 0, userHdr.name, 0, nameBytes.Length);
-                            if (userInfo.Password.IsNotNullOrEmpty())
+                            if (userInfoForDevice.Password.IsNotNullOrEmpty())
                             {
-                                var pwdBytes = Encoding.Unicode.GetBytes(userInfo.Password);
+                                var pwdBytes = Encoding.Unicode.GetBytes(userInfoForDevice.Password);
                                 Buffer.BlockCopy(pwdBytes, 0, userHdr.password, 0, pwdBytes.Length);
                             }
 
-                            userHdr.ID = (uint)userInfo.EmployeeNumber;
-                            if (userInfo.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator)
+                            userHdr.ID = (uint)userInfoForDevice.UserIdOnDevice;
+                            if (userInfoForDevice.Privilege == (int)SupremaDevicePrivilegeEnumeration.Administrator)
                                 userHdr.adminLevel = (ushort)FSUserHdr.ENUM.USER_ADMIN;
                             else userHdr.adminLevel = (ushort)FSUserHdr.ENUM.USER_NORMAL;
                             userHdr.securityLevel = (ushort)(userHdr.adminLevel == 0
                                 ? BSSDK.BS_USER_SECURITY_DEFAULT
                                 : BSSDK.BS_USER_SECURITY_HIGHER);
                             userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
-                            var startTime = userInfo.StartTime;
-                            var endTime = DeviceSharedHelperMethods.GetEndDate(userInfo.EndTime,
-                                ProducerEnumeration.Suprema, SdkVersionEnumeration.SdkVersion1);
+                            // ReSharper disable PossibleInvalidOperationException
                             userHdr.startDateTime =
-                                (uint)((startTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
+                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
                             userHdr.expireDateTime =
-                                (uint)((endTime.Ticks - new DateTime(1970, 1, 1).Ticks) / 10000000);
-                            userHdr.authMode = (ushort)userInfo.VerificationStyle;
-                            if (userInfo.RfCardNumbers.IsCollectionNotNullOrEmpty())
+                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
+                            // ReSharper restore PossibleInvalidOperationException
+                            userHdr.authMode = (ushort)userInfoForDevice.VerificationStyle;
+                            if (userInfoForDevice.RfCardNumbers.IsCollectionNotNullOrEmpty())
                             {
-                                userHdr.cardID = uint.Parse(userInfo.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
+                                userHdr.cardID = uint.Parse(userInfoForDevice.RfCardNumbers[0] /*, NumberStyles.HexNumber*/);
                             }
 
                             userHdr.customID = 0;
@@ -2096,13 +2101,13 @@ namespace GuardianCommunication.Hardware.Suprema
 
         }
 
-        private DtoEmployeeDeviceRelatedData ReadUser(long id)
+        private DtoUserDeviceRelatedData ReadUser(long id)
         {
 
             var templateData = new byte[TemplateSize * 2 * 2];
             var faceTemplate = new byte[FaceTemplateSize * BsFstMaxFaceTemplate];
 
-            var resultOfMethod = new DtoEmployeeDeviceRelatedData();
+            var resultOfMethod = new DtoUserDeviceRelatedData();
             switch (ProductCode)
             {
                 case BSSDK.BS_DEVICE_BIOENTRY_PLUS:
@@ -2123,7 +2128,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         var userHdr = (BEUserHdr)Marshal.PtrToStructure(userInfo, typeof(BEUserHdr));
                         Marshal.FreeHGlobal(userInfo);
-                        resultOfMethod.EmployeeNumber = userHdr.userID;
+                        resultOfMethod.UserIdOnDevice = userHdr.userID;
                         resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
                         resultOfMethod.Privilege = userHdr.adminLevel;
                         //resultOfMethod.IsEnable = userHdr.disabled != 1;
@@ -2138,13 +2143,13 @@ namespace GuardianCommunication.Hardware.Suprema
                             resultOfMethod.VerificationStyle = 0;
                         if (userHdr.numOfFinger > 0)
                         {
-                            resultOfMethod.FingerDataList = new List<DtoEmployeeFinger>();
+                            resultOfMethod.FingerDataList = new List<DtoUserFinger>();
                         }
                         if (userHdr.numOfFinger > 0)
                         {
-                            var finger1 = new DtoEmployeeFinger
+                            var finger1 = new DtoUserFinger
                             {
-                                EmployeeNumber = userHdr.userID,
+                                UserIdOnDevice = userHdr.userID,
                                 FingerIndex = 0,
                                 TemplateData = FingerDivider(0, templateData),
                                 CheckSum = userHdr.fingerChecksum[0]
@@ -2153,9 +2158,9 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         if (userHdr.numOfFinger > 1)
                         {
-                            var finger2 = new DtoEmployeeFinger
+                            var finger2 = new DtoUserFinger
                             {
-                                EmployeeNumber = userHdr.userID,
+                                UserIdOnDevice = userHdr.userID,
                                 FingerIndex = 1,
                                 TemplateData = FingerDivider(1, templateData),
                                 CheckSum = userHdr.fingerChecksum[1]
@@ -2180,7 +2185,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         var userHdr = (BSUserHdrEx)Marshal.PtrToStructure(userInfo, typeof(BSUserHdrEx));
                         Marshal.FreeHGlobal(userInfo);
-                        resultOfMethod.EmployeeNumber = userHdr.ID;
+                        resultOfMethod.UserIdOnDevice = userHdr.ID;
                         resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
 
                         resultOfMethod.Privilege =
@@ -2221,7 +2226,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         var userHdr = (DSUserHdr)Marshal.PtrToStructure(userInfo, typeof(DSUserHdr));
                         Marshal.FreeHGlobal(userInfo);
-                        resultOfMethod.EmployeeNumber = userHdr.ID;
+                        resultOfMethod.UserIdOnDevice = userHdr.ID;
 
                         resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
                         resultOfMethod.Privilege = (userHdr.adminLevel == (ushort)DSUserHdr.ENUM.USER_ADMIN)
@@ -2233,13 +2238,13 @@ namespace GuardianCommunication.Hardware.Suprema
                         ///////////// ------------- finger splitter------------------
                         if (userHdr.numOfFinger > 0)
                         {
-                            resultOfMethod.FingerDataList = new List<DtoEmployeeFinger>();
+                            resultOfMethod.FingerDataList = new List<DtoUserFinger>();
                         }
                         if (userHdr.numOfFinger > 0)
                         {
-                            var finger1 = new DtoEmployeeFinger
+                            var finger1 = new DtoUserFinger
                             {
-                                EmployeeNumber = userHdr.ID,
+                                UserIdOnDevice = userHdr.ID,
                                 FingerIndex = 0,
                                 TemplateData = FingerDivider(0, templateData),
                                 CheckSum = userHdr.fingerChecksum[0]
@@ -2248,9 +2253,9 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         if (userHdr.numOfFinger > 1)
                         {
-                            var finger2 = new DtoEmployeeFinger
+                            var finger2 = new DtoUserFinger
                             {
-                                EmployeeNumber = userHdr.ID,
+                                UserIdOnDevice = userHdr.ID,
                                 FingerIndex = 1,
                                 TemplateData = FingerDivider(1, templateData),
                                 CheckSum = userHdr.fingerChecksum[1]
@@ -2258,9 +2263,9 @@ namespace GuardianCommunication.Hardware.Suprema
                             resultOfMethod.FingerDataList.Add(finger2);
                         }
                         ///////////// ------------- Face------------------
-                        resultOfMethod.FaceDataList.Add(new DtoEmployeeFace()
+                        resultOfMethod.FaceDataList.Add(new DtoUserFace()
                         {
-                            EmployeeNumber = userHdr.ID,
+                            UserIdOnDevice = userHdr.ID,
                             FaceIndex = 0,
                             TemplateData = faceTemplate,
                             CheckSum = userHdr.faceChecksum[0]
@@ -2301,7 +2306,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         var userHdr = (XSUserHdr)Marshal.PtrToStructure(userInfo, typeof(XSUserHdr));
                         Marshal.FreeHGlobal(userInfo);
-                        resultOfMethod.EmployeeNumber = userHdr.ID;
+                        resultOfMethod.UserIdOnDevice = userHdr.ID;
                         resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
                         resultOfMethod.Privilege = (userHdr.adminLevel == (ushort)XSUserHdr.ENUM.USER_ADMIN)
                             ? (int)SupremaDevicePrivilegeEnumeration.Administrator
@@ -2341,7 +2346,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         var userHdr = (BS2UserHdr)Marshal.PtrToStructure(userInfo, typeof(BS2UserHdr));
                         Marshal.FreeHGlobal(userInfo);
-                        resultOfMethod.EmployeeNumber = userHdr.ID;
+                        resultOfMethod.UserIdOnDevice = userHdr.ID;
                         resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
                         resultOfMethod.Privilege = (userHdr.adminLevel == (ushort)BS2UserHdr.ENUM.USER_ADMIN)
                             ? (int)SupremaDevicePrivilegeEnumeration.Administrator
@@ -2357,13 +2362,13 @@ namespace GuardianCommunication.Hardware.Suprema
                         //else userInfoDto.IsCardAuth = true;
                         if (userHdr.numOfFinger > 0)
                         {
-                            resultOfMethod.FingerDataList = new List<DtoEmployeeFinger>();
+                            resultOfMethod.FingerDataList = new List<DtoUserFinger>();
                         }
                         if (userHdr.numOfFinger > 0)
                         {
-                            var finger1 = new DtoEmployeeFinger
+                            var finger1 = new DtoUserFinger
                             {
-                                EmployeeNumber = userHdr.ID,
+                                UserIdOnDevice = userHdr.ID,
                                 FingerIndex = 0,
                                 TemplateData = FingerDivider(0, templateData),
                                 CheckSum = userHdr.fingerChecksum[0]
@@ -2372,9 +2377,9 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                         if (userHdr.numOfFinger > 1)
                         {
-                            var finger2 = new DtoEmployeeFinger
+                            var finger2 = new DtoUserFinger
                             {
-                                EmployeeNumber = userHdr.ID,
+                                UserIdOnDevice = userHdr.ID,
                                 FingerIndex = 1,
                                 TemplateData = FingerDivider(1, templateData),
                                 CheckSum = userHdr.fingerChecksum[1]
@@ -2408,7 +2413,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             Marshal.Copy(userInfoPTr, bufferFsUserHdrEx, 0, nSize);
                             // Marshal.Copy(bytes, 0, m_userInfo, nSize);
                             var userHdr = (FSUserHdrEx)Marshal.PtrToStructure(userInfoPTr, typeof(FSUserHdrEx));
-                            resultOfMethod.EmployeeNumber = userHdr.ID;
+                            resultOfMethod.UserIdOnDevice = userHdr.ID;
                             resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
                             resultOfMethod.Privilege = (userHdr.adminLevel == (ushort)FSUserHdr.ENUM.USER_ADMIN)
                                 ? (int)SupremaDevicePrivilegeEnumeration.Administrator
@@ -2419,9 +2424,9 @@ namespace GuardianCommunication.Hardware.Suprema
                             var checkFaceZero = faceTemplate.All(x => x == 0);
                             if (!checkFaceZero)
                             {
-                                resultOfMethod.FaceDataList.Add(new DtoEmployeeFace
+                                resultOfMethod.FaceDataList.Add(new DtoUserFace
                                 {
-                                    EmployeeNumber = userHdr.ID,
+                                    UserIdOnDevice = userHdr.ID,
                                     FaceIndex = 0,
                                     TemplateData = faceTemplate,
                                 });
@@ -2452,7 +2457,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             }
                             var userHdr = (FSUserHdr)Marshal.PtrToStructure(userInfo, typeof(FSUserHdr));
                             Marshal.FreeHGlobal(userInfo);
-                            resultOfMethod.EmployeeNumber = userHdr.ID;
+                            resultOfMethod.UserIdOnDevice = userHdr.ID;
                             resultOfMethod.RfCardNumbers = userHdr.cardID > 0 ? new List<string> { userHdr.cardID.ToString() } : new List<string>();
                             resultOfMethod.Privilege = userHdr.adminLevel == 1
                                 ? (ushort)SupremaDevicePrivilegeEnumeration.Administrator
@@ -2483,9 +2488,9 @@ namespace GuardianCommunication.Hardware.Suprema
                             //		userInfoDto.IsCardAuth = true;
                             //		break;
                             //}
-                            resultOfMethod.FaceDataList.Add(new DtoEmployeeFace
+                            resultOfMethod.FaceDataList.Add(new DtoUserFace
                             {
-                                EmployeeNumber = userHdr.ID,
+                                UserIdOnDevice = userHdr.ID,
                                 FaceIndex = 0,
                                 TemplateData = faceTemplateFst
                             });
@@ -2502,431 +2507,32 @@ namespace GuardianCommunication.Hardware.Suprema
 
         #region Access Control
 
-        public void SendHolidays(List<DtoSupremaSdk1DeviceHolidayGroup> holidayGroups)
-        {
-            if (holidayGroups.IsCollectionNullOrEmpty())
-            {
-                return;
-            }
+        //public void OpenDoorPermanent(DtoDeviceDoor doorInfo)
+        //{
+        //    var result = BSSDK.BS_RelayControlEx(_deviceHandle, doorInfo.RelayDeviceId, doorInfo.DoorSensor, true);
+        //    RaiseErrorIfRequired(result);
+        //}
 
-            var data = Marshal.AllocHGlobal(BSSDK.BS_MAX_HOLIDAY_EX * Marshal.SizeOf(typeof(BSHolidayEx)));
-            try
-            {
-                var holidayEx = new BSHolidayEx[BSSDK.BS_MAX_HOLIDAY_EX];
-                for (var i = 0; i < BSSDK.BS_MAX_HOLIDAY_EX; i++)
-                {
-                    holidayEx[i].name = new byte[32];
-                    holidayEx[i].holiday = new BSHolidayElemEx[32];
-                    for (var k = 0; k < 32; k++)
-                    {
-                        holidayEx[i].holiday[k].reserved = new byte[3];
-                    }
-                    holidayEx[i].reserved = new int[2];
-                }
-
-                var numOfHolidaySchedule = holidayGroups.Count;
-                for (var i = 0; i < holidayGroups.Count && i < BSSDK.BS_MAX_HOLIDAY_EX; i++)
-                {
-                    if (holidayGroups[i].Holidays.IsCollectionNotNullOrEmpty())
-                    {
-                        holidayEx[i].holidayID = holidayGroups[i].GroupNumber;
-                        var name = Encoding.Unicode.GetBytes(holidayGroups[i].GroupName);
-                        Buffer.BlockCopy(name, 0, holidayEx[0].name, 0, name.Length);
-                        holidayEx[i].numOfHoliday = holidayGroups.Count;
-                        for (var j = 0; j < holidayEx[i].numOfHoliday; j++)
-                        {
-                            var holiday = holidayGroups[i].Holidays[j];
-
-                            holidayEx[i].holiday[j].year = (byte)(holiday.HolidayDate.Year - 2000);
-                            holidayEx[i].holiday[j].month = (byte)(holiday.HolidayDate.Month);
-                            holidayEx[i].holiday[j].startDay = (byte)(holiday.HolidayDate.Day);
-                            holidayEx[i].holiday[j].duration = (byte)(holiday.HollidayDuration);
-                            holidayEx[i].holiday[j].flag = (byte)(holiday.IsRepeatYearly ? 1 : 0);
-                        }
-                    }
-                }
-
-                var longPtr = data.ToInt64();
-                foreach (var t in holidayEx)
-                {
-                    var tempPtr = new IntPtr(longPtr);
-                    Marshal.StructureToPtr(t, tempPtr, false);
-                    longPtr += Marshal.SizeOf(typeof(BSHolidayEx));
-                }
-                var result = BSSDK.BS_SetAllHolidayEx(_deviceHandle, numOfHolidaySchedule, data);
-                RaiseErrorIfRequired(result);
-
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(data);
-            }
-
-        }
-
-        public void SetTimezones(List<DtoSupremaSdk1Timezone> timezones)
-        {
-            if (timezones.IsCollectionNullOrEmpty())
-            {
-                return;
-            }
-            var data = Marshal.AllocHGlobal(BSSDK.DF_MAX_TIMESCHEDULE * Marshal.SizeOf(typeof(BSTimeScheduleEx)));
-            try
-            {
-                var timezoneEx = new BSTimeScheduleEx[BSSDK.DF_MAX_TIMESCHEDULE];
-                for (var i = 0; i < BSSDK.DF_MAX_TIMESCHEDULE; i++)
-                {
-                    timezoneEx[i].name = new byte[32];
-                    timezoneEx[i].holiday = new int[2];
-                    timezoneEx[i].timeCode = new BSTimeCodeEx[9];
-                    for (var k = 0; k < 9; k++)
-                    {
-                        timezoneEx[i].timeCode[k].codeElement = new BSTimeCodeElemEx[5];
-                    }
-                    timezoneEx[i].reserved = new int[2];
-                }
-                for (var i = 0; i < timezones.Count; i++)
-                {
-                    timezoneEx[i].scheduleID = timezones[i].TimezoneNumber;
-                    var name = Encoding.Unicode.GetBytes(timezones[i].TimezoneTitle);   // name
-                    Buffer.BlockCopy(name, 0, timezoneEx[0].name, 0, name.Length);
-
-                    if (timezones[i].HolidayGroupNumber1.HasValue)
-                    {
-                        timezoneEx[i].holiday[0] = timezones[i].HolidayGroupNumber1.Value;
-                    }
-                    else
-                    {
-                        timezoneEx[i].holiday[0] = 0;
-                    }
-                    if (timezones[i].HolidayGroupNumber2.HasValue)
-                    {
-                        timezoneEx[i].holiday[1] = timezones[i].HolidayGroupNumber2.Value;
-                    }
-                    else
-                    {
-                        timezoneEx[i].holiday[1] = 0;
-                    }
-                    for (var j = 0; j < 9; j++)
-                    {
-                        timezoneEx[i].timeCode[j].codeElement[0].startTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[0].endTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[1].startTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[1].endTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[2].startTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[2].endTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[3].startTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[3].endTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[4].startTime = 0;
-                        timezoneEx[i].timeCode[j].codeElement[4].endTime = 0;
-                    }
-                    var elementCodesOfCurrentTimezone = timezones[i].Elements.Select(row => row.ElementCode).Distinct().ToList();
-                    foreach (var elementCode in elementCodesOfCurrentTimezone)
-                    {
-                        var timesOfCurrentElement = timezones[i].Elements.Where(row => row.ElementCode == elementCode).OrderBy(row => row.StartTime).ToList();
-                        for (var j = 0; j < timesOfCurrentElement.Count; j++)
-                        {
-                            timezoneEx[i].timeCode[elementCode].codeElement[j].startTime = (ushort)timesOfCurrentElement[j].StartTime;
-                            timezoneEx[i].timeCode[elementCode].codeElement[j].endTime = (ushort)timesOfCurrentElement[j].EndTime;
-                        }
-
-                    }
-                }
-                var longPtr = data.ToInt64();
-                foreach (var t in timezoneEx)
-                {
-                    var tempPtr = new IntPtr(longPtr);
-                    Marshal.StructureToPtr(t, tempPtr, false);
-                    longPtr += Marshal.SizeOf(typeof(BSTimeScheduleEx));
-                }
-
-                var result = BSSDK.BS_SetAllTimeScheduleEx(_deviceHandle, timezones.Count, data);
-                RaiseErrorIfRequired(result);
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(data);
-            }
-        }
-
-        public void SetAccessGroups(List<DtoSupremaSdk1AccessGroup> accessGroups)
-        {
-            if (accessGroups.IsCollectionNullOrEmpty())
-            {
-                return;
-            }
-            var data = Marshal.AllocHGlobal(BSSDK.DF_MAX_ACCESSGROUP * Marshal.SizeOf(typeof(BSAccessGroupEx)));
-            try
-            {
-                var accessGroupEx = new BSAccessGroupEx[BSSDK.DF_MAX_ACCESSGROUP];
-                for (var i = 0; i < BSSDK.DF_MAX_ACCESSGROUP; i++)
-                {
-                    accessGroupEx[i].name = new byte[32];
-                    accessGroupEx[i].readerID = new uint[32];
-                    accessGroupEx[i].scheduleID = new int[32];
-                    accessGroupEx[i].reserved = new int[2];
-                }
-
-                for (var i = 0; i < accessGroups.Count; i++)
-                {
-                    accessGroupEx[i].groupID = accessGroups[i].AccessGroupNumber;
-                    var name = Encoding.Unicode.GetBytes(accessGroups[i].Title);
-                    Buffer.BlockCopy(name, 0, accessGroupEx[i].name, 0, name.Length);
-                    accessGroupEx[i].numOfReader = accessGroups[i].DoorTimezones.Count;
-                    for (var j = 0; j < accessGroups[i].DoorTimezones.Count && j < 32; j++)
-                    {
-                        accessGroupEx[i].readerID[j] = (uint)accessGroups[i].DoorTimezones[j].DeviceDoorId;
-                        accessGroupEx[i].scheduleID[j] = accessGroups[i].DoorTimezones[j].TimezoneNumber;
-                    }
-                }
-
-                var longPtr = data.ToInt64();
-                foreach (var t in accessGroupEx)
-                {
-                    var tempPtr = new IntPtr(longPtr);
-                    Marshal.StructureToPtr(t, tempPtr, false);
-                    longPtr += Marshal.SizeOf(typeof(BSAccessGroupEx));
-                }
-
-                var result = BSSDK.BS_SetAllAccessGroupEx(_deviceHandle, accessGroups.Count, data);
-                RaiseErrorIfRequired(result);
-            }
-            finally
-            {
-                Marshal.FreeHGlobal(data);
-            }
-        }
-
-        public void SetDoorInfo(DtoSupremaSdk1DeviceDoor doorInfo)
-        {
-            switch (ProductCode)
-            {
-                case BSSDK.BS_DEVICE_DSTATION:
-                case BSSDK.BS_DEVICE_FSTATION:
-                case BSSDK.BS_DEVICE_BIOSTATION2:
-                case BSSDK.BS_DEVICE_XSTATION:
-                case BSSDK.BS_DEVICE_BIOSTATION:
-                    {
-                        var data = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(BSDoorConfig)));
-                        try
-                        {
-                            var result = BSSDK.BS_ReadDoorConfig(_deviceHandle, data);
-                            RaiseErrorIfRequired(result);
-                            var doorConfig = (BSDoorConfig)Marshal.PtrToStructure(data, typeof(BSDoorConfig));
-
-                            doorConfig.door[0].relay = doorInfo.Relay;
-                            doorConfig.door[0].useRTE = 0;
-                            doorConfig.door[0].useDoorSensor = 0;
-                            doorConfig.door[0].openEvent = doorInfo.OpenEvent;
-                            doorConfig.door[0].openTime = doorInfo.OpenTime;
-                            doorConfig.door[0].heldOpenTime = doorInfo.HeldOpenTime;
-                            doorConfig.door[0].forcedOpenSchedule = doorInfo.ForcedOpenSchedule;
-                            doorConfig.door[0].forcedCloseSchedule = doorInfo.ForcedCloseSchedule;
-                            doorConfig.door[0].RTEType = doorInfo.RteType;
-                            doorConfig.door[0].sensorType = doorInfo.SensorType;
-                            doorConfig.door[0].reader[0] = (short)doorInfo.Reader1;
-                            doorConfig.door[0].reader[1] = (short)doorInfo.Reader1;
-                            doorConfig.door[0].useRTEEx = doorInfo.UseRteEx ? (byte)1 : (byte)0;
-                            doorConfig.door[0].useSoundForcedOpen = doorInfo.UseSoundForcedOpen ? (byte)1 : (byte)0;
-                            doorConfig.door[0].useSoundHeldOpen = doorInfo.UseSoundHeldOpen ? (byte)1 : (byte)0;
-                            doorConfig.door[0].openOnce = doorInfo.OpenOnce ? (byte)1 : (byte)0;
-                            doorConfig.door[0].RTE = doorInfo.Rte;
-                            doorConfig.door[0].useDoorSensorEx = doorInfo.UseDoorSensorEx ? (byte)1 : (byte)0;
-                            doorConfig.door[0].alarmStatus = doorInfo.AlarmStatus ? (byte)1 : (byte)0;
-                            doorConfig.door[0].reserved2[0] = 0;
-                            doorConfig.door[0].reserved2[1] = 0;
-                            doorConfig.door[0].doorSensor = doorInfo.DoorSensor;
-                            doorConfig.door[0].relayDeviceId = doorInfo.RelayDeviceId;
-                            doorConfig.apbType = 0;
-                            doorConfig.apbResetTime = 0;
-                            switch (DeviceInfo.DoorTypeEnum)
-                            {
-                                case DoorTypeEnumeration.NotSupport:
-                                    doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.NO_DOOR;
-                                    break;
-                                case DoorTypeEnumeration.Standalone:
-                                    doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.ONE_DOOR;
-                                    break;
-                                case DoorTypeEnumeration.TwoDoor:
-                                case DoorTypeEnumeration.ThreeDoor:
-                                    doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.TWO_DOOR;
-                                    break;
-                                default:
-                                    doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.NO_DOOR;
-                                    break;
-                            }
-                            Marshal.StructureToPtr(doorConfig, data, true);
-                            result = BSSDK.BS_WriteDoorConfig(_deviceHandle, data);
-                            RaiseErrorIfRequired(result);
-
-                        }
-                        finally
-                        {
-                            Marshal.FreeHGlobal(data);
-                        }
+        //public void CloseDoorPermanent(DtoDeviceDoor doorInfo)
+        //{
+        //    var result = BSSDK.BS_RelayControlEx(_deviceHandle, doorInfo.RelayDeviceId, doorInfo.DoorSensor, false);
+        //    RaiseErrorIfRequired(result);
+        //}
 
 
-                    }
-                    break;
+        //public void OpenDoor(DtoDeviceDoor doorInfo)
+        //{
+        //    OpenDoorPermanent(doorInfo);
+        //    Thread.Sleep(doorInfo.OpenDoorDelay * 1000);
+        //    CloseDoorPermanent(doorInfo);
+        //}
 
-                case BSSDK.BS_DEVICE_BIOENTRY_PLUS:
-                case BSSDK.BS_DEVICE_BIOENTRY_W:
-                case BSSDK.BS_DEVICE_XPASS:
-                case BSSDK.BS_DEVICE_XPASS_SLIM:
-                case BSSDK.BS_DEVICE_XPASS_SLIM2:
-                    {
-                        var data = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(BEConfigData)));
-                        try
-                        {
-                            var configSize = 0;
-                            var result = BSSDK.BS_ReadConfig(_deviceHandle, BSSDK.BEPLUS_CONFIG, ref configSize, data);
-                            RaiseErrorIfRequired(result);
-                            var configBePlus = (BEConfigData)Marshal.PtrToStructure(data, typeof(BEConfigData));
-
-                            configBePlus.doorConfig.door[0].relay = doorInfo.Relay;
-                            configBePlus.doorConfig.door[0].useRTE = 0;
-                            configBePlus.doorConfig.door[0].useDoorSensor = 0;
-                            configBePlus.doorConfig.door[0].openEvent = doorInfo.OpenEvent;
-                            configBePlus.doorConfig.door[0].openTime = doorInfo.OpenTime;
-                            configBePlus.doorConfig.door[0].heldOpenTime = doorInfo.HeldOpenTime;
-                            configBePlus.doorConfig.door[0].forcedOpenSchedule = doorInfo.ForcedOpenSchedule;
-                            configBePlus.doorConfig.door[0].forcedCloseSchedule = doorInfo.ForcedCloseSchedule;
-                            configBePlus.doorConfig.door[0].RTEType = doorInfo.RteType;
-                            configBePlus.doorConfig.door[0].sensorType = doorInfo.SensorType;
-                            configBePlus.doorConfig.door[0].reader[0] = (short)doorInfo.Reader1;
-                            configBePlus.doorConfig.door[0].reader[1] = (short)doorInfo.Reader2;
-                            configBePlus.doorConfig.door[0].useRTEEx = doorInfo.UseRteEx ? (byte)1 : (byte)0;
-                            configBePlus.doorConfig.door[0].useSoundForcedOpen = doorInfo.UseSoundForcedOpen ? (byte)1 : (byte)0;
-                            configBePlus.doorConfig.door[0].useSoundHeldOpen = doorInfo.UseSoundHeldOpen ? (byte)1 : (byte)0;
-                            configBePlus.doorConfig.door[0].openOnce = doorInfo.OpenOnce ? (byte)1 : (byte)0;
-                            configBePlus.doorConfig.door[0].RTE = doorInfo.Rte;
-                            configBePlus.doorConfig.door[0].useDoorSensorEx = doorInfo.UseDoorSensorEx ? (byte)1 : (byte)0;
-                            configBePlus.doorConfig.door[0].alarmStatus = doorInfo.AlarmStatus ? (byte)1 : (byte)0;
-                            configBePlus.doorConfig.door[0].reserved2[0] = 0;
-                            configBePlus.doorConfig.door[0].reserved2[1] = 0;
-                            configBePlus.doorConfig.door[0].doorSensor = doorInfo.DoorSensor;
-                            configBePlus.doorConfig.door[0].relayDeviceId = doorInfo.RelayDeviceId;
-                            configBePlus.doorConfig.apbType = 0;
-                            configBePlus.doorConfig.apbResetTime = 0;
-                            switch (DeviceInfo.DoorTypeEnum)
-                            {
-                                case DoorTypeEnumeration.NotSupport:
-                                    configBePlus.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.NO_DOOR;
-                                    break;
-                                case DoorTypeEnumeration.Standalone:
-                                    configBePlus.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.ONE_DOOR;
-                                    break;
-                                case DoorTypeEnumeration.TwoDoor:
-                                case DoorTypeEnumeration.ThreeDoor:
-                                    configBePlus.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.TWO_DOOR;
-                                    break;
-                                default:
-                                    configBePlus.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.NO_DOOR;
-                                    break;
-                            }
-                            Marshal.StructureToPtr(configBePlus, data, true);
-                            configSize = Marshal.SizeOf(typeof(BEConfigData));
-                            result = BSSDK.BS_WriteConfig(_deviceHandle, BSSDK.BEPLUS_CONFIG, configSize, data);
-                            RaiseErrorIfRequired(result);
-                        }
-                        finally
-                        {
-                            Marshal.FreeHGlobal(data);
-                        }
-                    }
-                    break;
-
-                case BSSDK.BS_DEVICE_BIOLITE:
-                    {
-                        var data = Marshal.AllocHGlobal(Marshal.SizeOf(typeof(BEConfigDataBLN)));
-                        try
-                        {
-                            var configSize = 0;
-                            var result = BSSDK.BS_ReadConfig(_deviceHandle, BSSDK.BIOLITE_CONFIG, ref configSize, data);
-                            RaiseErrorIfRequired(result);
-                            var configBln = (BEConfigDataBLN)Marshal.PtrToStructure(data, typeof(BEConfigDataBLN));
-
-                            configBln.doorConfig.door[0].relay = doorInfo.Relay;
-                            configBln.doorConfig.door[0].useRTE = 0;
-                            configBln.doorConfig.door[0].useDoorSensor = 0;
-                            configBln.doorConfig.door[0].openEvent = doorInfo.OpenEvent;
-                            configBln.doorConfig.door[0].openTime = doorInfo.OpenTime;
-                            configBln.doorConfig.door[0].heldOpenTime = doorInfo.HeldOpenTime;
-                            configBln.doorConfig.door[0].useSoundHeldOpen = doorInfo.UseSoundHeldOpen ? (byte)1 : (byte)0;
-                            configBln.doorConfig.door[0].useSoundForcedOpen = doorInfo.UseSoundForcedOpen ? (byte)1 : (byte)0;
-                            configBln.doorConfig.door[0].forcedOpenSchedule = doorInfo.ForcedOpenSchedule;
-                            configBln.doorConfig.door[0].forcedCloseSchedule = doorInfo.ForcedCloseSchedule;
-                            configBln.doorConfig.door[0].RTEType = doorInfo.RteType;
-                            configBln.doorConfig.door[0].sensorType = doorInfo.SensorType;
-                            configBln.doorConfig.door[0].reader[0] = (short)doorInfo.Reader1;
-                            configBln.doorConfig.door[0].reader[1] = (short)doorInfo.Reader2;
-                            configBln.doorConfig.door[0].useRTEEx = doorInfo.UseRteEx ? (byte)1 : (byte)0;
-                            configBln.doorConfig.door[0].openOnce = doorInfo.OpenOnce ? (byte)1 : (byte)0;
-                            configBln.doorConfig.door[0].RTE = doorInfo.Rte;
-                            configBln.doorConfig.door[0].useDoorSensorEx = 1;
-                            configBln.doorConfig.door[0].alarmStatus = doorInfo.AlarmStatus ? (byte)1 : (byte)0;
-                            configBln.doorConfig.door[0].reserved2[0] = 0;
-                            configBln.doorConfig.door[0].reserved2[1] = 0;
-                            configBln.doorConfig.door[0].doorSensor = doorInfo.DoorSensor;
-                            configBln.doorConfig.door[0].relayDeviceId = doorInfo.RelayDeviceId;
-                            configBln.doorConfig.apbType = 0;
-                            configBln.doorConfig.apbResetTime = 0;
-                            switch (DeviceInfo.DoorTypeEnum)
-                            {
-                                case DoorTypeEnumeration.NotSupport:
-                                    configBln.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.NO_DOOR;
-                                    break;
-                                case DoorTypeEnumeration.Standalone:
-                                    configBln.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.ONE_DOOR;
-                                    break;
-                                case DoorTypeEnumeration.TwoDoor:
-                                case DoorTypeEnumeration.ThreeDoor:
-                                    configBln.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.TWO_DOOR;
-                                    break;
-                                default:
-                                    configBln.doorConfig.doorMode = (int)BSDoorConfig.BSDOORCONFIG.NO_DOOR;
-                                    break;
-                            }
-                            Marshal.StructureToPtr(configBln, data, true);
-                            configSize = Marshal.SizeOf(typeof(BEConfigDataBLN));
-                            result = BSSDK.BS_WriteConfig(_deviceHandle, BSSDK.BIOLITE_CONFIG, configSize, data);
-                            RaiseErrorIfRequired(result);
-                        }
-                        finally
-                        {
-                            Marshal.FreeHGlobal(data);
-                        }
-                    }
-                    break;
-            }
-        }
-
-        public void OpenDoorPermanent(DtoSupremaSdk1DeviceDoor doorInfo)
-        {
-            var result = BSSDK.BS_RelayControlEx(_deviceHandle, doorInfo.RelayDeviceId, doorInfo.DoorSensor, true);
-            RaiseErrorIfRequired(result);
-        }
-
-        public void CloseDoorPermanent(DtoSupremaSdk1DeviceDoor doorInfo)
-        {
-            var result = BSSDK.BS_RelayControlEx(_deviceHandle, doorInfo.RelayDeviceId, doorInfo.DoorSensor, false);
-            RaiseErrorIfRequired(result);
-        }
-
-
-        public void OpenDoor(DtoSupremaSdk1DeviceDoor doorInfo)
-        {
-            OpenDoorPermanent(doorInfo);
-            Thread.Sleep(doorInfo.OpenDoorDelay * 1000);
-            CloseDoorPermanent(doorInfo);
-        }
-
-        public void OpenDoorWithDelay(DtoSupremaSdk1DeviceDoor doorInfo, int delayInSecond)
-        {
-            OpenDoorPermanent(doorInfo);
-            Thread.Sleep(delayInSecond * 1000);
-            CloseDoorPermanent(doorInfo);
-        }
+        //public void OpenDoorWithDelay(DtoDeviceDoor doorInfo, int delayInSecond)
+        //{
+        //    OpenDoorPermanent(doorInfo);
+        //    Thread.Sleep(delayInSecond * 1000);
+        //    CloseDoorPermanent(doorInfo);
+        //}
 
         #endregion
 

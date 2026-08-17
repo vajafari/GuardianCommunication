@@ -9,6 +9,14 @@ using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Shared.Commands;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Hardware.Suprema
 {
@@ -21,7 +29,7 @@ namespace GuardianCommunication.Hardware.Suprema
         private IntPtr _sdkContext = IntPtr.Zero;
         private SupremaSdk2ServerConfig _config;
 
-        private readonly List<DtoCommunicationDeviceData> _currentDeviceList = new List<DtoCommunicationDeviceData>();
+        private readonly List<DtoDevice> _currentDeviceList = new List<DtoDevice>();
         private readonly ConcurrentDictionary<uint, SupremaSdk2OnDemandAdapter> _connectedDeviceAdapters = new ConcurrentDictionary<uint, SupremaSdk2OnDemandAdapter>();
         private readonly ConcurrentQueue<uint> _disconnectedDevices = new ConcurrentQueue<uint>();
         private Thread _deviceCommandsThread;
@@ -58,7 +66,7 @@ namespace GuardianCommunication.Hardware.Suprema
         public void StartServer(
             SupremaSdk2ServerConfig serverConfig,
             Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> actionToGetCommands
-            , List<DtoCommunicationDeviceData> deviceInfos)
+            , List<DtoDevice> deviceInfos)
         {
             _config = serverConfig;
             _actionToGetCommands = actionToGetCommands;
@@ -70,22 +78,22 @@ namespace GuardianCommunication.Hardware.Suprema
         }
 
 
-        public void SetDeviceList(List<DtoCommunicationDeviceData> deviceInfos)
+        public void SetDeviceList(List<DtoDevice> deviceInfos)
         {
             lock (_currentDeviceList)
             {
                 if (deviceInfos == null)
                 {
-                    deviceInfos = new List<DtoCommunicationDeviceData>();
+                    deviceInfos = new List<DtoDevice>();
                 }
 
-                var forAdd = new List<DtoCommunicationDeviceData>();
-                var forUpdate = new List<DtoCommunicationDeviceData>();
-                var forDelete = new List<DtoCommunicationDeviceData>();
+                var forAdd = new List<DtoDevice>();
+                var forUpdate = new List<DtoDevice>();
+                var forDelete = new List<DtoDevice>();
                 var pushDeviceInfos = deviceInfos.Where
                 (row =>
-                    row.ProducerEnum == ProducerEnumeration.Suprema
-                    && row.SdkVersionEnum == SdkVersionEnumeration.SdkVersion2
+                    row.ProducerNumber == ProducerEnumeration.Suprema
+                    && row.SdkVersion == SdkVersionEnumeration.SdkVersion2
                     && row.ConnectionMode == DeviceConnectionModeEnumeration.Push).ToList();
                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.ServerSetDeviceList))
                 {
@@ -164,7 +172,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         public SupremaSdk2OnDemandAdapter GetDeviceAdapter(int deviceNumber)
         {
-            DtoCommunicationDeviceData device;
+            DtoDevice device;
             lock (_currentDeviceList)
             {
                 device = _currentDeviceList.FirstOrDefault(d => d.DeviceNumber == deviceNumber);
@@ -180,7 +188,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
         #region Private Methods
 
-        private void DelayedStartServer(List<DtoCommunicationDeviceData> deviceInfos)
+        private void DelayedStartServer(List<DtoDevice> deviceInfos)
         {
 
             SetDeviceList(deviceInfos);
@@ -316,7 +324,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     });
                 }
 
-                DtoCommunicationDeviceData device;
+                DtoDevice device;
                 lock (_currentDeviceList)
                 {
                     device = _currentDeviceList.FirstOrDefault(row => row.SerialNumber == deviceId.ToString());
@@ -358,7 +366,7 @@ namespace GuardianCommunication.Hardware.Suprema
                 {
                     new DtoDeviceConnectionStatus
                     {
-                        DeviceNumber = device.DeviceNumber,
+                        DeviceId = device.Id,
                         IsConnected = true
                     }
                 });
@@ -386,7 +394,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     });
                 }
 
-                DtoCommunicationDeviceData device;
+                DtoDevice device;
                 lock (_currentDeviceList)
                 {
                     device = _currentDeviceList.FirstOrDefault(row => row.SerialNumber == deviceId.ToString());
@@ -407,7 +415,7 @@ namespace GuardianCommunication.Hardware.Suprema
                 {
                     new DtoDeviceConnectionStatus
                     {
-                        DeviceNumber = device.DeviceNumber,
+                        DeviceId = device.Id,
                         IsConnected = false
                     }
                 });
@@ -478,26 +486,26 @@ namespace GuardianCommunication.Hardware.Suprema
                                 {
                                     case DeviceCommandTypeEnumeration.SetUserInfo:
                                         deviceAdapter.SetUserInfo(
-                                            ObjectHelper.DeserializeAsJson<DtoEmployeeDeviceRelatedData>(
+                                            ObjectHelper.DeserializeAsJson<DtoUserDeviceRelatedData>(
                                                 command.CommandContent));
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.EnrollUserWithTemplate:
                                         deviceAdapter.SetUserInfoWithTemplate(
-                                            ObjectHelper.DeserializeAsJson<DtoEmployeeDeviceRelatedData>(
+                                            ObjectHelper.DeserializeAsJson<DtoUserDeviceRelatedData>(
                                                 command.CommandContent));
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.DeleteUser:
@@ -508,7 +516,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ReadUser:
@@ -524,11 +532,11 @@ namespace GuardianCommunication.Hardware.Suprema
                                                 {
                                                     CommandResponseResult = "SUCCESS",
                                                     CommandResponseTime = DateTime.Now,
-                                                    Id = command.Id
+                                                    NumericId = command.NumericId
                                                 });
                                             HardwareEventPublisher.Instance.PublishNewUserEnrolled(user,
                                                 deviceAdapter.DeviceInfo.DeviceNumber,
-                                                DtoEmployeeEnrolledSetting.GetAllSettingInstance());
+                                                DtoUserEnrolledSetting.GetAllSettingInstance());
                                         }
                                         else
                                         {
@@ -537,7 +545,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                                 {
                                                     CommandResponseResult = ServiceConstants.UserNotFoundCommandText,
                                                     CommandResponseTime = DateTime.Now,
-                                                    Id = command.Id
+                                                    NumericId = command.NumericId
                                                 });
                                         }
 
@@ -549,7 +557,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ClearData:
@@ -559,7 +567,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.Reboot:
@@ -569,13 +577,14 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ReadAttendance:
                                         {
-                                            if (!deviceAdapter.DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration
-                                                    .DontSaveAttendance))
+
+                                            if (deviceAdapter.DeviceInfo.DeviceSettings == null ||
+                                                !deviceAdapter.DeviceInfo.DeviceSettings.DontSaveAttendance)
                                             {
                                                 var attendances = deviceAdapter.GetData
                                                 ((uint)ObjectHelper
@@ -594,14 +603,14 @@ namespace GuardianCommunication.Hardware.Suprema
                                                 {
                                                     CommandResponseResult = "SUCCESS",
                                                     CommandResponseTime = DateTime.Now,
-                                                    Id = command.Id
+                                                    NumericId = command.NumericId
                                                 });
                                         }
                                         break;
                                     case DeviceCommandTypeEnumeration.ReadoutAttendance:
                                         {
-                                            if (!deviceAdapter.DeviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration
-                                                    .DontSaveAttendance))
+                                            if (deviceAdapter.DeviceInfo.DeviceSettings == null ||
+                                                !deviceAdapter.DeviceInfo.DeviceSettings.DontSaveAttendance)
                                             {
                                                 var dateInterval =
                                                     ObjectHelper.DeserializeAsJson<CommandStartAndEndDate>(
@@ -622,7 +631,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                                 {
                                                     CommandResponseResult = "SUCCESS",
                                                     CommandResponseTime = DateTime.Now,
-                                                    Id = command.Id
+                                                    NumericId = command.NumericId
                                                 });
                                         }
                                         break;
@@ -635,7 +644,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.FaceCount:
@@ -647,7 +656,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.FingerCount:
@@ -659,7 +668,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.UserCount:
@@ -671,7 +680,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.SetDateAndTime:
@@ -681,12 +690,12 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFace:
                                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
-                                            { command.Id });
+                                            { command.NumericId });
                                         var face = deviceAdapter.ScanFace(ObjectHelper
                                             .DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                         HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face,
@@ -696,12 +705,12 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFinger:
                                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
-                                            { command.Id });
+                                            { command.NumericId });
                                         var scanFingerParams =
                                             ObjectHelper.DeserializeAsJson<CommandScanFinger>(
                                                 command.CommandContent);
@@ -714,12 +723,12 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanCard:
                                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
-                                            { command.Id });
+                                            { command.NumericId });
                                         var scanCardParams =
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
                                         var cardNumber = deviceAdapter.ScanCard();
@@ -731,63 +740,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = "SUCCESS",
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
-                                            });
-                                        break;
-                                    case DeviceCommandTypeEnumeration.SupremaSdk2HolidayGroup:
-                                        deviceAdapter.SendHolidays(ObjectHelper
-                                            .DeserializeAsJson<List<DtoSupremaSdk2DeviceHolidayGroup>>(command.CommandContent));
-                                        HardwareEventPublisher.Instance.PublishCommandResponseReceived(
-                                            new DtoDeviceCommandProcessingResult
-                                            {
-                                                CommandResponseResult = "SUCCESS",
-                                                CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
-                                            });
-                                        break;
-                                    case DeviceCommandTypeEnumeration.SupremaSdk2AccessSchedule:
-                                        deviceAdapter.SetAccessSchedules(ObjectHelper
-                                            .DeserializeAsJson<List<DtoSupremaSdk2AccessSchedule>>(command.CommandContent));
-                                        HardwareEventPublisher.Instance.PublishCommandResponseReceived(
-                                            new DtoDeviceCommandProcessingResult
-                                            {
-                                                CommandResponseResult = "SUCCESS",
-                                                CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
-                                            });
-                                        break;
-                                    case DeviceCommandTypeEnumeration.SupremaSdk2AccessLevel:
-                                        deviceAdapter.SetAccessLevels(ObjectHelper
-                                            .DeserializeAsJson<List<DtoSupremaSdk2AccessLevel>>(command.CommandContent));
-                                        HardwareEventPublisher.Instance.PublishCommandResponseReceived(
-                                            new DtoDeviceCommandProcessingResult
-                                            {
-                                                CommandResponseResult = "SUCCESS",
-                                                CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
-                                            });
-                                        break;
-                                    case DeviceCommandTypeEnumeration.SupremaSdk2AccessGroup:
-                                        deviceAdapter.SetAccessGroups(ObjectHelper
-                                            .DeserializeAsJson<List<DtoSupremaSdk2AccessGroup>>(command.CommandContent));
-                                        HardwareEventPublisher.Instance.PublishCommandResponseReceived(
-                                            new DtoDeviceCommandProcessingResult
-                                            {
-                                                CommandResponseResult = "SUCCESS",
-                                                CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
-                                            });
-                                        break;
-                                    case DeviceCommandTypeEnumeration.SupremaSdk2DoorInfo:
-                                        var doorInfo = ObjectHelper
-                                            .DeserializeAsJson<DtoSupremaSdk2DeviceDoor>(command.CommandContent);
-                                        deviceAdapter.SetDoorInfo(new List<DtoSupremaSdk2DeviceDoor> { doorInfo });
-                                        HardwareEventPublisher.Instance.PublishCommandResponseReceived(
-                                            new DtoDeviceCommandProcessingResult
-                                            {
-                                                CommandResponseResult = "SUCCESS",
-                                                CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                     default:
@@ -796,7 +749,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             {
                                                 CommandResponseResult = ServiceConstants.NotSupportedCommandText,
                                                 CommandResponseTime = DateTime.Now,
-                                                Id = command.Id
+                                                NumericId = command.NumericId
                                             });
                                         break;
                                 }
@@ -848,17 +801,17 @@ namespace GuardianCommunication.Hardware.Suprema
                                    )
                                 {
                                     HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
-                                        { command.Id });
+                                        { command.NumericId });
                                 }
                             }
                             else
                             {
                                 // No error detail: consume the command (with a recorded description) so it isn't
                                 // re-fetched and re-executed on every loop iteration (stuck command).
-                                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.Id });
+                                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
                                 HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription
                                 {
-                                    Id = command.Id,
+                                    NumericId = command.NumericId,
                                     Description = "Command failed without error detail",
                                 });
                             }
@@ -933,14 +886,14 @@ namespace GuardianCommunication.Hardware.Suprema
                     var eventType = SupremaV2Utility.GetEventType(eventLog.code);
                     if (eventType == SupremaSdk2EventTypeEnumeration.VerifySuccess)
                     {
-                        if (deviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                        if (deviceInfo.DeviceSettings != null &&
+                            deviceInfo.DeviceSettings.DontSaveAttendance)
                         {
                             return;
                         }
                         var att = SupremaV2Utility.ConvertBs2EventToDtoAttendance(
                             eventLog
-                            , deviceInfo.DeviceNumber
-                            , deviceInfo.TimeSetting
+                            , deviceInfo
                             , DeviceAttendanceIoRetrieveTypeEnumeration.Push);
                         if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.ServerRealTimeAttendance))
                         {
@@ -962,12 +915,13 @@ namespace GuardianCommunication.Hardware.Suprema
                         }
                     }
 
-                    if (deviceInfo.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveEvents))
+                    if (deviceInfo.DeviceSettings != null &&
+                        deviceInfo.DeviceSettings.DontSaveEvents)
                     {
                         return;
                     }
                     var operationLog = SupremaV2Utility.ConvertBs2EventToDtoDeviceEventLog(
-                        eventLog, deviceInfo.DeviceNumber, deviceInfo.TimeSetting);
+                        eventLog, deviceInfo);
                     if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.ServerRealTimeLog))
                     {
                         LoggingSystem.LogInfo("Suprema 2 Server realtime log", operationLog);

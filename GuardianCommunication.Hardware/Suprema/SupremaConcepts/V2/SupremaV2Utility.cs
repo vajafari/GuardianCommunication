@@ -6,6 +6,10 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using GuardianCommunication.Hardware.Shared.Helpers;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2
 {
@@ -40,34 +44,33 @@ namespace GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2
             return digits.TryConvertToInt64(0);
         }
 
-        public static DtoAttendance ConvertBs2EventToDtoAttendance(BS2Event record, int deviceNumber, DtoCommunicationDeviceTimeSettings timeSetting, DeviceAttendanceIoRetrieveTypeEnumeration retrieveType)
+        public static DtoAttendance ConvertBs2EventToDtoAttendance(BS2Event record, DtoDevice deviceInfo, DeviceAttendanceIoRetrieveTypeEnumeration retrieveType)
         {
             return new DtoAttendance
             {
-                Id = (int)record.id,
-                EmployeeNumber = Encoding.ASCII.GetString(record.userID).ToInt64(),
-                AttendanceDateTime = DeviceSharedHelperMethods.ConvertUnixTimestampToServerLocalTime(record.dateTime, timeSetting),
-                DeviceNumber = deviceNumber,
+                LogIdOnDevice = (int)record.id,
+                UserIdOnDevice = Encoding.ASCII.GetString(record.userID).ToInt64(),
+                AttendanceDateTime = DateTimeHelper.ConvertUnixTimestampToUtc(record.dateTime),
+                DeviceId = deviceInfo.Id,
                 CameraId = null,
                 VerificationStyle = (int)GetVerificationStyle(record.code),
                 AttendanceSource = AttendanceSourceEnumeration.Device,
                 DeviceAttendanceIoRetrieveType = retrieveType,
-                IsInvalid = false,
-                IsSent = false,
+                IsSentToGuardian = false,
                 StatusCode = record.param,
                 RfCardNumber = null,
             };
         }
 
-        public static DtoDeviceEventLog ConvertBs2EventToDtoDeviceEventLog(BS2Event record, int deviceNumber, DtoCommunicationDeviceTimeSettings timeSetting)
+        public static DtoDeviceEventLog ConvertBs2EventToDtoDeviceEventLog(BS2Event record, DtoDevice deviceInfo)
         {
             //Convert.ToBoolean(eventLog.param) ? "Device" : "Server"
             return new DtoDeviceEventLog
             {
                 Id = (int)record.id,
-                EmployeeNumber = GetUserIdOrDefault(record.userID),
-                EventDateTime = DeviceSharedHelperMethods.ConvertUnixTimestampToServerLocalTime(record.dateTime, timeSetting),
-                DeviceNumber = deviceNumber,
+                UserIdOnDevice = GetUserIdOrDefault(record.userID),
+                EventDateTime = DateTimeHelper.ConvertUnixTimestampToUtc(record.dateTime),
+                DeviceId = deviceInfo.DeviceTypeId,
                 EventCode = record.code,
                 SdkVersion = SdkVersionEnumeration.SdkVersion2,
                 IsFromDevice = Convert.ToBoolean(record.param),

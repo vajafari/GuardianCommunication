@@ -192,6 +192,7 @@
     <Compile Include="Definition\GuardianControllerWiegandFormatEnumeration.cs" />
     <Compile Include="Definition\AttendanceVerificationStyleEnumeration.cs" />
     <Compile Include="Definition\LogLevelGuardianControllerEnumeration.cs" />
+    <Compile Include="Dto\DtoDeviceStatistics.cs" />
     <Compile Include="Dto\DtoDeviceDoor.cs" />
     <Compile Include="Dto\DtoDeviceDoorBase.cs" />
     <Compile Include="Dto\DtoDeviceSettings.cs" />

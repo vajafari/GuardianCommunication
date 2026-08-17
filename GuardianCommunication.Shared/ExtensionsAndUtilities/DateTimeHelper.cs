@@ -421,32 +421,18 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
             Second = 6,
         }
 
-        public static long ToEpochMillisecondsTime(this DateTime date)
-        {
-            return new DateTimeOffset(date).ToUnixTimeMilliseconds();
-        }
+        private static readonly DateTime _unixBaseDate =
+            new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-        public static long ToEpochSecondsTime(this DateTime date)
-        {
-            return new DateTimeOffset(date).ToUnixTimeSeconds();
-        }
+        // دریافت از دستگاه → مستقیم UTC، بدون هیچ آفستی
+        public static DateTime ConvertUnixTimestampToUtc(uint timestamp)
+            => _unixBaseDate.AddSeconds(timestamp);
 
-        public static DateTime ToDateTimeFromEpochMillisecondTime(this long epochMilliseconds, bool toLocalTime)
+        // ارسال به دستگاه → از UTC مستقیم به timestamp
+        public static uint ConvertUtcToUnixTimestamp(DateTime utcTime)
         {
-            if (toLocalTime)
-            {
-                return DateTimeOffset.FromUnixTimeMilliseconds(epochMilliseconds).LocalDateTime;
-            }
-            return DateTimeOffset.FromUnixTimeMilliseconds(epochMilliseconds).UtcDateTime;
-        }
-
-        public static DateTime ToDateTimeFromEpochSecondTime(this long epochSeconds, bool toLocalTime)
-        {
-            if (toLocalTime)
-            {
-                return DateTimeOffset.FromUnixTimeSeconds(epochSeconds).LocalDateTime;
-            }
-            return DateTimeOffset.FromUnixTimeSeconds(epochSeconds).UtcDateTime;
+            var asUtc = DateTime.SpecifyKind(utcTime, DateTimeKind.Utc);
+            return (uint)Math.Floor((asUtc - _unixBaseDate).TotalSeconds);
         }
 
         #endregion

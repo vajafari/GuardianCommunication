@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Text;
-using AccessControl.TimeHandling;
 using GuardianCommunication.Data.Logger;
-using GuardianCommunication.Hardware.PadisController.Definition;
-using GuardianCommunication.Hardware.Pw.PwConcepts;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V1;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2;
 using GuardianCommunication.Hardware.Timy.TimyConcepts;
-using GuardianCommunication.Hardware.Zk;
 using GuardianCommunication.Hardware.Zk.ZkConcepts;
 using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.Dto;
@@ -31,12 +27,12 @@ namespace GuardianCommunication.Hardware.Shared.Helpers
             return Encoding.UTF8.GetString(val);
         }
 
-        public static double ConvertToTimestamp(this DateTime date)
-        {
-            var origin = new DateTime(1970, 1, 1, 0, 0, 0, 0);
-            var diff = date - origin;
-            return Math.Floor(diff.TotalSeconds);
-        }
+        //public static double ConvertToTimestamp(this DateTime date)
+        //{
+        //    var origin = new DateTime(1970, 1, 1, 0, 0, 0, 0);
+        //    var diff = date - origin;
+        //    return Math.Floor(diff.TotalSeconds);
+        //}
 
         public static OperationResultEnumeration MapToOperationResult(int result, DtoDevice deviceInfo)
         {
@@ -1429,46 +1425,6 @@ namespace GuardianCommunication.Hardware.Shared.Helpers
             return endDate ?? DateTime.Now.AddYears(20);
         }
 
-
-
-        private static DateTime _unixBaseDate = new DateTime
-            (1970, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc);
-
-        public static DateTime ConvertUnixTimestampToServerLocalTime
-            (
-                uint timestamp,
-                DtoCommunicationDeviceTimeSettings timeSetting
-            )
-        {
-            if (timeSetting == null)
-            {
-                // No timezone/DST settings available: return the UTC-based time without adjustments
-                // instead of throwing an NRE (which would drop the attendance record).
-                return _unixBaseDate.AddSeconds(timestamp);
-            }
-            var result = _unixBaseDate.AddSeconds(timestamp).AddSeconds
-                (DateTimeHelper.ConvertToTimeZoneTotalSecond(timeSetting.TimeZone));
-            if (timeSetting.IsDaylightActive)
-            {
-                if (result >= timeSetting.CurrentYearDaylightStart && result <= timeSetting.CurrentYearDaylightEnd)
-                {
-                    result = result.AddSeconds(timeSetting.DaylightChangeTimeInSeconds);
-                }
-            }
-            return result;
-        }
-
-        public static double ConvertToUnixTimestamp(DateTime date)
-        {
-            var diff = date.ToUniversalTime() - _unixBaseDate.ToUniversalTime();
-            return Math.Floor(diff.TotalSeconds);
-        }
-        
-        public static double ConvertToUnixTimestampAndConsiderDateAsUtc(DateTime date)
-        {
-            var currDate = new DateTime(date.Year, date.Month, date.Day, date.Hour, date.Minute, date.Second, DateTimeKind.Utc);
-            return currDate.Subtract(_unixBaseDate).TotalSeconds;
-        }
 
         private static readonly DeviceTimeService TimeService = new DeviceTimeService();
 

@@ -1,5 +1,4 @@
-﻿using AccessControl.TimeHandling;
-using GuardianCommunication.Data.Logger;
+﻿using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.Dto;
@@ -15,6 +14,7 @@ using System.Globalization;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
 
 namespace GuardianCommunication.Hardware.Timy

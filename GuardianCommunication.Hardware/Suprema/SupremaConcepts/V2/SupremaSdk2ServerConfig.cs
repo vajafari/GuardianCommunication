@@ -1,4 +1,6 @@
-﻿namespace GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2
+﻿using GuardianCommunication.Shared.Dto;
+
+namespace GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2
 {
     public class SupremaSdk2ServerConfig
     {

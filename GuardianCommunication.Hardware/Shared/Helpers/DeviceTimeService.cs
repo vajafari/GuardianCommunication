@@ -16,7 +16,7 @@
 using System;
 using NodaTime;
 
-namespace AccessControl.TimeHandling
+namespace GuardianCommunication.Hardware.Shared.Helpers
 {
     /// <summary>
     /// حالتِ برخورد با ساعت‌های نامعتبر/مبهمِ DST هنگام تبدیلِ زمانِ تردد به UTC.
