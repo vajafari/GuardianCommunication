@@ -460,11 +460,11 @@ namespace GuardianCommunication.Data.Repository
         private static DynamicParameters GetInsertParameters(DtoDeviceCommand entity)
         {
             var parameters = new DynamicParameters(entity);
-            parameters.Add(nameof(entity.CommitTime), entity.CommitTime.ToUtc());
-            parameters.Add(nameof(entity.SendTime), entity.SendTime.ToUtc());
-            parameters.Add(nameof(entity.ResponseTime), entity.ResponseTime.ToUtc());
-            parameters.Add(nameof(entity.Deadline), entity.Deadline.ToUtc());
-            parameters.Add(nameof(entity.VisiblilityTime), entity.VisiblilityTime.ToUtc());
+            parameters.Add(nameof(entity.CommitTime), entity.CommitTime.ToUniversalTime());
+            parameters.Add(nameof(entity.SendTime), entity.SendTime?.ToUniversalTime());
+            parameters.Add(nameof(entity.ResponseTime), entity.ResponseTime?.ToUniversalTime());
+            parameters.Add(nameof(entity.Deadline), entity.Deadline?.ToUniversalTime());
+            parameters.Add(nameof(entity.VisiblilityTime), entity.VisiblilityTime?.ToUniversalTime());
             return parameters;
         }
 
@@ -473,10 +473,10 @@ namespace GuardianCommunication.Data.Repository
             var parameters = new DynamicParameters(filter);
             if (filter != null)
             {
-                parameters.Add(nameof(filter.CommitTimeFrom), filter.CommitTimeFrom.ToUtc());
-                parameters.Add(nameof(filter.CommitTimeTo), filter.CommitTimeTo.ToUtc());
-                parameters.Add(nameof(filter.VisiblilityTimeFrom), filter.VisiblilityTimeFrom.ToUtc());
-                parameters.Add(nameof(filter.VisiblilityTimeTo), filter.VisiblilityTimeTo.ToUtc());
+                parameters.Add(nameof(filter.CommitTimeFrom), filter.CommitTimeFrom?.ToUniversalTime());
+                parameters.Add(nameof(filter.CommitTimeTo), filter.CommitTimeTo?.ToUniversalTime());
+                parameters.Add(nameof(filter.VisiblilityTimeFrom), filter.VisiblilityTimeFrom?.ToUniversalTime());
+                parameters.Add(nameof(filter.VisiblilityTimeTo), filter.VisiblilityTimeTo?.ToUniversalTime());
             }
             return parameters;
         }
@@ -627,7 +627,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     connection.Execute(SetResponseWithModeCommand, new
                     {
-                        ResponseTime = commandResult.CommandResponseTime.ToUtc(),
+                        ResponseTime = commandResult.CommandResponseTime.ToUniversalTime(),
                         ResponseValue = commandResult.CommandResponseResult,
                         commandResult.NumericId,
                         commandResult.Mode,
@@ -637,7 +637,7 @@ namespace GuardianCommunication.Data.Repository
                 {
                     connection.Execute(SetResponseCommand, new
                     {
-                        ResponseTime = commandResult.CommandResponseTime.ToUtc(),
+                        ResponseTime = commandResult.CommandResponseTime.ToUniversalTime(),
                         ResponseValue = commandResult.CommandResponseResult,
                         commandResult.NumericId,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);

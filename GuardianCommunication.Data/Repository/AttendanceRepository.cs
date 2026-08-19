@@ -368,7 +368,7 @@ namespace GuardianCommunication.Data.Repository
         private static DynamicParameters GetInsertParameters(DtoAttendance entity)
         {
             var parameters = new DynamicParameters(entity);
-            parameters.Add(nameof(entity.AttendanceDateTime), entity.AttendanceDateTime.ToUtc());
+            parameters.Add(nameof(entity.AttendanceDateTime), entity.AttendanceDateTime.ToUniversalTime());
             return parameters;
         }
 
@@ -510,7 +510,7 @@ namespace GuardianCommunication.Data.Repository
 
         public bool CheckExistence(long employeeNumber, DateTime attendanceDate, List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings)
         {
-            attendanceDate = attendanceDate.ToUtc();
+            attendanceDate = attendanceDate.ToUniversalTime();
 
             var conditions = new List<string>();
             var parameters = new DynamicParameters();
@@ -582,8 +582,8 @@ namespace GuardianCommunication.Data.Repository
 
                 var startDateParameterName = $"CheckExistenceStartDate{i}";
                 var endDateParameterName = $"CheckExistenceEndDate{i}";
-                parameters.Add(startDateParameterName, entity.AttendanceDateTime.ToUtc().AddMinutes(setting.Interval * -1));
-                parameters.Add(endDateParameterName, entity.AttendanceDateTime.ToUtc().AddMinutes(setting.Interval));
+                parameters.Add(startDateParameterName, entity.AttendanceDateTime.ToUniversalTime().AddMinutes(setting.Interval * -1));
+                parameters.Add(endDateParameterName, entity.AttendanceDateTime.ToUniversalTime().AddMinutes(setting.Interval));
 
                 conditions.Add($@" (
                                         att.[AttendanceDateTime] >= @{startDateParameterName}

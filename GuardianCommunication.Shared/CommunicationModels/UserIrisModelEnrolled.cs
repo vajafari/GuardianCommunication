@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace GuardianCommunication.Shared.CommunicationModels
 {
     [DataContract]
-    public class IrisModelEnrolled
+    public class UserIrisModelEnrolled
     {
         [DataMember]
         public UserIrisModel IrisInfo { get; set; }

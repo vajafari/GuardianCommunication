@@ -5,6 +5,10 @@ using System.Linq.Expressions;
 using GuardianCommunication.Business.Cache;
 using GuardianCommunication.Data.Repository;
 using GuardianCommunication.ExternalServices.Hooks;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.SearchDataWrapper;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -15,89 +19,43 @@ namespace GuardianCommunication.Business.Component
             : base(sharedRepository)
         { }
 
-        #region HookSystem
+        #region HookDefinition
 
 
-        public List<DtoHookSystem> SearchHookSystem(PagingData<HookSystemFilter, HookSystemSortEnumeration> searchInfo, bool attachDetail)
+        public List<DtoHookDefinition> SearchHookDefinition(PagingData<HookDefinitionFilter, HookDefinitionSortEnumeration> searchInfo, bool attachDetail)
         {
-            var result = RepositoryFactory.GetHookSystemRepository().Search(searchInfo);
-            if (result.IsCollectionNotNullOrEmpty() && attachDetail)
-            {
-                var details = SearchHookSystemDetail(new PagingData<HookSystemDetailFilter, HookSystemDetailSortEnumeration>
-                {
-                    Filter = new HookSystemDetailFilter
-                    {
-                        HookSystemIds = result.Select(row => row.Id).ToList()
-                    }
-                });
-                foreach (var item in result)
-                {
-                    item.Details = details.Where(row => row.HookSystemId == item.Id).ToList();
-                }
-            }
-            return result;
+            return RepositoryFactory.GetHookDefinitionRepository().Search(searchInfo);
         }
 
         #region Internal methods
 
 
-        internal List<DtoHookSystem> SearchHookSystemCache(Expression<Func<DtoHookSystem, bool>> expression)
+        internal List<DtoHookDefinition> GetHookDefinitionCache()
         {
-            return CacheWrapper.Instance.HookSystemCacheManager.Filter(expression.Compile()).ToList();
+            return GuardianCommunicationInMemoryCacheWrapper.Instance.GetHookDefinitions();
         }
 
-        internal void UpdateHookSystem(DtoHookSystem entity)
-        {
-            RepositoryFactory.GetHookSystemRepository().Update(entity);
-            ResetHookSystemCache(new List<int> { entity.Id });
-        }
-
-        #endregion
-
-
-        #region Private method
-
-
-        private static void ResetHookSystemCache(List<int> ids)
-        {
-            CacheWrapper.Instance.ResetHookSystemCache(ids);
-        }
-
-
-        #endregion
-
-        #endregion
-
-
-        #region HookSystemDetail
-
-
-        public List<DtoHookSystemDetail> SearchHookSystemDetail(PagingData<HookSystemDetailFilter, HookSystemDetailSortEnumeration> searchInfo)
-        {
-            return RepositoryFactory.GetHookSystemDetailRepository().Search(searchInfo);
-        }
 
         #endregion
 
 
         #region Hook actions
 
-        internal dynamic CallHookApi<T>(DtoHookSystem system, DtoHookSystemDetail detail, T model)
+        internal dynamic CallHookApi<T>(DtoHookDefinition hookDefinitions, T model)
         {
             var hookingServiceGeneral = new HookingService();
             return hookingServiceGeneral.CallHook(new HookSystemModel
             {
-                AuthorizationType = system.AuthorizationType,
-                HeaderTemplate = detail.HeaderTemplate,
-                BodyTemplate = detail.BodyTemplate,
-                QueryStringTemplate = detail.QueryStringTemplate,
-                EndPointUrl = detail.EndPointUrl,
-                HttpMethod = detail.HttpMethod,
-                RequestTimeout = TimeSpan.FromSeconds(detail.RequestTimeoutInSeconds),
-                AuthorizationBearerToken = system.AuthorizationToken,
-                AuthorizationUsername = system.AuthorizationUsername,
-                AuthorizationPassword = system.AuthorizationPassword,
-                DateFormat = detail.DateFormat,
+                AuthorizationType = hookDefinitions.AuthorizationType,
+                HeaderTemplate = hookDefinitions.HeaderTemplate,
+                BodyTemplate = hookDefinitions.BodyTemplate,
+                QueryStringTemplate = hookDefinitions.QueryStringTemplate,
+                EndPointUrl = hookDefinitions.EndPointUrl,
+                HttpMethod = hookDefinitions.HttpMethod,
+                RequestTimeout = TimeSpan.FromSeconds(hookDefinitions.RequestTimeoutInSeconds),
+                AuthorizationUsername = hookDefinitions.AuthorizationPassword,
+                AuthorizationPassword = hookDefinitions.AuthorizationPassword,
+                DateFormat = hookDefinitions.DateFormat,
 
             }, model);
         }

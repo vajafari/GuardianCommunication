@@ -1,14 +1,15 @@
-﻿using System.Runtime.Serialization;
+﻿using System;
+using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-    public class PalmModelEnrolled
+    public class UserPalmModelEnrolled
     {
 		[DataMember]
 	    public UserPalmModel PalmInfo { get; set; }
 
 	    [DataMember]
-	    public int DeviceNumber { get; set; }
+	    public Guid DeviceId { get; set; }
     }
 }

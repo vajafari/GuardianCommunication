@@ -4,7 +4,7 @@ using System.Runtime.Serialization;
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-    public class CardEnrolledModel
+    public class UserCardEnrolledModel
     {
 		[DataMember]
 	    public string Card { get; set; }

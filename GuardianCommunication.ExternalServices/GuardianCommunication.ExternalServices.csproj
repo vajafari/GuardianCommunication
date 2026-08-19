@@ -133,7 +133,7 @@
   <ItemGroup>
     <Compile Include="Hooks\HookingService.cs" />
     <Compile Include="Hooks\HookSystemModel.cs" />
-    <Compile Include="KarnamaApi\PadisApiConfig.cs" />
+    <Compile Include="KarnamaApi\GuardianApiConfig.cs" />
     <Compile Include="Shared\RestApiDigestAuthorizationData.cs" />
     <Compile Include="Shared\RestApiKeyHeaderAuthorizationData.cs" />
     <Compile Include="Shared\RestApiKeyQueryStringAuthorizationData.cs" />

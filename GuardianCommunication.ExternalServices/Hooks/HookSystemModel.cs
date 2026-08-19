@@ -1,4 +1,6 @@
-﻿using System;
+﻿using GuardianCommunication.Shared.Definition;
+using RestSharp;
+using System;
 
 namespace GuardianCommunication.ExternalServices.Hooks
 {
@@ -12,7 +14,7 @@ namespace GuardianCommunication.ExternalServices.Hooks
         public string HeaderTemplate { get; set; }
         public string BodyTemplate { get; set; }
 
-        public HttpMethodEnumeration HttpMethod { get; set; }
+        public Method HttpMethod { get; set; }
 
         public AuthorizationTypeEnumeration AuthorizationType { get; set; }
 
@@ -22,8 +24,6 @@ namespace GuardianCommunication.ExternalServices.Hooks
 
         public string AuthorizationPassword { get; set; }
         
-        public string AuthorizationBearerToken { get; set; }
-
         public TimeSpan? RequestTimeout { get; set; }
 
     }

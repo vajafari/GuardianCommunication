@@ -1,9 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using GuardianCommunication.Business.Cache;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
 using GuardianCommunication.ExternalServices.KarnamaApi;
+using GuardianCommunication.Shared;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -341,11 +349,6 @@ namespace GuardianCommunication.Business.Component
                     result.MaxRetryForUserCommand = configCache.TimyMaxRetryForUserCommand;
                     result.WaitBetweenCommandSendInMilliseconds = configCache.TimyWaitBetweenCommandSendInMilliseconds;
                     break;
-                case ProducerEnumeration.ProcessingWorld:
-                    result.MaxRetryForOtherCommand = configCache.MaxRetryForPwOtherCommands;
-                    result.MaxRetryForUserCommand = configCache.MaxRetryForPwUserCommands;
-                    result.WaitBetweenCommandSendInMilliseconds = configCache.PwWaitInCommandLoopInMilliseconds;
-                    break;
                 case ProducerEnumeration.Suprema:
                     switch (sdkVersion)
                     {
@@ -370,23 +373,12 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public DtoSystemConfigCameraCommandSetting GetCameraSettingFromCache()
+        public GuardianApiConfig GetGuardianApiConfig()
         {
             var configCache = GetSystemConfigCache();
-            return new DtoSystemConfigCameraCommandSetting
-            {
-                MaxRetryForOtherCommand = configCache.FaceDetectionCameraMaxRetryForOtherCommand,
-                MaxRetryForUserCommand = configCache.FaceDetectionCameraMaxRetryForUserCommand,
-            };
-        }
-
-        public PadisApiConfig GetPadisApiConfig()
-        {
-            var configCache = GetSystemConfigCache();
-            var result = new PadisApiConfig
+            var result = new GuardianApiConfig
             {
                 BaseUri = configCache.KarnamaServiceUrl,
-                BearerToken = configCache.KarnamaAuthorizationToken,
                 Password = configCache.KarnamaAppPassword,
                 Username = configCache.KarnamaAppUsername,
             };
@@ -397,40 +389,19 @@ namespace GuardianCommunication.Business.Component
         {
             var karnamaComponent = new KarnamaComponent(RepositoryFactory);
             var encodedConfig = karnamaComponent.GetSoftwareEncodedConfig();
-            ApplicationEmbeddedInfo.ActiveProducers = encodedConfig.ActiveProducers;
-            ApplicationEmbeddedInfo.CalendarType = encodedConfig.CalendarType;
-            ApplicationEmbeddedInfo.CustomerName = encodedConfig.CustomerName;
-            ApplicationEmbeddedInfo.DeviceCount = encodedConfig.DeviceCount;
-            ApplicationEmbeddedInfo.EmployeeCount = encodedConfig.EmployeeCount;
+            ApplicationEmbeddedInfo.Modules = encodedConfig.Modules;
             ApplicationEmbeddedInfo.ExpireDate = encodedConfig.ExpireDate;
-            ApplicationEmbeddedInfo.SerialNumber = encodedConfig.SerialNumber;
-            ApplicationEmbeddedInfo.TotalDeviceCount = encodedConfig.TotalDeviceCount;
-            ApplicationEmbeddedInfo.ValidApplication = encodedConfig.ValidApplication;
+            ApplicationEmbeddedInfo.ActiveProducers = encodedConfig.ActiveProducers;
             ApplicationEmbeddedInfo.SupremaProducerVersions = encodedConfig.SupremaProducerVersions;
-            ApplicationEmbeddedInfo.CheckDeviceSerialNumber = encodedConfig.CheckDeviceSerialNumber;
-            ApplicationEmbeddedInfo.ValidDeviceSerialNumbers = encodedConfig.ValidDeviceSerialNumbers;
-            ApplicationEmbeddedInfo.EffectiveDateForValidDeviceSerialNumbers = encodedConfig.EffectiveDateForValidDeviceSerialNumbers;
-            ApplicationEmbeddedInfo.ValidSerialNumberCheckTypes = encodedConfig.ValidSerialNumberCheckTypes;
-            ApplicationEmbeddedInfo.FaceDetectionModuleType = encodedConfig.FaceDetectionModuleType;
 
             if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.StartupLog))
             {
                 LoggingSystem.LogInfo("ApplicationEmbeddedInfo", ObjectHelper.SerializeAsJsonFormatted(new
                 {
+                    ApplicationEmbeddedInfo.Modules,
                     ApplicationEmbeddedInfo.ActiveProducers,
-                    ApplicationEmbeddedInfo.CalendarType,
-                    ApplicationEmbeddedInfo.CustomerName,
-                    ApplicationEmbeddedInfo.DeviceCount,
-                    ApplicationEmbeddedInfo.EmployeeCount,
                     ApplicationEmbeddedInfo.ExpireDate,
-                    ApplicationEmbeddedInfo.SerialNumber,
-                    ApplicationEmbeddedInfo.TotalDeviceCount,
-                    ApplicationEmbeddedInfo.ValidApplication,
                     ApplicationEmbeddedInfo.SupremaProducerVersions,
-                    ApplicationEmbeddedInfo.CheckDeviceSerialNumber,
-                    ApplicationEmbeddedInfo.ValidDeviceSerialNumbers,
-                    ApplicationEmbeddedInfo.EffectiveDateForValidDeviceSerialNumbers,
-                    ApplicationEmbeddedInfo.ValidSerialNumberCheckTypes
                 }));
             }
 
@@ -439,7 +410,7 @@ namespace GuardianCommunication.Business.Component
 
         #region Internal Methods
 
-        internal List<DtoAttendanceRegisterIntervalSetting> GetAttendanceRegisterIntervalSetting(ApplicationTypeEnumeration applicationType)
+        internal List<DtoAttendanceRegisterIntervalSetting> GetAttendanceRegisterIntervalSetting(ModuleEnumeration moduleType)
         {
             var result = new List<DtoAttendanceRegisterIntervalSetting>();
             var configCache = GetSystemConfigCache();
@@ -451,15 +422,7 @@ namespace GuardianCommunication.Business.Component
                     Interval = configCache.AttendanceRegisterInterval,
                 });
             }
-            if (applicationType.HasFlag(ApplicationTypeEnumeration.AccessControl) && configCache.AttendanceRegisterIntervalForAccessControl > 0)
-            {
-                result.Add(new DtoAttendanceRegisterIntervalSetting
-                {
-                    ApplicationType = AttendanceRegisterIntervalTypeEnumeration.AccessControl,
-                    Interval = configCache.AttendanceRegisterIntervalForAccessControl,
-                });
-            }
-            if (applicationType.HasFlag(ApplicationTypeEnumeration.Parking) && configCache.AttendanceRegisterIntervalForParking > 0)
+            if (moduleType.HasFlag(ModuleEnumeration.Parking) && configCache.AttendanceRegisterIntervalForParking > 0)
             {
                 result.Add(new DtoAttendanceRegisterIntervalSetting
                 {
@@ -467,21 +430,12 @@ namespace GuardianCommunication.Business.Component
                     Interval = configCache.AttendanceRegisterIntervalForParking,
                 });
             }
-            if (applicationType.HasFlag(ApplicationTypeEnumeration.TimeAndAttendance) && configCache.AttendanceRegisterIntervalForTimeAttendance > 0)
-            {
-                result.Add(new DtoAttendanceRegisterIntervalSetting
-                {
-                    ApplicationType = AttendanceRegisterIntervalTypeEnumeration.TimeAndAttendance,
-                    Interval = configCache.AttendanceRegisterIntervalForTimeAttendance,
-                });
-            }
-
             return result;
         }
 
         internal DtoSystemConfig GetSystemConfigCache()
         {
-            return CacheWrapper.Instance.SystemConfig;
+            return GuardianCommunicationInMemoryCacheWrapper.Instance.GetSystemConfigCache();
         }
 
         #endregion
@@ -521,7 +475,7 @@ namespace GuardianCommunication.Business.Component
 
         private static void ResetCacheAfterUpdate()
         {
-            CacheWrapper.Instance.ResetSystemConfigCache();
+            GuardianCommunicationInMemoryCacheWrapper.Instance.ResetSystemConfigCache();
         }
 
         #endregion

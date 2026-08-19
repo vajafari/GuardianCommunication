@@ -8,19 +8,10 @@ namespace GuardianCommunication.Shared.SharedSettings
 {
     public static class ApplicationEmbeddedInfo
     {
-        public static string CustomerName { get; set; }
-
-        public static int SerialNumber { get; set; }
 
         public static DateTime? ExpireDate { get; set; }
 
         public static ModuleEnumeration Modules { get; set; }
-
-        public static int PersonCount { get; set; }
-
-        public static int DeviceCount { get; set; }
-
-        public static int TotalDeviceCount { get; set; }
 
         public static ProducerEnumeration ActiveProducers { get; set; }
 

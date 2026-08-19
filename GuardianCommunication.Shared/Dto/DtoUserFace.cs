@@ -8,14 +8,7 @@
 		public uint CheckSum { get; set; }
 		public int Length { get; set; }
 
-        #region SupremaSdk2
-
-        public byte? SupremaSdk2FaceFlag { get; set; }
-		public int? SupremaSdk2FaceImageLen { get; set; }
-		public byte[] SupremaSdk2FaceImageData { get; set; }
-		public byte? SupremaSdk2FaceNumOfTemplate { get; set; }
-
-		#endregion
+        public DtoSupremaSdk2FaceTemplateAdditionalData SupremaSdk2AdditionalData { get; set; }
 
 	}
 }

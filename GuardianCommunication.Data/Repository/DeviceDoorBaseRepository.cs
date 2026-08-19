@@ -12,25 +12,25 @@ using GuardianCommunication.Shared.SharedSettings;
 namespace GuardianCommunication.Data.Repository
 {
 
-    public interface IDeviceDoorBaseRepository
+    public interface IDeviceDoorRepository
     {
-        List<DtoDeviceDoorBase> Search(PagingData<DeviceDoorBaseFilter, DeviceDoorBaseSortEnumeration> searchInfo);
+        List<DtoDeviceDoor> Search(PagingData<DeviceDoorFilter, DeviceDoorSortEnumeration> searchInfo);
     }
 
 
-    public class DeviceDoorBaseRepository : BaseRepository, IDeviceDoorBaseRepository
+    public class DeviceDoorRepository : BaseRepository, IDeviceDoorRepository
     {
 
-        public DeviceDoorBaseRepository(ConnectionConfiguration connectionConfig) : base(connectionConfig)
+        public DeviceDoorRepository(ConnectionConfiguration connectionConfig) : base(connectionConfig)
         { }
 
         #region Command Strings
 
-        private static readonly Dictionary<DeviceDoorBaseSortEnumeration, string> MapSortEnumToFieldName =
-            new Dictionary<DeviceDoorBaseSortEnumeration, string>()
+        private static readonly Dictionary<DeviceDoorSortEnumeration, string> MapSortEnumToFieldName =
+            new Dictionary<DeviceDoorSortEnumeration, string>()
             {
-                { DeviceDoorBaseSortEnumeration.Id, "ddb.[Id]" },
-                { DeviceDoorBaseSortEnumeration.DoorNumber, "ddb.[DoorNumber]" },
+                { DeviceDoorSortEnumeration.Id, "ddb.[Id]" },
+                { DeviceDoorSortEnumeration.DoorNumber, "ddb.[DoorNumber]" },
             };
 
 
@@ -60,7 +60,7 @@ namespace GuardianCommunication.Data.Repository
 
         #region Private Methods
 
-        private static string GetSearchClause(DeviceDoorBaseFilter filter)
+        private static string GetSearchClause(DeviceDoorFilter filter)
         {
             var sb = new StringBuilder();
             if (filter != null)
@@ -86,7 +86,7 @@ namespace GuardianCommunication.Data.Repository
         #endregion
 
 
-        public List<DtoDeviceDoorBase> Search(PagingData<DeviceDoorBaseFilter, DeviceDoorBaseSortEnumeration> searchInfo)
+        public List<DtoDeviceDoor> Search(PagingData<DeviceDoorFilter, DeviceDoorSortEnumeration> searchInfo)
         {
             using (var connection = GetConnection())
             {
@@ -100,12 +100,12 @@ namespace GuardianCommunication.Data.Repository
                     commandText = searchType == SearchTypeEnumeration.SimpleSearch
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoDeviceDoorBase>(commandText, searchInfo.Filter
+                    return connection.Query<DtoDeviceDoor>(commandText, searchInfo.Filter
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
 
                 commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
-                return (connection.Query<DtoDeviceDoorBase>(commandText,
+                return (connection.Query<DtoDeviceDoor>(commandText,
                     commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
             }
         }

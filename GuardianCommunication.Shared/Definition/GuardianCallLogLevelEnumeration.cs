@@ -15,6 +15,7 @@ namespace GuardianCommunication.Shared.Definition
         ChangeConnectionStatus = 1 << 7,
         UserEnrollment = 1 << 8,
         SubmitInvalidIoEvent = 1 << 9,
+        DeviceStatistics = 1 << 10,
 
         All = long.MaxValue
 

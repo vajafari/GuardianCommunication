@@ -3,30 +3,36 @@ using System.Collections.Generic;
 using System.Linq;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.ExternalServices.Shared;
+using GuardianCommunication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.ExternalServices.KarnamaApi
 {
-    public class PadisProxy
+    public class GuardianProxy
     {
-        private PadisApiConfig Config { get; }
+        private GuardianApiConfig Config { get; }
 
-        public PadisProxy(PadisApiConfig config)
+        public GuardianProxy(GuardianApiConfig config)
         {
             Config = config;
         }
 
         #region Basic Info
 
-        public void SubmitUserCount(int deviceNumber, int count)
+        public void SubmitUserCount(Guid deviceId, int count)
         {
             var model = new DataCountModel
             {
-                DeviceNumber = deviceNumber,
+                DeviceId = deviceId,
                 Count = count,
             };
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.DeviceStatistics))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.DeviceStatistics))
             {
-                LoggingSystem.LogInfo("SubmitUserCount Called", new { DeviceNumber = deviceNumber, Count = count });
+                LoggingSystem.LogInfo("SubmitUserCount Called", new { DeviceId = deviceId, Count = count });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -41,16 +47,16 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
             });
         }
 
-        public void SubmitAccessLogCount(int deviceNumber, int count)
+        public void SubmitAccessLogCount(Guid deviceId, int count)
         {
             var model = new DataCountModel
             {
-                DeviceNumber = deviceNumber,
+                DeviceId = deviceId,
                 Count = count,
             };
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.DeviceStatistics))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.DeviceStatistics))
             {
-                LoggingSystem.LogInfo("SubmitAccessLogCount Called", new { DeviceNumber = deviceNumber, Count = count });
+                LoggingSystem.LogInfo("SubmitAccessLogCount Called", new { DeviceId = deviceId, Count = count });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -65,16 +71,16 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
             });
         }
 
-        public void SubmitFaceCount(int deviceNumber, int count)
+        public void SubmitFaceCount(Guid deviceId, int count)
         {
             var model = new DataCountModel
             {
-                DeviceNumber = deviceNumber,
+                DeviceId = deviceId,
                 Count = count,
             };
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.DeviceStatistics))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.DeviceStatistics))
             {
-                LoggingSystem.LogInfo("SubmitFaceCount Called", new { DeviceNumber = deviceNumber, Count = count });
+                LoggingSystem.LogInfo("SubmitFaceCount Called", new { DeviceId = deviceId, Count = count });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -89,16 +95,16 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
             });
         }
 
-        public void SubmitFingerCount(int deviceNumber, int count)
+        public void SubmitFingerCount(Guid deviceId, int count)
         {
             var model = new DataCountModel
             {
-                DeviceNumber = deviceNumber,
+                DeviceId = deviceId,
                 Count = count,
             };
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.DeviceStatistics))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.DeviceStatistics))
             {
-                LoggingSystem.LogInfo("SubmitFingerCount Called", new { DeviceNumber = deviceNumber, Count = count });
+                LoggingSystem.LogInfo("SubmitFingerCount Called", new { DeviceId = deviceId, Count = count });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -116,7 +122,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public void SubmitDeviceEventLog(DtoDeviceEventLog eventLog)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.EventLog))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.EventLog))
             {
                 LoggingSystem.LogInfo("SubmitDeviceEventLog Called", eventLog);
             }
@@ -136,7 +142,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public void SubmitZkOperationLog(DtoZkOperationLog operationLog)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.EventLog))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.EventLog))
             {
                 LoggingSystem.LogInfo("SubmitZkOperationLog Called", operationLog);
             }
@@ -154,61 +160,9 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
             });
         }
 
-        public void SendMetalDetectorPersonPassed(DtoMetalDetectorPersonPassedData passData)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.MetalDetectorLog))
-            {
-                LoggingSystem.LogInfo("SendMetalDetectorPersonPassed Called", passData);
-            }
-
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/SubmitMetalDetectorPersonPassed"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new MetalDetectorPersonPassedModel
-                {
-                    DeviceId = passData.DeviceId,
-                    PassingDateTime = passData.Date.ToNumericDateTime(),
-                    ZoneData = Convert.ToBase64String(passData.ZoneData),
-                    TotalAlarm = passData.TotalAlarm,
-                    TotalPassed = passData.TotalPassed,
-                }
-            });
-        }
-
-        public void SendXRayDeviceScanData(string deviceId, DateTime date, byte[] zoneData)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.XRayLog))
-            {
-                LoggingSystem.LogInfo("SendXRayDeviceScanData Called", new { DeviceId = deviceId, Date = date, ZoneData = zoneData });
-            }
-
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/SubmitXRayDeviceScanData"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new XRayDeviceScanDataModel
-                {
-                    DeviceId = deviceId,
-                    ScanDateTime = date.ToNumericDateTime(),
-                    ScanData = Convert.ToBase64String(zoneData),
-                }
-            });
-        }
-
         public void SendAttendanceImage(DtoDeviceAttendanceImage image)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SendAttendanceImage))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SendAttendanceImage))
             {
                 LoggingSystem.LogInfo("SendAttendanceImage Called", image);
             }
@@ -228,7 +182,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public void SendUnauthorizedAttendanceImage(DtoDeviceUnauthorizedAttendanceImage image)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SendAttendanceImage))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SendAttendanceImage))
             {
                 LoggingSystem.LogInfo("SendUnauthorizedAttendanceImage Called", image);
             }
@@ -245,131 +199,9 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                 Body = CommunicationModelMapper.MapDtoDeviceUnauthorizedAttendanceImageToDeviceUnauthorizedAttendanceImageModel(image)
             });
         }
-
-        public List<DtoDevice> GetAllDevices(DeviceSearchParams param)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllDevices Called", param);
-            }
-
-            var result = RestSharpClient.GetInstance().PostAsJson<List<DtoDevice>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/Device/SearchBasic"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = param
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllDevices result", result);
-            }
-            return result;
-
-        }
-
-        public List<DtoDeviceDoor> GetAllDeviceDoors()
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllControllerDeviceDoors Called");
-            }
-
-            var result = RestSharpClient.GetInstance().GetAsJson<List<DtoDeviceDoor>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/ac/DeviceDoorBase/GetAllBasic"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllControllerDeviceDoors result", result);
-            }
-            return result;
-
-        }
-
-
-        public List<DtoMetalDetectorGate> GetAllActiveMetalDetectorGates()
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllActiveMetalDetectorGates Called");
-            }
-            var result = RestSharpClient.GetInstance().GetAsJson<List<MetalDetectorGateModel>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/ac/MetalDetectorGate/GetAllActiveGatesBasic"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllActiveMetalDetectorGates result", result);
-            }
-            return CommunicationModelMapper.MapMetalDetectorGateModelToDtoMetalDetectorGate(result);
-        }
-
-        public List<DtoXRayDevice> GetAllActiveXRayDevices()
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllActiveXRayDevices Called");
-            }
-            var result = RestSharpClient.GetInstance().GetAsJson<List<XRayDeviceModel>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/ac/XRayDevice/GetAllActiveXRayDeviceBasic"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllActiveXRayDevices result", result);
-            }
-            return CommunicationModelMapper.MapXRayDeviceModelToDtoXRayDevice(result);
-        }
-
-        public List<DtoCamera> GetAllCameras()
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllCameras Called");
-            }
-            var result = RestSharpClient.GetInstance().GetAsJson<List<CameraModel>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/ac/Camera/GetAllCamerasWithDeviceAdAreaInfoBasic"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.FetchBasicResourceData))
-            {
-                LoggingSystem.LogInfo("GetAllCameras result", result);
-            }
-            return CommunicationModelMapper.MapCameraModelToDtoCamera(result);
-        }
-
         public void SubmitInvalidIoEvent(DtoInvalidAttendance entity)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SubmitInvalidIoEvent))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SubmitInvalidIoEvent))
             {
                 LoggingSystem.LogInfo("SubmitInvalidIoEvent Called", entity);
             }
@@ -388,7 +220,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public AttendanceProcessResultModel SubmitIoEvent(DtoAttendance entity)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SubmitIoEvent))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SubmitIoEvent))
             {
                 LoggingSystem.LogInfo("SubmitIoEvent Called", entity);
             }
@@ -403,7 +235,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
                 Body = CommunicationModelMapper.MapDtoAttendanceToDeviceAttendanceModel(entity)
             });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SubmitIoEvent))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SubmitIoEvent))
             {
                 LoggingSystem.LogInfo("SubmitIoEvent Result", result);
             }
@@ -412,7 +244,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public ServerMatchingResultModel SubmitServerMatching(DtoServerMatchData entity)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SubmitSeverMatching))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SubmitSeverMatching))
             {
                 LoggingSystem.LogInfo("SubmitServerMatching Called", entity);
             }
@@ -427,7 +259,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
                 Body = CommunicationModelMapper.MapServerMatchDataToServerMatchDataModel(entity)
             });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SubmitSeverMatching))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SubmitSeverMatching))
             {
                 LoggingSystem.LogInfo("SubmitServerMatching result", result);
             }
@@ -436,7 +268,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public void SubmitConnectionStatusChanged(List<DtoDeviceConnectionStatus> deviceConnectionStatuses)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.ChangeConnectionStatus))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.ChangeConnectionStatus))
             {
                 LoggingSystem.LogInfo("SubmitConnectionStatusChanged Called", deviceConnectionStatuses);
             }
@@ -451,17 +283,17 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
                 Body = deviceConnectionStatuses.Select(cs => new DeviceConnectionChangedModel
                 {
-                    DeviceNumber = cs.DeviceNumber,
+                    DeviceId = cs.DeviceId,
                     IsConnected = cs.IsConnected
                 }).ToArray()
             });
         }
 
-        public void SubmitFingerEnrolled(DtoEmployeeFinger fingerInfo, int deviceNumber)
+        public void SubmitFingerEnrolled(DtoUserFinger fingerInfo, Guid deviceId)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitFingerEnrolled Called", new { FingerInfo = fingerInfo, DeviceNumber = deviceNumber });
+                LoggingSystem.LogInfo("SubmitFingerEnrolled Called", new { FingerInfo = fingerInfo, DeviceId = deviceId });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -472,19 +304,19 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewFingerEnrolledModel
+                Body = new UserFingerEnrolledModel
                 {
-                    DeviceNumber = deviceNumber,
-                    FingerInfo = CommunicationModelMapper.MapDtoEmployeeFingerToEmployeeFingerModel(fingerInfo)
+                    DeviceId = deviceId,
+                    FingerInfo = CommunicationModelMapper.MapDtoUserFingerToUserFingerModel(fingerInfo)
                 }
             });
         }
 
-        public void SubmitUserProfileImage(DtoEmployeeImage employeeImage, int deviceNumber)
+        public void SubmitUserProfileImage(DtoUserImage employeeImage, Guid deviceId)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitUserProfileImage Called", new { EmployeeImage = employeeImage, DeviceNumber = deviceNumber });
+                LoggingSystem.LogInfo("SubmitUserProfileImage Called", new { UserImage = employeeImage, DeviceId = deviceId });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -495,19 +327,19 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewEmployeeImageEnrolledModel
+                Body = new UserImageEnrolledModel
                 {
-                    DeviceNumber = deviceNumber,
-                    EmployeeImage = CommunicationModelMapper.MapDtoEmployeeImageToEmployeeImageModel(employeeImage)
+                    DeviceId = deviceId,
+                    UserImage = CommunicationModelMapper.MapDtoUserImageToUserImageModel(employeeImage)
                 }
             });
         }
 
-        public void SubmitFaceEnrolled(DtoEmployeeFace faceInfo, int deviceNumber)
+        public void SubmitFaceEnrolled(DtoUserFace faceInfo, Guid deviceId)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitFaceEnrolled Called", new { FaceInfo = faceInfo, DeviceNumber = deviceNumber });
+                LoggingSystem.LogInfo("SubmitFaceEnrolled Called", new { FaceInfo = faceInfo, DeviceId = deviceId });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -518,20 +350,20 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewFaceEnrolledModel
+                Body = new UserFaceEnrolledModel
                 {
-                    DeviceNumber = deviceNumber,
-                    FaceInfo = CommunicationModelMapper.MapDtoEmployeeFaceToEmployeeFaceModel(faceInfo)
+                    DeviceId = deviceId,
+                    FaceInfo = CommunicationModelMapper.MapDtoUserFaceToUserFaceModel(faceInfo)
                 }
             });
         }
 
-        public void SubmitCardEnrolled(string cardNumber, int deviceNumber, long userId)
+        public void SubmitCardEnrolled(string cardNumber, Guid deviceId, long userId)
         {
 
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitCardEnrolled Called", new { CardNumber = cardNumber, DeviceNumber = deviceNumber, UserId = userId });
+                LoggingSystem.LogInfo("SubmitCardEnrolled Called", new { CardNumber = cardNumber, DeviceId = deviceId, UserId = userId });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -542,20 +374,20 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewCardEnrolledModel
+                Body = new UserCardEnrolledModel
                 {
-                    DeviceNumber = deviceNumber,
+                    DeviceId = deviceId,
                     Card = cardNumber,
-                    EmployeeNumber = userId,
+                    UserIdOnDevice = userId,
                 }
             });
         }
 
-        public void SubmitPalmEnrolled(DtoEmployeePalm palmInfo, int deviceNumber)
+        public void SubmitPalmEnrolled(DtoUserPalm palmInfo, Guid deviceId)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitPalmEnrolled Called", new { PalmInfo = palmInfo, DeviceNumber = deviceNumber });
+                LoggingSystem.LogInfo("SubmitPalmEnrolled Called", new { PalmInfo = palmInfo, DeviceId = deviceId });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -566,19 +398,19 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewPalmModelEnrolled
+                Body = new UserPalmModelEnrolled
                 {
-                    DeviceNumber = deviceNumber,
-                    PalmInfo = CommunicationModelMapper.MapDtoEmployeePalmToEmployeePalmModel(palmInfo)
+                    DeviceId = deviceId,
+                    PalmInfo = CommunicationModelMapper.MapDtoUserPalmToUserPalmModel(palmInfo)
                 }
             });
         }
 
-        public void SubmitIrisEnrolled(DtoEmployeeIris irisInfo, int deviceNumber)
+        public void SubmitIrisEnrolled(DtoUserIris irisInfo, Guid deviceId)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitIrisEnrolled Called", new { IrisInfo = irisInfo, DeviceNumber = deviceNumber });
+                LoggingSystem.LogInfo("SubmitIrisEnrolled Called", new { IrisInfo = irisInfo, DeviceId = deviceId });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
@@ -589,181 +421,35 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewIrisModelEnrolled
+                Body = new UserIrisModelEnrolled
                 {
-                    DeviceNumber = deviceNumber,
-                    IrisInfo = CommunicationModelMapper.MapDtoEmployeeIrisToEmployeeIrisModel(irisInfo)
+                    DeviceId = deviceId,
+                    IrisInfo = CommunicationModelMapper.MapDtoUserIrisToUserIrisModel(irisInfo)
                 }
             });
         }
 
-        public void SubmitUserEnrolled(DtoEmployeeDeviceRelatedData userInfo, int deviceNumber, DtoEmployeeEnrolledSetting setting)
+        public void SubmitUserEnrolled(DtoUserDeviceRelatedData userInfo, Guid deviceId, DtoUserEnrolledSetting setting)
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.UserEnrollment))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.UserEnrollment))
             {
-                LoggingSystem.LogInfo("SubmitUserEnrolled Called", new { UserInfo = userInfo, DeviceNumber = deviceNumber, Setting = setting });
+                LoggingSystem.LogInfo("SubmitUserEnrolled Called", new { UserInfo = userInfo, DeviceId = deviceId, Setting = setting });
             }
             RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
             {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/EmployeeEnrolledOnDevice"),
+                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/UserEnrolledOnDevice"),
                 AuthorizationData = new RestApiBasicAuthorizationData
                 {
                     Password = Config.Password,
                     Username = Config.Username
                 },
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new NewUserEnrolledModel
+                Body = new UserEnrolledModel
                 {
-                    DeviceNumber = deviceNumber,
-                    EmployeeDeviceInfo = CommunicationModelMapper.MapDtoEmployeeToEmployeeModel(userInfo),
-                    EmployeeEnrolledSetting = CommunicationModelMapper.MapDtoEmployeeEnrolledSettingToEmployeeEnrolledSettingModel(setting),
+                    DeviceId = deviceId,
+                    UserDeviceInfo = CommunicationModelMapper.MapDtoUserToUserModel(userInfo),
+                    UserEnrolledSetting = CommunicationModelMapper.MapDtoUserEnrolledSettingToUserEnrolledSettingModel(setting),
                 }
-            });
-        }
-
-        public void SubmitNotLiveValidPlateDetectionCameraAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.PlateDetection))
-            {
-                LoggingSystem.LogInfo("SubmitNotLiveValidPlateDetectionCameraAttendance Called", attendance);
-            }
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/SubmitNotLiveValidParkingCameraEvent"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new SubmitValidCameraEventModel
-                {
-                    PlateString = attendance.PlateString,
-                    AttendanceDateTimeNumeric = attendance.AttendanceDateTime.ToNumericDateTime(),
-                    CameraId = attendance.CameraId,
-                    CarImage = attendance.CarImage.IsCollectionNotNullOrEmpty() ? Convert.ToBase64String(attendance.CarImage) : null,
-                    AcceptType = attendance.AcceptType,
-                }
-            });
-        }
-
-        public void SubmitNotLiveInvalidPlateDetectionCameraAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.PlateDetection))
-            {
-                LoggingSystem.LogInfo("SubmitNotLiveInvalidPlateDetectionCameraAttendance Called", attendance);
-            }
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/SubmitNotLiveInvalidParkingCameraEvent"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new SubmitInvalidCameraEventModel
-                {
-                    PlateString = attendance.PlateString,
-                    AttendanceDateTimeNumeric = attendance.AttendanceDateTime.ToNumericDateTime(),
-                    CameraId = attendance.CameraId,
-                    CarImage = attendance.CarImage.IsCollectionNotNullOrEmpty() ? Convert.ToBase64String(attendance.CarImage) : null,
-                    AcceptType = attendance.AcceptType,
-                }
-            });
-        }
-
-        public void SubmitLivePlateDetectionCameraAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.PlateDetection))
-            {
-                LoggingSystem.LogInfo("SubmitLivePlateDetectionCameraAttendance Called", attendance);
-            }
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/general/HardwareEvent/SubmitParkingCameraEvent"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new SubmitValidCameraEventModel
-                {
-                    PlateString = attendance.PlateString,
-                    AttendanceDateTimeNumeric = attendance.AttendanceDateTime.ToNumericDateTime(),
-                    CameraId = attendance.CameraId,
-                    CarImage = Convert.ToBase64String(attendance.CarImage),
-                }
-            });
-        }
-
-        #endregion
-
-
-        #region Self
-
-        public List<DtoDeviceMealOrderData> GetMealOrderMealsInfo(int offsetTime)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.GetMealOrder))
-            {
-                LoggingSystem.LogInfo("GetMealOrderMealsInfo Called", offsetTime);
-            }
-            var result = RestSharpClient.GetInstance().GetAsJson<List<DtoDeviceMealOrderData>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/sf/SelfHardwareEvent/GetActiveDeviceDataToMonitor"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.GetMealOrder))
-            {
-                LoggingSystem.LogInfo("GetMealOrderMealsInfo result", result);
-            }
-            return result;
-        }
-
-        public void SubmitSelfEvent(DtoAttendance entity)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SelfAttendance))
-            {
-                LoggingSystem.LogInfo("SubmitSelfEvent Called", entity);
-            }
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/sf/SelfHardwareEvent/SubmitSelfEvent"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new SubmitSelfEventModel
-                {
-                    DtoDeviceAttendance = CommunicationModelMapper.MapDtoAttendanceToDeviceAttendanceModel(entity)
-                }
-            });
-        }
-
-        public void SubmitSelfPrintResult(DtoSelfPrintResult entity)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.SelfPrintResult))
-            {
-                LoggingSystem.LogInfo("SubmitSelfPrintResult Called", entity);
-            }
-            RestSharpClient.GetInstance().PostAsJsonVoid(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/sf/SelfHardwareEvent/SubmitSelfPrintResult"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = CommunicationModelMapper.MapDtoSelfPrintResultToSelfPrintResultModel(entity)
             });
         }
 
@@ -774,7 +460,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         public DtoApplicationEncodedConfig GetSoftwareEncodedConfig()
         {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.GeneralInfo))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.GeneralInfo))
             {
                 LoggingSystem.LogInfo("GetSoftwareEncodedConfig Called");
             }
@@ -789,7 +475,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                 AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
                 Body = null
             });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.GeneralInfo))
+            if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.GeneralInfo))
             {
                 LoggingSystem.LogInfo("GetSoftwareEncodedConfig result", result);
             }
@@ -799,41 +485,6 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
 
         #endregion
 
-
-        #region Access control
-
-
-        public List<DtoCarAccessData> GetCameraCarAccessData(int cameraId, DateTime startDateTime, DateTime endDateTime)
-        {
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.CameraCarAccessData))
-            {
-                LoggingSystem.LogInfo("GetCameraCarAccessData Called", new { CameraId = cameraId, StartDateTime = startDateTime, EndDateTime = endDateTime });
-            }
-            var result = RestSharpClient.GetInstance().PostAsJson<List<DtoCarAccessData>>(new RestApiRequestData
-            {
-                Uri = ApiCallHelpers.CombineUri(Config.BaseUri, "/api/ac/Camera/GetCarsThatAreValidToPass"),
-                AuthorizationData = new RestApiBasicAuthorizationData
-                {
-                    Password = Config.Password,
-                    Username = Config.Username
-                },
-                AuthorizationType = AuthorizationTypeEnumeration.BasicAuth,
-                Body = new CameraAccessDataParamsModel
-                {
-                    CameraId = cameraId,
-                    StartDate = startDateTime.ToNumericDateTime(),
-                    EndDate = endDateTime.ToNumericDateTime()
-                }
-            });
-            if (AppConfigs.LogLevelKarnamaCall.HasFlag(KarnamaCallLogLevelEnumeration.CameraCarAccessData))
-            {
-                LoggingSystem.LogInfo("GetCameraCarAccessData result", result);
-            }
-            return result;
-        }
-
-
-        #endregion
 
     }
 }

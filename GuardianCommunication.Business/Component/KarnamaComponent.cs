@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
 using GuardianCommunication.ExternalServices.KarnamaApi;
+using GuardianCommunication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -13,175 +15,101 @@ namespace GuardianCommunication.Business.Component
             : base(sharedRepository)
         { }
 
-        public List<DtoDevice> FetchAllDevices()
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            var deviceList = proxy.GetAllDevices(new DeviceSearchParams
-            {
-                GetArea = true,
-                GetDeviceTypeSummary = true,
-                Filter = new DeviceFilter
-                {
-                    IsActive = true
-                }
-            });
-
-            return deviceList;
-        }
-
-        public List<DtoDeviceDoor> FetchAllDeviceDoors()
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            return proxy.GetAllDeviceDoors();
-        }
-
-        public List<DtoMetalDetectorGate> FetchAllMetalDetectorGates()
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            var metalDetectorGatesList = proxy.GetAllActiveMetalDetectorGates();
-
-            return metalDetectorGatesList;
-        }
-
-        public List<DtoXRayDevice> FetchAllXRayDevices()
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            var xRayDevicesList = proxy.GetAllActiveXRayDevices();
-            return xRayDevicesList;
-        }
-
-        public List<DtoCamera> FetchAllCameras()
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            var cameraList = proxy.GetAllCameras();
-            return cameraList;
-        }
 
         #region Basic Info
 
         public AttendanceProcessResultModel SubmitIoEvent(DtoAttendance entity)
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             return proxy.SubmitIoEvent(entity);
         }
 
         public void SubmitInvalidIoEvent(DtoInvalidAttendance entity)
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             proxy.SubmitInvalidIoEvent(entity);
-        }
-
-        public void SubmitNotLiveValidPlateDetectionCameraAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitNotLiveValidPlateDetectionCameraAttendance(attendance);
-        }
-
-        public void SubmitNotLiveInvalidPlateDetectionCameraAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitNotLiveInvalidPlateDetectionCameraAttendance(attendance);
-        }
-
-        public void SubmitLivePlateDetectionCameraAttendance(DtoPlateDetectionCameraCarAttendance attendance)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitLivePlateDetectionCameraAttendance(attendance);
         }
 
         public ServerMatchingResultModel SubmitServerMatching(DtoServerMatchData entity)
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             var result = proxy.SubmitServerMatching(entity);
-
             return result;
         }
 
         public void SendDeviceConnectionStatusChanged(List<DtoDeviceConnectionStatus> deviceConnectionStatuses)
         {
-
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             proxy.SubmitConnectionStatusChanged(deviceConnectionStatuses);
         }
 
-        public void SendUserEnrolled(DtoEmployeeDeviceRelatedData userInfo, int deviceNumber, DtoEmployeeEnrolledSetting setting)
+        public void SendUserEnrolled(DtoUserDeviceRelatedData userInfo, Guid deviceId, DtoUserEnrolledSetting setting)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitUserEnrolled(userInfo, deviceNumber, setting);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitUserEnrolled(userInfo, deviceId, setting);
         }
 
-        public void SendFaceEnrolled(DtoEmployeeFace faceInfo, int deviceNumber)
+        public void SendFaceEnrolled(DtoUserFace faceInfo, Guid deviceId)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitFaceEnrolled(faceInfo, deviceNumber);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitFaceEnrolled(faceInfo, deviceId);
         }
 
-        public void SendCardEnrolled(string cardNumber, int deviceNumber, long userId)
+        public void SendCardEnrolled(string cardNumber, Guid deviceId, long userId)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitCardEnrolled(cardNumber, deviceNumber, userId);
-
-        }
-
-        public void SendPalmEnrolled(DtoEmployeePalm palmInfo, int deviceNumber)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitPalmEnrolled(palmInfo, deviceNumber);
-        }
-
-        public void SendIrisEnrolled(DtoEmployeeIris irisInfo, int deviceNumber)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitIrisEnrolled(irisInfo, deviceNumber);
-        }
-
-        public void SendFingerEnrolled(DtoEmployeeFinger fingerInfo, int deviceNumber)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitFingerEnrolled(fingerInfo, deviceNumber);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitCardEnrolled(cardNumber, deviceId, userId);
 
         }
 
-        public void SendUserProfileImage(DtoEmployeeImage employeeImage, int deviceNumber)
+        public void SendPalmEnrolled(DtoUserPalm palmInfo, Guid deviceId)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitUserProfileImage(employeeImage, deviceNumber);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitPalmEnrolled(palmInfo, deviceId);
+        }
+
+        public void SendIrisEnrolled(DtoUserIris irisInfo, Guid deviceId)
+        {
+
+            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitIrisEnrolled(irisInfo, deviceId);
+        }
+
+        public void SendFingerEnrolled(DtoUserFinger fingerInfo, Guid deviceId)
+        {
+
+            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitFingerEnrolled(fingerInfo, deviceId);
+
+        }
+
+        public void SendUserProfileImage(DtoUserImage employeeImage, Guid deviceId)
+        {
+
+            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitUserProfileImage(employeeImage, deviceId);
 
         }
 
         public void SendZkOperationLog(DtoZkOperationLog operationLog)
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             proxy.SubmitZkOperationLog(operationLog);
 
         }
@@ -190,66 +118,49 @@ namespace GuardianCommunication.Business.Component
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             proxy.SubmitDeviceEventLog(eventLog);
 
         }
 
-        public void SendUserCount(int deviceNumber, int count)
+        public void SendUserCount(Guid deviceId, int count)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitUserCount(deviceNumber, count);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitUserCount(deviceId, count);
         }
 
-        public void SendAccessLogCount(int deviceNumber, int count)
+        public void SendAccessLogCount(Guid deviceId, int count)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitAccessLogCount(deviceNumber, count);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitAccessLogCount(deviceId, count);
         }
 
-        public void SendFaceCount(int deviceNumber, int count)
+        public void SendFaceCount(Guid deviceId, int count)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitFaceCount(deviceNumber, count);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitFaceCount(deviceId, count);
         }
 
-        public void SendFingerCount(int deviceNumber, int count)
+        public void SendFingerCount(Guid deviceId, int count)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitFingerCount(deviceNumber, count);
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
+            proxy.SubmitFingerCount(deviceId, count);
         }
 
-        public void SendMetalDetectorPersonPassed(DtoMetalDetectorPersonPassedData passData)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SendMetalDetectorPersonPassed(passData);
-
-        }
-
-        public void SendXRayDeviceScanData(string deviceId, DateTime date, byte[] scanData)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SendXRayDeviceScanData(deviceId, date, scanData);
-
-        }
 
         public void SendAttendanceImage(DtoDeviceAttendanceImage image)
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             proxy.SendAttendanceImage(image);
         }
 
@@ -257,14 +168,14 @@ namespace GuardianCommunication.Business.Component
         {
 
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             proxy.SendUnauthorizedAttendanceImage(image);
         }
 
         public DtoApplicationEncodedConfig GetSoftwareEncodedConfig()
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
+            var proxy = new GuardianProxy(systemConfigComponent.GetGuardianApiConfig());
             return proxy.GetSoftwareEncodedConfig();
         }
 
@@ -273,54 +184,5 @@ namespace GuardianCommunication.Business.Component
         #endregion
 
 
-        #region Self
-
-
-        public void SendSelfEvent(DtoAttendance entity)
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            proxy.SubmitSelfEvent(entity);
-        }
-
-        public void ReportSelfPrintResult(DtoSelfPrintResult entity)
-        {
-            try
-            {
-                var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-                var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-                proxy.SubmitSelfPrintResult(entity);
-            }
-            catch (Exception exp)
-            {
-                LoggingSystem.LogError(exp);
-            }
-
-        }
-
-        public List<DtoDeviceMealOrderData> GetMealOrderMealsInfo(int time)
-        {
-
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            var result = proxy.GetMealOrderMealsInfo(time);
-            return result;
-        }
-
-
-        #endregion
-
-
-        #region Access Control
-
-        public List<DtoCarAccessData> GetCameraCarAccessData(int cameraId, DateTime startDateTime, DateTime endDateTime)
-        {
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var proxy = new PadisProxy(systemConfigComponent.GetPadisApiConfig());
-            var carAccessDataList = proxy.GetCameraCarAccessData(cameraId, startDateTime, endDateTime);
-            return carAccessDataList;
-        }
-
-        #endregion
     }
 }

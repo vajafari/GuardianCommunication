@@ -27,6 +27,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <PlatformTarget>AnyCPU</PlatformTarget>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -35,6 +36,7 @@
     <DefineConstants>TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <LangVersion>latest</LangVersion>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Publish|AnyCPU'">
     <OutputPath>bin\Publish\</OutputPath>
@@ -42,7 +44,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -52,7 +54,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x86'">
@@ -61,7 +63,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x86</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x86'">
@@ -70,7 +72,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x86</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Publish|x86'">
@@ -79,7 +81,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x86</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -89,7 +91,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x86</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug|x64'">
@@ -98,7 +100,7 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <DebugType>full</DebugType>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
@@ -107,7 +109,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Publish|x64'">
@@ -116,7 +118,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
@@ -126,7 +128,7 @@
     <Optimize>true</Optimize>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>x64</PlatformTarget>
-    <LangVersion>7.3</LangVersion>
+    <LangVersion>latest</LangVersion>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
@@ -182,9 +184,15 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="CacheManagement\DictionaryBaseCacheManager.cs" />
+    <Compile Include="CacheManagement\ICacheable.cs" />
+    <Compile Include="CacheManagement\ICacheManagerT.cs" />
+    <Compile Include="CommunicationModels\SupremaSdk2FaceTemplateAdditionalDataModel.cs" />
+    <Compile Include="CommunicationModels\UserFaceEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\UserImageEnrolledModel.cs" />
     <Compile Include="CommunicationModels\DeviceInvalidAttendanceModel.cs" />
     <Compile Include="CommunicationModels\UserIrisModel.cs" />
-    <Compile Include="CommunicationModels\IrisModelEnrolled.cs" />
+    <Compile Include="CommunicationModels\UserIrisModelEnrolled.cs" />
     <Compile Include="CommunicationModels\OpenDoorWithDelayModel.cs" />
     <Compile Include="CommunicationModels\OpenCabinetDoorModel.cs" />
     <Compile Include="Definition\GuardianControllerRelayTypeEnumeration.cs" />
@@ -192,13 +200,14 @@
     <Compile Include="Definition\GuardianControllerWiegandFormatEnumeration.cs" />
     <Compile Include="Definition\AttendanceVerificationStyleEnumeration.cs" />
     <Compile Include="Definition\LogLevelGuardianControllerEnumeration.cs" />
+    <Compile Include="Dto\DtoApplicationEncodedConfig.cs" />
     <Compile Include="Dto\DtoDeviceStatistics.cs" />
     <Compile Include="Dto\DtoDeviceDoor.cs" />
-    <Compile Include="Dto\DtoDeviceDoorBase.cs" />
     <Compile Include="Dto\DtoDeviceSettings.cs" />
     <Compile Include="Dto\DtoDatabaseEntityBase.cs" />
     <Compile Include="Dto\DtoDeviceInvalidAttendanceImage.cs" />
     <Compile Include="Dto\DtoInvalidAttendance.cs" />
+    <Compile Include="Dto\DtoSupremaSdk2FaceTemplateAdditionalData.cs" />
     <Compile Include="Dto\DtoUnsentCommandCountByDeviceId.cs" />
     <Compile Include="Dto\DtoUserIris.cs" />
     <Compile Include="Dto\DtoUnsentCommandCountByDeviceNumber.cs" />
@@ -224,7 +233,7 @@
     <Compile Include="CommunicationModels\OtherResourcesAttendanceModel.cs" />
     <Compile Include="CommunicationModels\DeviceAttendanceModel.cs" />
     <Compile Include="CommunicationModels\DataCountModel.cs" />
-    <Compile Include="CommunicationModels\CardEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\UserCardEnrolledModel.cs" />
     <Compile Include="CommunicationModels\DeviceDoorBaseModel.cs" />
     <Compile Include="CommunicationModels\DeviceEventLogModel.cs" />
     <Compile Include="Definition\GuardianCallLogLevelEnumeration.cs" />
@@ -258,15 +267,15 @@
     <Compile Include="CommunicationModels\UserAndDeviceModel.cs" />
     <Compile Include="CommunicationModels\OpenDoorModel.cs" />
     <Compile Include="CommunicationModels\SystemConfigModel.cs" />
-    <Compile Include="CommunicationModels\NewEmployeeImageEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\EmployeeImageEnrolledModel.cs" />
     <Compile Include="CommunicationModels\ZkOperationLogModel.cs" />
     <Compile Include="CommunicationModels\ImageEnrolledModel.cs" />
     <Compile Include="CommunicationModels\UserEnrolledModel.cs" />
     <Compile Include="CommunicationModels\CommunicationModelMapper.cs" />
     <Compile Include="CommunicationModels\DeviceConnectionChangedModel.cs" />
     <Compile Include="CommunicationModels\UserImageModel.cs" />
-    <Compile Include="CommunicationModels\FingerEnrolledModel.cs" />
-    <Compile Include="CommunicationModels\PalmModelEnrolled.cs" />
+    <Compile Include="CommunicationModels\UserFingerEnrolledModel.cs" />
+    <Compile Include="CommunicationModels\UserPalmModelEnrolled.cs" />
     <Compile Include="Definition\AuthorizationTypeEnumeration.cs" />
     <Compile Include="Definition\CommandPriorityEnumeration.cs" />
     <Compile Include="Definition\DeviceCommandTypeEnumeration.cs" />
@@ -303,8 +312,8 @@
     <Compile Include="ExtensionsAndUtilities\CollectionHelper.cs" />
     <Compile Include="ExtensionsAndUtilities\DateTimeHelper.cs" />
     <Compile Include="Filter\DeviceFilter.cs" />
-    <Compile Include="Filter\DeviceDoorBaseFilter.cs" />
-    <Compile Include="Filter\DeviceDoorBaseSortEnumeration.cs" />
+    <Compile Include="Filter\DeviceDoorFilter.cs" />
+    <Compile Include="Filter\DeviceDoorSortEnumeration.cs" />
     <Compile Include="Filter\DeviceNotSentCommandsCountByDeviceSerialNumberFilter.cs" />
     <Compile Include="Filter\DeviceNotSentCommandsCountByDeviceIdFilter.cs" />
     <Compile Include="Filter\DeviceNotSentCommandsCountByDeviceNumberFilter.cs" />

@@ -1,4 +1,5 @@
-﻿using System.Runtime.Serialization;
+﻿using GuardianCommunication.Shared.Dto;
+using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
 {
@@ -16,18 +17,8 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public int Length { get; set; }
 
-        #region Suprema SDK 2 Face
+        public SupremaSdk2FaceTemplateAdditionalDataModel SupremaSdk2AdditionalData { get; set; }
 
-        [DataMember]
-        public byte? SupremaSdk2FaceFlag { get; set; }
-        [DataMember]
-        public int? SupremaSdk2FaceImageLen { get; set; }
-        [DataMember]
-        public string SupremaSdk2FaceImageData { get; set; }
-        [DataMember]
-        public byte? SupremaSdk2FaceNumOfTemplate { get; set; }
-
-        #endregion
 
     }
 

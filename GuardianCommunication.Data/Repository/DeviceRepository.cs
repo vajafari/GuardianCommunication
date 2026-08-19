@@ -14,7 +14,7 @@ namespace GuardianCommunication.Data.Repository
 
     public interface IDeviceRepository
     {
-        Task<List<DtoDevice>> SearchFullInfoAsync(PagingData<DeviceFilter, DeviceSortEnumeration> searchInfo);
+        List<DtoDevice> SearchFullInfo(PagingData<DeviceFilter, DeviceSortEnumeration> searchInfo);
     }
 
 
@@ -145,7 +145,7 @@ namespace GuardianCommunication.Data.Repository
         #endregion
 
 
-        public async Task<List<DtoDevice>> SearchFullInfoAsync(PagingData<DeviceFilter, DeviceSortEnumeration> searchInfo)
+        public List<DtoDevice> SearchFullInfo(PagingData<DeviceFilter, DeviceSortEnumeration> searchInfo)
         {
             using (var connection = GetLogConnection())
             {
@@ -163,7 +163,7 @@ namespace GuardianCommunication.Data.Repository
                             searchParts.PrevCommandClause, searchParts.JoinClauseStringBuilder.ToString())
                         : SelectFullInfoWithPaging.FormatInvariantCulture(whereClause, orderByClause, pagingClause,
                             searchParts.PrevCommandClause, searchParts.JoinClauseStringBuilder.ToString());
-                    return (await connection.QueryAsync<DtoDevice>(commandText
+                    return (connection.Query<DtoDevice>(commandText
                         , searchParts.Parameters
                         , commandType: CommandType.Text
                         , commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
@@ -171,7 +171,7 @@ namespace GuardianCommunication.Data.Repository
 
                 commandText =
                     SelectFullInfo.FormatInvariantCulture(string.Empty, string.Empty, string.Empty, string.Empty);
-                return (await connection.QueryAsync<DtoDevice>(commandText
+                return (connection.Query<DtoDevice>(commandText
                     , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
             }
 

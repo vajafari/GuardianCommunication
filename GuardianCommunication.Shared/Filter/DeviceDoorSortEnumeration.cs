@@ -1,6 +1,6 @@
 namespace GuardianCommunication.Shared.Filter
 {
-    public enum DeviceDoorBaseSortEnumeration
+    public enum DeviceDoorSortEnumeration
     {
         Id,
         DoorNumber,

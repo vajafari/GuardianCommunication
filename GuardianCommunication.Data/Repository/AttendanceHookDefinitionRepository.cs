@@ -143,7 +143,7 @@ namespace GuardianCommunication.Data.Repository
             {
                 connection.Execute(MarkAsSentCommand, new
                 {
-                    CurrentTime = DateTime.Now.ToUtc(),
+                    CurrentTime = DateTime.Now.ToUniversalTime(),
                     AttendanceId = attendanceId,
                     HookDefinitionId = hookSystemId
                 }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
