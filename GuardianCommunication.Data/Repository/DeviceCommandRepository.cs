@@ -29,13 +29,13 @@ namespace GuardianCommunication.Data.Repository
         List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumber(
             DeviceNotSentCommandsCountByDeviceSerialNumberFilter filter);
 
-        void UpdateSendData(List<long> numericIds);
-
         void SetResponse(DtoDeviceCommandProcessingResult commandResult);
 
         void SetDescription(DtoDeviceCommandProcessingDescription commandResult);
 
         void DeleteByIds(List<Guid> ids, long? mode);
+
+        void UpdateSendDataByNumericIds(List<long> numericIds);
 
         void DeleteByNumericIds(List<long> numericIds, long? mode);
 
@@ -606,7 +606,7 @@ namespace GuardianCommunication.Data.Repository
             return new List<DtoUnsentCommandCountByDeviceSerialNumber>();
         }
 
-        public void UpdateSendData(List<long> numericIds)
+        public void UpdateSendDataByNumericIds(List<long> numericIds)
         {
             if (numericIds.IsCollectionNotNullOrEmpty())
             {

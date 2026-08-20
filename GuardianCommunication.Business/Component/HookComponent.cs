@@ -1,12 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Linq.Expressions;
 using GuardianCommunication.Business.Cache;
 using GuardianCommunication.Data.Repository;
 using GuardianCommunication.ExternalServices.Hooks;
 using GuardianCommunication.Shared.Dto;
-using GuardianCommunication.Shared.ExtensionsAndUtilities;
 using GuardianCommunication.Shared.Filter;
 using GuardianCommunication.Shared.SearchDataWrapper;
 
@@ -39,6 +36,9 @@ namespace GuardianCommunication.Business.Component
         #endregion
 
 
+        #endregion
+
+
         #region Hook actions
 
         internal dynamic CallHookApi<T>(DtoHookDefinition hookDefinitions, T model)
@@ -53,7 +53,7 @@ namespace GuardianCommunication.Business.Component
                 EndPointUrl = hookDefinitions.EndPointUrl,
                 HttpMethod = hookDefinitions.HttpMethod,
                 RequestTimeout = TimeSpan.FromSeconds(hookDefinitions.RequestTimeoutInSeconds),
-                AuthorizationUsername = hookDefinitions.AuthorizationPassword,
+                AuthorizationUsername = hookDefinitions.AuthorizationUsername,
                 AuthorizationPassword = hookDefinitions.AuthorizationPassword,
                 DateFormat = hookDefinitions.DateFormat,
 

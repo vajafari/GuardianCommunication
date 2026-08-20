@@ -4,6 +4,15 @@ using System.Linq;
 using System.Threading;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -21,52 +30,36 @@ namespace GuardianCommunication.Business.Component
 
         public DtoServerMatchResult ProcessServerMatchEvent(DtoServerMatchData serverMatchData)
         {
-            var karnamaComponent = new KarnamaComponent(RepositoryFactory);
+            var karnamaComponent = new GuardianComponent(RepositoryFactory);
             try
             {
                 var deviceComponent = new DeviceComponent(RepositoryFactory);
-                var deviceCache = deviceComponent.GetDeviceByDeviceNumber(serverMatchData.DeviceNumber);
+                var deviceCache = deviceComponent.GetDeviceCache(serverMatchData.DeviceId);
                 if (deviceCache != null)
                 {
-                    if (!deviceComponent.IsDeviceNumberValid(deviceCache.DeviceNumber, ValidSerialNumberCheckTypeEnumeration.Attendance))
-                    {
-                        if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogAttendanceSaveProcess))
-                        {
-                            LoggingSystem.LogInfo("ProcessServerMatchEvent Invalid device", new
-                            {
-                                MatchData = serverMatchData,
-                            });
-                        }
-                        return new DtoServerMatchResult
-                        {
-                            IsSuccessfullyProcessed = false
-                        };
-                    }
                     var resultServerMatch = karnamaComponent.SubmitServerMatching(serverMatchData);
                     if (resultServerMatch.IsSuccessfullyProcessed
                         && resultServerMatch.Attendance != null
-                        && resultServerMatch.Attendance.UserId > 0)
+                        && resultServerMatch.Attendance.UserIdOnDevice > 0)
                     {
 
                         var entity = new DtoAttendance
                         {
-                            DeviceNumber = resultServerMatch.Attendance.DeviceNumber,
+                            DeviceId = resultServerMatch.Attendance.DeviceId,
                             CameraId = null,
                             IoType = resultServerMatch.Attendance.IoType,
                             VerificationStyle = resultServerMatch.Attendance.VerificationStyle,
                             AttendanceDateTime = resultServerMatch.Attendance.AttendanceDateTime.FromNumericDateTime(),
-                            ApplicationId = resultServerMatch.Attendance.ApplicationId,
-                            EmployeeNumber = resultServerMatch.Attendance.UserId,
+                            ModuleId = resultServerMatch.Attendance.ModuleId,
+                            UserIdOnDevice = resultServerMatch.Attendance.UserIdOnDevice,
                             AttendanceSource = resultServerMatch.Attendance.AttendanceSource,
                             DeviceAttendanceIoRetrieveType = null,
-                            IsInvalid = false,
-                            IsSent = true,
+                            IsSentToGuardian = true,
                             RfCardNumber = resultServerMatch.Attendance.RfCardNumber,
                             StatusCode = resultServerMatch.Attendance.StatusCode,
                         };
-                        entity.IsSent = true;
                         var resultOfSave = SaveAttendance
-                            (new List<DtoAttendance> { entity }, false, false, false);
+                            (new List<DtoAttendance> { entity }, false, false);
                         if (resultOfSave.Successful.IsCollectionNotNullOrEmpty())
                         {
                             var thread = new Thread(() => HookIoEvent(resultOfSave.Successful.First()));
@@ -75,7 +68,7 @@ namespace GuardianCommunication.Business.Component
                             return new DtoServerMatchResult
                             {
                                 IsSuccessfullyProcessed = true,
-                                UserId = resultServerMatch.Attendance.UserId
+                                UserIdOnDevice = resultServerMatch.Attendance.UserIdOnDevice
                             };
                         }
                     }
@@ -101,9 +94,9 @@ namespace GuardianCommunication.Business.Component
         /// </summary>
         public void HookOtherResourcesAttendance(DtoAttendance attendance, bool checkDuplicateInterval)
         {
-            attendance.IsSent = true;
+            attendance.IsSentToGuardian = true;
             var resultOfSave = SaveAttendance(new List<DtoAttendance> { attendance }
-                , checkDuplicateInterval, false, false);
+                , checkDuplicateInterval, false);
             if (resultOfSave.Successful.IsCollectionNotNullOrEmpty())
             {
                 var newAttendance = resultOfSave.Successful.FirstOrDefault();
@@ -121,7 +114,6 @@ namespace GuardianCommunication.Business.Component
         public DtoAttendanceSaveResult SaveAttendance
             (List<DtoAttendance> attendances
                 , bool checkDuplicateInterval
-                , bool checkDeviceSerialNumber
                 , bool applyDeviceRelatedProperties)
         {
 
@@ -138,9 +130,9 @@ namespace GuardianCommunication.Business.Component
                 };
             }
             var hookComponent = new HookComponent(RepositoryFactory);
-            var activeAttendanceHooks = hookComponent.SearchHookSystemCache(
-                h => h.Details.IsCollectionNotNullOrEmpty()
-                     && h.Details.Any(hd => hd.IsActive && hd.DetailType == HookDetailTypeEnumeration.Attendance));
+            var allHooks = hookComponent.GetHookDefinitionCache();
+            var activeAttendanceHooks = allHooks?.Where(
+                h => h.IsActive && h.HookType == HookTypeEnumeration.Attendance).ToList();
             var deviceComponent = new DeviceComponent(RepositoryFactory);
             if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogAttendanceSaveProcess))
             {
@@ -158,64 +150,73 @@ namespace GuardianCommunication.Business.Component
                         result.InvalidAttendances.Add(attendance);
                         continue;
                     }
-
-                    if (attendance.DeviceNumber.HasValue
-                        && checkDeviceSerialNumber
-                        && !deviceComponent.IsDeviceNumberValid(attendance.DeviceNumber.Value, ValidSerialNumberCheckTypeEnumeration.Attendance))
-                    {
-                        result.InvalidDeviceSerialNumberRecords.Add(attendance);
-                        continue;
-                    }
                     if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogAttendanceSaveProcess))
                     {
                         LoggingSystem.LogInfo("SaveAttendance process attendance is valid", attendances);
                     }
 
                     DtoDevice deviceCache = null;
-                    if (attendance.DeviceNumber.HasValue)
+                    if (attendance.DeviceId.HasValue)
                     {
-                        deviceCache = deviceComponent.GetDeviceByDeviceNumber(attendance.DeviceNumber.Value);
+                        deviceCache = deviceComponent.GetDeviceCache(attendance.DeviceId.Value);
                         if (deviceCache == null)
                         {
-                            LoggingSystem.LogWarning("DEVICE NOT FOUND IN CACHE", attendance.DeviceNumber);
+                            LoggingSystem.LogWarning("DEVICE NOT FOUND IN CACHE", attendance.DeviceId);
                         }
                         if (applyDeviceRelatedProperties && deviceCache != null)
                         {
-                            if (deviceCache.DeviceTypeSummary != null && deviceCache.DeviceTypeSummary.ProducerNumber == ProducerEnumeration.Padis && attendance.DoorId.HasValue)
+                            if (deviceCache.ProducerNumber == ProducerEnumeration.AsaGuard && attendance.DoorId.HasValue)
                             {
-                                var doorInCache = deviceComponent.GetDeviceDoorByDoorId(attendance.DoorId.Value);
-                                if (doorInCache != null)
+                                var doorInCache = deviceComponent.GetDeviceDoorCache(attendance.DoorId.Value);
+                                if (doorInCache?.ReaderDeviceId != null)
                                 {
-                                    attendance.ApplicationId = doorInCache.ReaderApplicationId;
+                                    attendance.ModuleId = doorInCache.ReaderModuleId;
                                     attendance.IoType = doorInCache.ReaderIoType;
-                                    attendance.ReaderDeviceNumber = doorInCache.ReaderDeviceNumber;
+                                    attendance.ReaderDeviceId = doorInCache.ReaderDeviceId;
+                                    attendance.LocationId = doorInCache.ReaderLocationId;
+                                    attendance.CameraId = null;
+                                }
+                                else if (doorInCache?.ReaderCameraId != null)
+                                {
+                                    attendance.ModuleId = doorInCache.ReaderModuleId;
+                                    attendance.IoType = doorInCache.ReaderIoType;
+                                    attendance.CameraId = doorInCache.ReaderCameraId;
+                                    attendance.CameraId = doorInCache.ReaderLocationId;
+                                    attendance.ReaderDeviceId = null;
                                 }
                                 else
                                 {
-                                    attendance.ApplicationId = deviceCache.ApplicationId;
+                                    attendance.ModuleId = deviceCache.ModuleId;
                                     attendance.IoType = deviceCache.IoType;
+                                    attendance.LocationId = deviceCache.LocationId;
+                                    attendance.ReaderDeviceId = null;
+                                    attendance.CameraId = null;
                                 }
                             }
                             else
                             {
-                                attendance.ApplicationId = deviceCache.ApplicationId;
+                                attendance.ModuleId = deviceCache.ModuleId;
                                 attendance.IoType = deviceCache.IoType;
+                                attendance.LocationId = deviceCache.LocationId;
+                                attendance.ReaderDeviceId = null;
+                                attendance.CameraId = null;
                             }
                         }
                     }
                     var attendanceRegisterIntervalSettings =
-                        systemConfigComponent.GetAttendanceRegisterIntervalSetting(attendance.ApplicationId);
+                        systemConfigComponent.GetAttendanceRegisterIntervalSetting(attendance.ModuleId);
 
-                    var hookSystemIds = new List<int>();
-                    if (deviceCache != null
-                        && deviceCache.IsHookActive
+                    var hookSystemIds = new List<Guid>();
+                    if (deviceCache?.DeviceSettings != null
+                        && deviceCache.DeviceSettings.IsHookActive
                         && activeAttendanceHooks.IsCollectionNotNullOrEmpty())
                     {
                         hookSystemIds = activeAttendanceHooks.Select(hs => hs.Id).ToList();
                     }
 
-                    var resultOfInsert = RepositoryFactory.GetAttendanceRepository().Insert(attendance, attendanceRegisterIntervalSettings, hookSystemIds);
-                    if (resultOfInsert == -1)
+                    var resultOfInsert = RepositoryFactory.GetAttendanceRepository()
+                        .Insert(attendance, attendanceRegisterIntervalSettings, hookSystemIds);
+                    if (resultOfInsert != null)
                     {
                         // Record is duplicate
                         result.ExistingRecords.Add(attendance);
@@ -264,7 +265,7 @@ namespace GuardianCommunication.Business.Component
 
         private static bool ValidateAttendance(DtoAttendance attendance)
         {
-            if (attendance.EmployeeNumber <= 0)
+            if (attendance.UserIdOnDevice <= 0)
             {
                 return false;
             }
@@ -285,10 +286,10 @@ namespace GuardianCommunication.Business.Component
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
             var attendanceRegisterIntervalSettings =
-                systemConfigComponent.GetAttendanceRegisterIntervalSetting(attendance.ApplicationId);
+                systemConfigComponent.GetAttendanceRegisterIntervalSetting(attendance.ModuleId);
             if (attendanceRegisterIntervalSettings.Count > 0)
             {
-                if (CheckExistence(attendance.EmployeeNumber, attendance.AttendanceDateTime, attendanceRegisterIntervalSettings))
+                if (CheckExistence(attendance.UserIdOnDevice, attendance.AttendanceDateTime, attendanceRegisterIntervalSettings))
                 {
                     return true;
                 }
@@ -304,9 +305,9 @@ namespace GuardianCommunication.Business.Component
         #region Private methods
 
 
-        private bool CheckExistence(long employeeNumber, DateTime attendanceDate, List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings)
+        private bool CheckExistence(long userIdOnDevice, DateTime attendanceDate, List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings)
         {
-            return RepositoryFactory.GetAttendanceRepository().CheckExistence(employeeNumber, attendanceDate, registerIntervalSettings);
+            return RepositoryFactory.GetAttendanceRepository().CheckExistence(userIdOnDevice, attendanceDate, registerIntervalSettings);
         }
 
         #endregion
@@ -314,44 +315,31 @@ namespace GuardianCommunication.Business.Component
         #endregion
 
 
-        #region Karnama Attendance
+        #region Guardian Attendance
 
-        public void ResendUnsentAttendancesToKarnama()
+        public void ResendUnsentAttendancesToGuardian()
         {
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var unsentAttendances = Search(new PagingData<AttendanceFilter, AttendanceSortEnumeration>
-            {
-                Filter = new AttendanceFilter
-                {
-                    IsSent = false,
-                },
-                CurrentPage = new CurrentPageInfo
-                {
-                    PageNumber = 1,
-                    ItemPerPage = systemConfigComponent.GetSystemConfigCache().AttendanceSendToKarnamaTimerRecordCount
-                },
-                SortItems = new List<SortInfo<AttendanceSortEnumeration>>
-                {
-                    new SortInfo<AttendanceSortEnumeration>
-                        { SortItemEnum = AttendanceSortEnumeration.AttendanceDate, SortType = SortTypeEnum.Asc }
-                }
-            });
-
-
+            var configCache = systemConfigComponent.GetSystemConfigCache();
+            var unsentAttendances = RepositoryFactory.GetAttendanceRepository()
+                .GetUnsentToGuardianAttendances(configCache.AttendanceSendToGuardianTimerRecordCount,
+                    configCache.AttendanceSendToGuardianRetryCount);
             if (unsentAttendances.IsCollectionNotNullOrEmpty())
             {
                 var markAsSent = new List<DtoAttendance>();
+                var increaseRetryCount = new List<DtoAttendance>();
                 foreach (var entity in unsentAttendances)
                 {
                     try
                     {
-                        var resultOfSave = SubmitIoEventToKarnama(entity);
-                        if (resultOfSave.IsAttendanceSavedAtKarnama())
+                        var resultOfSave = SubmitIoEventToGuardian(entity);
+                        if (resultOfSave.IsAttendanceSavedAtGuardian())
                         {
                             markAsSent.Add(entity);
                         }
                         else
                         {
+                            increaseRetryCount.Add(entity);
                             LoggingSystem.LogWarning("Attendance not saved in karnama", new
                             {
                                 Attendance = entity,
@@ -366,18 +354,23 @@ namespace GuardianCommunication.Business.Component
                 }
                 if (markAsSent.IsCollectionNotNullOrEmpty())
                 {
-                    MarkAttendanceAsSentToKarnama(markAsSent);
+                    MarkAttendanceAsSentToGuardian(markAsSent);
+                }
+
+                if (increaseRetryCount.IsCollectionNotNullOrEmpty())
+                {
+                    MarkAttendanceAsSentToGuardian(increaseRetryCount);
                 }
             }
 
         }
 
-        public void MarkAttendanceAsSentToKarnama(List<DtoAttendance> attendances)
+        public void MarkAttendanceAsSentToGuardian(List<DtoAttendance> attendances)
         {
             if (!attendances.IsCollectionNotNullOrEmpty()) return;
             try
             {
-                RepositoryFactory.GetAttendanceRepository().MarkAsSent(attendances);
+                RepositoryFactory.GetAttendanceRepository().MarkAsSentToGuardian(attendances);
             }
             catch (Exception exp)
             {
@@ -386,28 +379,30 @@ namespace GuardianCommunication.Business.Component
 
         }
 
-        public AttendanceProcessResultModel SubmitIoEventToKarnama(DtoAttendance entity)
+        public void IncreaseSentToGuardianRetryCount(List<DtoAttendance> attendances)
         {
-            var karnamaComponent = new KarnamaComponent(RepositoryFactory);
-            var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
-            var result = karnamaComponent.SubmitIoEvent(entity);
-            if (systemConfigComponent.GetSystemConfigCache().AttendanceSaveKarnamaSendResult)
+            if (!attendances.IsCollectionNotNullOrEmpty()) return;
+            try
             {
-                RepositoryFactory.GetAttendanceSendToKarnamaResultRepository().Insert(new DtoAttendanceSendToKarnamaResult()
-                {
-                    StatusCode = result.ResultCode,
-                    AttendanceId = entity.Id,
-                    IsSuccessful = result.IsSuccessfullyProcessed,
-                    ExceptionMessage = string.Empty,
-                    SendTime = DateTime.Now
-                });
+                RepositoryFactory.GetAttendanceRepository().IncreaseSentToGuardianRetryCount(attendances);
             }
+            catch (Exception exp)
+            {
+                LoggingSystem.LogError(exp);
+            }
+
+        }
+
+        public AttendanceProcessResultModel SubmitIoEventToGuardian(DtoAttendance entity)
+        {
+            var karnamaComponent = new GuardianComponent(RepositoryFactory);
+            var result = karnamaComponent.SubmitIoEvent(entity);
             return result;
         }
 
-        public void SubmitInvalidIoEventToKarnama(DtoInvalidAttendance entity)
+        public void SubmitInvalidIoEventToGuardian(DtoInvalidAttendance entity)
         {
-            var karnamaComponent = new KarnamaComponent(RepositoryFactory);
+            var karnamaComponent = new GuardianComponent(RepositoryFactory);
             karnamaComponent.SubmitInvalidIoEvent(entity);
         }
 
@@ -416,15 +411,15 @@ namespace GuardianCommunication.Business.Component
 
         #region Attendance Hook
 
-        public List<DtoAttendanceHookSystem> GetAttendancesHookSystem(long attendanceId)
+        public List<DtoAttendanceHookDefinition> GetAttendancesHookDefinition(Guid attendanceId)
         {
 
-            return RepositoryFactory.GetAttendanceHookSystemRepository().Search(
-                new PagingData<AttendanceHookSystemFilter, AttendanceHookSystemSortEnumeration>
+            return RepositoryFactory.GetAttendanceHookDefinitionRepository().Search(
+                new PagingData<AttendanceHookDefinitionFilter, AttendanceHookDefinitionSortEnumeration>()
                 {
-                    Filter = new AttendanceHookSystemFilter
+                    Filter = new AttendanceHookDefinitionFilter
                     {
-                        AttendanceIds = new List<long>
+                        AttendanceIds = new List<Guid>
                         {
                             attendanceId
                         }
@@ -437,14 +432,15 @@ namespace GuardianCommunication.Business.Component
             return RepositoryFactory.GetAttendanceRepository().GetUnhookedAttendances(count);
         }
 
-        public void MarkAttendanceAsSendToHookSystem(long attendanceId, int hookSystemId)
+        public void MarkAttendanceAsSendToHook(Guid attendanceId, Guid hookDefinitionId)
         {
-            RepositoryFactory.GetAttendanceHookSystemRepository().MarkAsSent(attendanceId, hookSystemId);
+            RepositoryFactory.GetAttendanceHookDefinitionRepository().MarkAsSent(attendanceId, hookDefinitionId);
         }
 
-        public void IncreaseAttendanceHookSystemRetryCount(long attendanceId, int hookSystemId)
+        public void IncreaseAttendanceHookRetryCount(Guid attendanceId, Guid hookDefinitionId)
         {
-            RepositoryFactory.GetAttendanceHookSystemRepository().IncreaseRetryCount(attendanceId, hookSystemId);
+            RepositoryFactory.GetAttendanceHookDefinitionRepository()
+                .IncreaseRetryCount(attendanceId, hookDefinitionId);
         }
 
         public void HookUnsentAttendances()
@@ -453,6 +449,12 @@ namespace GuardianCommunication.Business.Component
             var deviceComponent = new DeviceComponent(RepositoryFactory);
             var systemConfigComponent = new SystemConfigComponent(RepositoryFactory);
             var attendanceComponent = new AttendanceComponent(RepositoryFactory);
+            var allHookDefinitionsInCache = hookComponent.GetHookDefinitionCache();
+            if (allHookDefinitionsInCache.IsCollectionNullOrEmpty())
+            {
+                return;
+            }
+
             var unsentAttendances = attendanceComponent.GetUnhookedAttendances
                 (systemConfigComponent.GetSystemConfigCache().AttendanceHookTimerRecordCount);
 
@@ -462,43 +464,41 @@ namespace GuardianCommunication.Business.Component
             }
             foreach (var item in unsentAttendances)
             {
-                var deviceInCache = deviceComponent.SearchDeviceCache(row => row.DeviceNumber == item.DeviceNumber).FirstOrDefault();
-                if (deviceInCache != null && !deviceInCache.IsHookActive)
+                if (!item.DeviceId.HasValue)
                 {
-                    if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.AttendanceHookTask))
-                    {
-                        LoggingSystem.LogInfo("Hooking IO skipped because of system setting", $"Data for hook is {ObjectHelper.SerializeAsJson(item)}");
-                    }
+                    continue;
                 }
-                var hookSystemCache = hookComponent.SearchHookSystemCache
-                    (row => row.Id == item.HookSystemId).FirstOrDefault();
-                var detail = hookSystemCache?.Details.FirstOrDefault
-                    (row => row.DetailType == HookDetailTypeEnumeration.Attendance);
-                if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.AttendanceHookTask))
+                var deviceInCache = deviceComponent.GetDeviceCache(item.DeviceId.Value);
+                if (deviceInCache?.DeviceSettings != null && deviceInCache.DeviceSettings.IsHookActive)
                 {
-                    LoggingSystem.LogInfo(
-                        detail != null
-                            ? $"Hook system detail is  {ObjectHelper.SerializeAsJson(detail)} data is {ObjectHelper.SerializeAsJson(item)} "
-                            : $"Hook system detail is is null and data is {ObjectHelper.SerializeAsJson(item)}", "Sending Unhooked items");
-                }
+                    var currentItemHookSystemDefinition = allHookDefinitionsInCache.FirstOrDefault
+                    (hsd => hsd.IsActive = hsd.HookType == HookTypeEnumeration.Attendance
+                                           && hsd.Id == item.HookDefinitionId);
 
-                if (detail != null)
-                {
+                    if (currentItemHookSystemDefinition == null)
+                    {
+                        continue;
+                    }
+
                     try
                     {
-                        hookComponent.CallHookApi<DtoAttendance>(hookSystemCache, detail, item);
-                        attendanceComponent.MarkAttendanceAsSendToHookSystem(item.Id, item.HookSystemId);
+                        hookComponent.CallHookApi<DtoAttendance>(currentItemHookSystemDefinition, item);
+                        attendanceComponent.MarkAttendanceAsSendToHook(item.Id, item.HookDefinitionId);
                     }
                     catch (Exception exp)
                     {
-                        LoggingSystem.LogHookError(exp, new { HookSystemDetail = detail, Attendance = item });
+                        LoggingSystem.LogHookError(exp, new
+                        {
+                            HookDefinition = currentItemHookSystemDefinition, Attendance = item
+                        });
                         try
                         {
-                            attendanceComponent.IncreaseAttendanceHookSystemRetryCount(item.Id, item.HookSystemId);
+                            attendanceComponent.IncreaseAttendanceHookRetryCount(item.Id, item.HookDefinitionId);
                         }
                         catch (Exception expSave)
                         {
-                            LoggingSystem.LogError(expSave, "Error on IncreaseAttendanceHookSystemRetryCount", $"Hook system detail is {ObjectHelper.SerializeAsJson(detail)} data is {ObjectHelper.SerializeAsJson(item)} ");
+                            LoggingSystem.LogError(expSave, "Error on IncreaseAttendanceHookSystemRetryCount",
+                                $"Hook system detail is {ObjectHelper.SerializeAsJson(currentItemHookSystemDefinition)} data is {ObjectHelper.SerializeAsJson(item)} ");
                         }
                     }
 
@@ -511,34 +511,50 @@ namespace GuardianCommunication.Business.Component
         {
             var hookComponent = new HookComponent(RepositoryFactory);
             var deviceComponent = new DeviceComponent(RepositoryFactory);
-            var deviceInCache = deviceComponent.SearchDeviceCache(row => row.DeviceNumber == attendance.DeviceNumber).FirstOrDefault();
-            if (deviceInCache != null && !deviceInCache.IsHookActive)
-            {
-                if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogHookProcess))
-                {
-                    LoggingSystem.LogInfo($"Data for hook is {ObjectHelper.SerializeAsJson(attendance)}", "Hooking IO skipped because of system setting");
-                }
 
+            var allHookDefinitions = hookComponent.GetHookDefinitionCache();
+            if (allHookDefinitions.IsCollectionNullOrEmpty())
+            {
                 return;
             }
-            var attendanceComponent = new AttendanceComponent(RepositoryFactory);
-            var attendanceHookSystems = attendanceComponent.GetAttendancesHookSystem(attendance.Id);
+
+            var allHookDefinitionActiveForAttendance = allHookDefinitions
+                .Where(hd => hd.IsActive && hd.HookType == HookTypeEnumeration.Attendance)
+                .ToList();
+            if (allHookDefinitionActiveForAttendance.IsCollectionNullOrEmpty())
+            {
+                return;
+            }
+            if (attendance.DeviceId.HasValue)
+            {
+                var deviceInCache = deviceComponent.GetDeviceCache(attendance.DeviceId.Value);
+                if (deviceInCache?.DeviceSettings != null && !deviceInCache.DeviceSettings.IsHookActive)
+                {
+                    if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogHookProcess))
+                    {
+                        LoggingSystem.LogInfo($"Data for hook is {ObjectHelper.SerializeAsJson(attendance)}",
+                            "Hooking IO skipped because of system setting");
+                    }
+                    return;
+                }
+            }
+
+
+            var allAttendanceHookDefinitions = GetAttendancesHookDefinition(attendance.Id);
             if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogHookProcess))
             {
-                LoggingSystem.LogInfo($"Data for hook is {ObjectHelper.SerializeAsJson(attendance)} and attendance hook systems are {ObjectHelper.SerializeAsJson(attendanceHookSystems)}", "IO hook");
+                LoggingSystem.LogInfo($"Data for hook is {ObjectHelper.SerializeAsJson(attendance)} and attendance hook systems are {ObjectHelper.SerializeAsJson(allAttendanceHookDefinitions)}", "IO hook");
             }
-            if (attendanceHookSystems.IsCollectionNullOrEmpty())
+            if (allAttendanceHookDefinitions.IsCollectionNullOrEmpty())
             {
                 return;
             }
 
-            foreach (var item in attendanceHookSystems)
+            foreach (var item in allAttendanceHookDefinitions)
             {
-                var hookSystemCache = hookComponent.SearchHookSystemCache
-                    (row => row.Id == item.HookSystemId).FirstOrDefault();
-                var detail = hookSystemCache?.Details.FirstOrDefault
-                    (row => row.DetailType == HookDetailTypeEnumeration.Attendance);
-                if (detail != null)
+                var hookDefinitionInCache = allHookDefinitionActiveForAttendance
+                    .FirstOrDefault(hd => hd.Id == item.HookDefinitionId );
+                if (hookDefinitionInCache != null)
                 {
 
                     if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogHookProcess))
@@ -547,16 +563,19 @@ namespace GuardianCommunication.Business.Component
                     }
                     try
                     {
-                        hookComponent.CallHookApi(hookSystemCache, detail, attendance);
-                        attendanceComponent.MarkAttendanceAsSendToHookSystem(attendance.Id, item.HookSystemId);
+                        hookComponent.CallHookApi(hookDefinitionInCache, attendance);
+                        MarkAttendanceAsSendToHook(attendance.Id, item.HookDefinitionId);
                     }
                     catch (Exception exp)
                     {
-                        LoggingSystem.LogHookError(exp, new { HookSystemDetail = detail, Attendance = attendance });
+                        LoggingSystem.LogHookError(exp, new
+                        {
+                            HookDefintion = hookDefinitionInCache, Attendance = attendance
+                        });
                         LoggingSystem.LogHookError(exp, item);
                         try
                         {
-                            attendanceComponent.IncreaseAttendanceHookSystemRetryCount(item.AttendanceId, item.HookSystemId);
+                            IncreaseAttendanceHookRetryCount(item.AttendanceId, item.HookDefinitionId);
                         }
                         catch (Exception expSave)
                         {

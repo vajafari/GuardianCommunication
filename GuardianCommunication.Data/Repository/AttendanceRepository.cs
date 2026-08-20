@@ -10,7 +10,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Linq;
-using System.Runtime.Remoting.Contexts;
 using System.Text;
 
 namespace GuardianCommunication.Data.Repository
@@ -18,16 +17,20 @@ namespace GuardianCommunication.Data.Repository
     public interface IAttendanceRepository
     {
 
-        Guid? Insert(DtoAttendance entity, List<DtoAttendanceRegisterIntervalSetting> intervalSettings, List<int> hookSystemIds);
+        Guid? Insert(DtoAttendance entity, List<DtoAttendanceRegisterIntervalSetting> intervalSettings, List<Guid> hookDefinitionIds);
 
-        void MarkAsSent(List<DtoAttendance> entities);
+        void MarkAsSentToGuardian(List<DtoAttendance> entities);
 
-        bool CheckExistence(long employeeNumber, DateTime attendanceDate
+        void IncreaseSentToGuardianRetryCount(List<DtoAttendance> entities);
+
+        bool CheckExistence(long userIdOnDevice, DateTime attendanceDate
             , List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings);
 
         List<DtoAttendance> Search(PagingData<AttendanceFilter, AttendanceSortEnumeration> searchInfo);
 
         List<DtoUnhookedAttendances> GetUnhookedAttendances(int count);
+
+        List<DtoUnhookedAttendances> GetUnsentToGuardianAttendances(int count, int retryCount);
 
     }
 
@@ -93,6 +96,15 @@ namespace GuardianCommunication.Data.Repository
 				ORDER BY ahd.[RetryCount] DESC
 			";
 
+        private const string SelectUnsentToGuardianAttendancesCommand =
+            @"	SELECT  TOP ({0})       
+					  att.*
+				FROM [com].[Attendance] att ON att.[Id] = ahd.[AttendanceId]
+				WHERE  att.[IsSentToGuardian] = 0
+					AND att.[SentToGuardianRetryCount] <= @RetryCount
+				ORDER BY ahd.[SentToGuardianRetryCount] DESC
+			";
+
         private const string InsertNormalCommand =
             @"	
                 DECLARE @CurrentId UNIQUEIDENTIFIER;
@@ -106,6 +118,7 @@ namespace GuardianCommunication.Data.Repository
                    , [DeviceId]
                    , [CameraId]
                    , [ReaderDeviceId]
+                   , [LocationId]
                    , [VerificationStyle]
                    , [RfCardNumber]
                    , [StatusCode]
@@ -127,6 +140,7 @@ namespace GuardianCommunication.Data.Repository
                    , @DeviceId
                    , @CameraId
                    , @ReaderDeviceId
+                   , @LocationId
                    , @VerificationStyle
                    , @RfCardNumber
                    , @StatusCode
@@ -157,6 +171,7 @@ namespace GuardianCommunication.Data.Repository
                        , [DeviceId]
                        , [CameraId]
                        , [ReaderDeviceId]
+                       , [LocationId]
                        , [VerificationStyle]
                        , [RfCardNumber]
                        , [StatusCode]
@@ -178,6 +193,7 @@ namespace GuardianCommunication.Data.Repository
                        , @DeviceId
                        , @CameraId
                        , @ReaderDeviceId
+                       , @LocationId
                        , @VerificationStyle
                        , @RfCardNumber
                        , @StatusCode
@@ -235,6 +251,7 @@ namespace GuardianCommunication.Data.Repository
                    , [DeviceId]
                    , [CameraId]
                    , [ReaderDeviceId]
+                   , [LocationId]
                    , [VerificationStyle]
                    , [RfCardNumber]
                    , [StatusCode]
@@ -256,6 +273,7 @@ namespace GuardianCommunication.Data.Repository
                    , @DeviceId
                    , @CameraId
                    , @ReaderDeviceId
+                   , @LocationId
                    , @VerificationStyle
                    , @RfCardNumber
                    , @StatusCode
@@ -287,6 +305,7 @@ namespace GuardianCommunication.Data.Repository
                        , [DeviceId]
                        , [CameraId]
                        , [ReaderDeviceId]
+                       , [LocationId]
                        , [VerificationStyle]
                        , [RfCardNumber]
                        , [StatusCode]
@@ -308,6 +327,7 @@ namespace GuardianCommunication.Data.Repository
                        , @DeviceId
                        , @CameraId
                        , @ReaderDeviceId
+                       , @LocationId
                        , @VerificationStyle
                        , @RfCardNumber
                        , @StatusCode
@@ -329,9 +349,14 @@ namespace GuardianCommunication.Data.Repository
                 END
 			";
 
-        private const string MarkAsSentCommand =
+        private const string MarkAsSentToGuardianCommand =
             @"	UPDATE        [com].[Attendance]
 					SET IsSentToGuardian = 1
+				WHERE  Id IN @Ids";
+
+        private const string IncreaseSentToGuardianRetryCountCommand =
+            @"	UPDATE        [com].[Attendance]
+					SET SentToGuardianRetryCount = ISNULL(SentToGuardianRetryCount , 0) + 1
 				WHERE  Id IN @Ids";
 
 
@@ -348,10 +373,6 @@ namespace GuardianCommunication.Data.Repository
                 if (filter.Ids.IsCollectionNotNullOrEmpty())
                 {
                     sb.AppendLine($" AND att.[Id] IN @{nameof(filter.Ids)}");
-                }
-                if (filter.IsSent.HasValue)
-                {
-                    sb.AppendLine($" AND att.[IsSentToGuardian] = @{nameof(filter.IsSent)}");
                 }
                 if (filter.IsHooked.HasValue)
                 {
@@ -377,14 +398,14 @@ namespace GuardianCommunication.Data.Repository
 
         public Guid? Insert(DtoAttendance entity
             , List<DtoAttendanceRegisterIntervalSetting> registerIntervalSettings
-            , List<int> hookSystemIds)
+            , List<Guid> hookDefinitionIds)
         {
-            if (hookSystemIds.IsCollectionNotNullOrEmpty())
+            if (hookDefinitionIds.IsCollectionNotNullOrEmpty())
             {
                 var sb = new StringBuilder();
-                foreach (var hookSystemId in hookSystemIds)
+                foreach (var hookDefinitionId in hookDefinitionIds)
                 {
-                    sb.AppendLine(InsertAttendanceHookDefinitionCommand.FormatInvariantCulture(hookSystemId));
+                    sb.AppendLine(InsertAttendanceHookDefinitionCommand.FormatInvariantCulture(hookDefinitionId));
                 }
                 if (registerIntervalSettings.IsCollectionNullOrEmpty())
                 {
@@ -456,7 +477,7 @@ namespace GuardianCommunication.Data.Repository
             }
         }
 
-        public void MarkAsSent(List<DtoAttendance> entities)
+        public void MarkAsSentToGuardian(List<DtoAttendance> entities)
         {
 
             if (entities.IsCollectionNullOrEmpty()) return;
@@ -466,10 +487,38 @@ namespace GuardianCommunication.Data.Repository
                 {
                     try
                     {
-                        foreach (var batch in entities.Batch(200))
+                        foreach (var batch in entities.Batch(500))
                         {
                             connection.Execute(
-                                MarkAsSentCommand
+                                MarkAsSentToGuardianCommand
+                                , batch
+                                , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+                        }
+                        transaction.Commit();
+                    }
+                    catch (Exception)
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+        public void IncreaseSentToGuardianRetryCount(List<DtoAttendance> entities)
+        {
+
+            if (entities.IsCollectionNullOrEmpty()) return;
+            using (var connection = GetConnection())
+            {
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        foreach (var batch in entities.Batch(500))
+                        {
+                            connection.Execute(
+                                IncreaseSentToGuardianRetryCountCommand
                                 , batch
                                 , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                         }
@@ -558,6 +607,21 @@ namespace GuardianCommunication.Data.Repository
                 return connection.Query<DtoUnhookedAttendances>(
                     SelectUnhookedAttendancesCommand.FormatInvariantCulture(count)
                     , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).ToList();
+            }
+        }
+
+        public List<DtoUnhookedAttendances> GetUnsentToGuardianAttendances(int count, int retryCount)
+        {
+            using (var connection = GetConnection())
+            {
+                return connection.Query<DtoUnhookedAttendances>(
+                    SelectUnsentToGuardianAttendancesCommand.FormatInvariantCulture(count)
+                    , new
+                    {
+                        RetryCount = retryCount
+                    }
+                    , commandType: CommandType.Text
+                    , commandTimeout: ConnectionConfig.CommandTimeout).ToList();
             }
         }
 

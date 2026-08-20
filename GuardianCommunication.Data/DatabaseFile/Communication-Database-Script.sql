@@ -46,6 +46,7 @@ CREATE TABLE [com].[Attendance](
 	[CameraId] [uniqueidentifier] NULL,
 	[DoorId] [uniqueidentifier] NULL,
 	[ReaderDeviceId] [uniqueidentifier] NULL,
+	[LocationId] [uniqueidentifier] NOT NULL,
 	[VerificationStyle] [int] NULL,
 	[RfCardNumber] [nvarchar](100) NULL,
 	[StatusCode] [int] NULL,
@@ -186,6 +187,9 @@ CREATE TABLE [com].[HookDefinition](
 	[HookType] [smallint] NOT NULL,
 	[EndPointUrl] [nvarchar](4000) NOT NULL,
 	[HttpMethod] [int] NOT NULL,
+	[AuthorizationType] [smallint] NOT NULL,
+	[AuthorizationUsername] [nvarchar](200) NULL,
+	[AuthorizationPassword] [nvarchar](200) NULL,
 	[QueryStringTemplate] [nvarchar](max) NOT NULL,
 	[HeaderTemplate] [nvarchar](max) NOT NULL,
 	[BodyTemplate] [nvarchar](max) NOT NULL,
@@ -394,6 +398,11 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_HookDefinition_HttpMethod]') AND type = 'D')
 BEGIN
 ALTER TABLE [com].[HookDefinition] ADD  CONSTRAINT [DF_HookDefinition_HttpMethod]  DEFAULT ((1)) FOR [HttpMethod]
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_HookDefinition_AuthorizationType]') AND type = 'D')
+BEGIN
+ALTER TABLE [com].[HookDefinition] ADD  CONSTRAINT [DF_HookDefinition_AuthorizationType]  DEFAULT ((0)) FOR [AuthorizationType]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_HookDefinition_QueryStringTemplate]') AND type = 'D')
@@ -897,6 +906,15 @@ IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'S
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'HttpMethod'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'HTTP Method مقصد' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'HttpMethod'
+GO
+IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'AuthorizationType'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'نوع احراز هویت درخواست به سیستم مقصد' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'AuthorizationType'
+GO
+IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'AuthorizationUsername'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'نام کاربری برای احراز هویت با سیستم مقصد' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'AuthorizationUsername'
+GO
+IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'AuthorizationPassword'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'کلمه عبور برای احراز هویت با سیستم مقصد' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'AuthorizationPassword'
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'QueryStringTemplate'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'قالب Query String' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'QueryStringTemplate'

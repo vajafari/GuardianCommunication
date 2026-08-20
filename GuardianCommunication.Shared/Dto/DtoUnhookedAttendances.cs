@@ -1,8 +1,10 @@
-﻿namespace GuardianCommunication.Shared.Dto
+﻿using System;
+
+namespace GuardianCommunication.Shared.Dto
 {
 	
 	public class DtoUnhookedAttendances : DtoAttendance
 	{
-		public int HookSystemId { get; set; }
+		public Guid HookDefinitionId { get; set; }
 	}
 }

@@ -6,10 +6,10 @@ namespace GuardianCommunication.Shared.Dto
     public class DtoSystemConfig
     {
 
-        public string KarnamaAppUsername { get; set; }
-        public string KarnamaAppPassword { get; set; }
-        public string KarnamaAuthorizationToken { get; set; }
-        public string KarnamaServiceUrl { get; set; }
+        public string GuardianAppUsername { get; set; }
+        public string GuardianAppPassword { get; set; }
+        public string GuardianAuthorizationToken { get; set; }
+        public string GuardianServiceUrl { get; set; }
         public int AutomaticCollectAttendanceTimerInterval { get; set; }
         public int OnlineMonitoringDevicesIntervalFromLastDataToReset { get; set; }
         public int OnlineMonitoringDevicesTimerCheckLastDataIntervalInMinutes { get; set; }
@@ -29,11 +29,11 @@ namespace GuardianCommunication.Shared.Dto
 
         #region Attendance
 
-        public int AttendanceSendToKarnamaTimerInterval { get; set; }
+        public int AttendanceSendToGuardianTimerInterval { get; set; }
         public int AttendanceHookTimerInterval { get; set; }
-        public int AttendanceSendToKarnamaTimerRecordCount { get; set; }
+        public int AttendanceSendToGuardianTimerRecordCount { get; set; }
+        public int AttendanceSendToGuardianRetryCount { get; set; }
         public int AttendanceHookTimerRecordCount { get; set; }
-        public bool AttendanceSaveKarnamaSendResult { get; set; }
         public int AttendanceRegisterInterval { get; set; }
         public int AttendanceRegisterIntervalForParking { get; set; }
         public int AttendanceRegisterIntervalForTimeAttendance { get; set; }

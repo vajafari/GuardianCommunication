@@ -431,6 +431,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     AttendanceDateTime = eventTime,
                                     VerificationStyle = record.subEvent,
                                     DeviceId = deviceInfo.Id,
+                                    LocationId = deviceInfo.LocationId,
                                     CameraId = null,
                                     StatusCode = record.tnaEvent,
                                     RfCardNumber = null,
@@ -495,6 +496,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     AttendanceDateTime = eventTime,
                                     VerificationStyle = record.subEvent,
                                     DeviceId = deviceInfo.Id,
+                                    LocationId = deviceInfo.LocationId,
                                     StatusCode = record.tnaEvent,
                                     RfCardNumber = null,
                                 };

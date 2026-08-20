@@ -7,18 +7,6 @@ namespace GuardianCommunication.Shared.Filter
 	{
 		public List<Guid> Ids { get; set; }
         
-  //      public List<Guid> DeviceIds { get; set; }
-
-  //      public List<long> UserIdsOnDevice { get; set; }
-
-		//public DateTime? AttendanceDate { get; set; }
-
-		//public DateTime? AttendanceDateFrom { get; set; }
-
-		//public DateTime? AttendanceDateTo { get; set; }
-
-		public bool? IsSent { get; set; }
-
 		public bool? IsHooked { get; set; }
 	}
 }

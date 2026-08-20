@@ -11,6 +11,12 @@ namespace GuardianCommunication.Shared.Dto
 
 		public Method HttpMethod { get; set; }
 
+		public AuthorizationTypeEnumeration AuthorizationType { get; set; }
+
+		public string AuthorizationUsername { get; set; }
+
+		public string AuthorizationPassword { get; set; }
+
 		public string QueryStringTemplate { get; set; }
 
 		public string HeaderTemplate { get; set; }

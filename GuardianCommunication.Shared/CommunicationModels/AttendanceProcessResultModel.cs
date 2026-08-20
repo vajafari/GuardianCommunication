@@ -12,7 +12,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public int ResultCode { get; set; }
 
 
-        public bool IsAttendanceSavedAtKarnama()
+        public bool IsAttendanceSavedAtGuardian()
         {
             if (IsSuccessfullyProcessed)
             {

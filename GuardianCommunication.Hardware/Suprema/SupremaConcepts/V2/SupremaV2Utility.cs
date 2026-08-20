@@ -52,6 +52,7 @@ namespace GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2
                 UserIdOnDevice = Encoding.ASCII.GetString(record.userID).ToInt64(),
                 AttendanceDateTime = DateTimeHelper.ConvertUnixTimestampToUtc(record.dateTime),
                 DeviceId = deviceInfo.Id,
+                LocationId = deviceInfo.LocationId,
                 CameraId = null,
                 VerificationStyle = (int)GetVerificationStyle(record.code),
                 AttendanceSource = AttendanceSourceEnumeration.Device,

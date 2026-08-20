@@ -14,7 +14,7 @@ namespace GuardianCommunication.Business.Cache
 
         #region DeviceDoor
 
-        DtoDeviceDoor GetDeviceDoorById(Guid deviceDoor);
+        DtoDeviceDoorFullInfo GetDeviceDoorById(Guid deviceDoor);
 
         #endregion
 

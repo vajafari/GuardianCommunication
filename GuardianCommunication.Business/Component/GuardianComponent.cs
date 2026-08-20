@@ -8,10 +8,10 @@ using GuardianCommunication.Shared.Dto.Communication.Shared.CommunicationModels;
 
 namespace GuardianCommunication.Business.Component
 {
-    public class KarnamaComponent : BaseComponent
+    public class GuardianComponent : BaseComponent
     {
 
-        public KarnamaComponent(RepositoryFactory sharedRepository)
+        public GuardianComponent(RepositoryFactory sharedRepository)
             : base(sharedRepository)
         { }
 

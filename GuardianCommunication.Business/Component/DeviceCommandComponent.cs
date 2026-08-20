@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using GuardianCommunication.Data.Repository;
-using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.Dto;
 using GuardianCommunication.Shared.ExtensionsAndUtilities;
 using GuardianCommunication.Shared.Filter;
@@ -24,30 +23,20 @@ namespace GuardianCommunication.Business.Component
         }
 
         public List<DtoUnsentCommandCountByDeviceSerialNumber> GetUnsentCommandsCountByDeviceSerialNumberForEachDevice
-            (DeviceNotSentCommandsFilter filter)
+            (DeviceNotSentCommandsCountByDeviceSerialNumberFilter filter)
         {
             return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceSerialNumber(filter);
         }
 
         public List<DtoUnsentCommandCountByDeviceNumber> GetUnsentCommandsCountByDeviceNumberForEachDevice
-            (DeviceNotSentCommandsFilter filter)
+            (DeviceNotSentCommandsCountByDeviceNumberFilter filter)
         {
             return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceNumbers(filter);
-        }
-
-        public List<DtoFailedCommandStatistics> GetDeviceNotSendCommandsStatistics(List<int> deviceNumbers)
-        {
-            return RepositoryFactory.GetDeviceCommandRepository().GetNotSendCommandsStatistics(deviceNumbers);
         }
 
         public List<DtoDeviceCommandWithoutContent> SearchWithoutContent(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
         {
             return RepositoryFactory.GetDeviceCommandRepository().SearchWithoutContent(searchInfo);
-        }
-
-        public int GetCount(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
-        {
-            return RepositoryFactory.GetDeviceCommandRepository().GetCount(searchInfo);
         }
 
         public List<DtoDeviceCommand> Insert(List<DtoDeviceCommand> entities)
@@ -64,37 +53,7 @@ namespace GuardianCommunication.Business.Component
             return entity != null ? Insert(new List<DtoDeviceCommand> { entity }).FirstOrDefault() : null;
         }
 
-        public void DeleteNotSentByEmployeeDeviceAndCommandTypes
-            (long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes)
-        {
-            RepositoryFactory.GetDeviceCommandRepository().DeleteNotSentByEmployeeDeviceAndCommandTypes(employeeNumber, deviceNumber, commandTypes);
-        }
-
-        public void DeleteNotSentByEmployeeDeviceCommandTypesAndCommandIdentifier
-            (long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes, List<Guid> commandIds)
-        {
-            RepositoryFactory.GetDeviceCommandRepository().DeleteNotSentByEmployeeDeviceCommandTypesAndCommandIdentifier
-                (employeeNumber, deviceNumber, commandTypes, commandIds);
-        }
-
-        public void DeleteNotSentByEmployeeDeviceCommandTypesAndCommandDateInterval
-            (long employeeNumber, int deviceNumber, List<DeviceCommandTypeEnumeration> commandTypes, DateTime startDate, DateTime endDate)
-        {
-            RepositoryFactory.GetDeviceCommandRepository().DeleteNotSentByEmployeeDeviceCommandTypesAndCommandDateInterval
-                (employeeNumber, deviceNumber, commandTypes, startDate, endDate);
-        }
-
-        public void DeleteNotSendByDeviceNumbers(List<int> deviceNumbers)
-        {
-            RepositoryFactory.GetDeviceCommandRepository().DeleteNotSendByDeviceNumber(deviceNumbers);
-        }
-
-        public void DeleteFailedBeforeDate(DateTime dateTime, bool justDeleteFailedCommands)
-        {
-            RepositoryFactory.GetDeviceCommandRepository().DeleteFailedBeforeDate(dateTime, justDeleteFailedCommands);
-        }
-
-        public void DeleteByIds(List<int> ids)
+        public void DeleteByIds(List<Guid> ids)
         {
             RepositoryFactory.GetDeviceCommandRepository().DeleteByIds(ids, null);
         }
@@ -108,14 +67,9 @@ namespace GuardianCommunication.Business.Component
             RepositoryFactory.GetDeviceCommandRepository().DeleteByCommandIdentifiers(commandIdentifiers);
         }
 
-        public void ResetSendData(List<int> ids)
+        public void UpdateSendDataByNumericIds(List<long> ids)
         {
-            RepositoryFactory.GetDeviceCommandRepository().ResetSendData(ids);
-        }
-
-        public void UpdateSendData(List<int> ids)
-        {
-            RepositoryFactory.GetDeviceCommandRepository().UpdateSendData(ids);
+            RepositoryFactory.GetDeviceCommandRepository().UpdateSendDataByNumericIds(ids);
         }
 
         public void SetResponse(DtoDeviceCommandProcessingResult entity)
@@ -127,7 +81,7 @@ namespace GuardianCommunication.Business.Component
             }
             else
             {
-                RepositoryFactory.GetDeviceCommandRepository().DeleteByIds(new List<int> { entity.Id }, entity.Mode);
+                RepositoryFactory.GetDeviceCommandRepository().DeleteByNumericIds(new List<long> { entity.NumericId }, entity.Mode);
             }
         }
 

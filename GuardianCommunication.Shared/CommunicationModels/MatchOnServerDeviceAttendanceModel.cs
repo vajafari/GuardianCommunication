@@ -1,4 +1,5 @@
-﻿using GuardianCommunication.Shared.Definition;
+﻿using System;
+using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.CommunicationModels
@@ -10,7 +11,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public int VerificationStyle { get; set; }
         public double AttendanceDateTime { get; set; }
         public AttendanceSourceEnumeration AttendanceSource { get; set; }
-        public int DeviceNumber { get; set; }
+        public Guid DeviceId { get; set; }
         public int StatusCode { get; set; }
         public string RfCardNumber { get; set; }
         public DeviceIoTypeEnumeration IoType { get; set; }

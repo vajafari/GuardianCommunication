@@ -3,25 +3,27 @@ using System.Threading;
 using GuardianCommunication.Business.Component;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Tasks
 {
-    public class AttendanceSendToKarnamaTask : TimedBaseTask
+    public class AttendanceSendToGuardianTask : TimedBaseTask
     {
         private readonly AttendanceComponent _attendanceComponent;
-        public AttendanceSendToKarnamaTask(TimeSpan interval) : base(interval)
+        public AttendanceSendToGuardianTask(TimeSpan interval) : base(interval)
         {
             var repositoryFactory = new RepositoryFactory();
             _attendanceComponent = new AttendanceComponent(repositoryFactory);
-            LoggingSystem.LogInfo($"AttendanceSendToKarnamaTask started with interval {(int)interval.TotalMinutes}");
+            LoggingSystem.LogInfo($"AttendanceSendToGuardianTask started with interval {(int)interval.TotalMinutes}");
         }
 
         private readonly object _lockAttendanceHook = new object();
         public override void Process()
         {
-            if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.AttendanceSendToKarnamaTask))
+            if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.AttendanceSendToGuardianTask))
             {
-                LoggingSystem.LogInfo("AttendanceSendToKarnamaTask process is calling");
+                LoggingSystem.LogInfo("AttendanceSendToGuardianTask process is calling");
             }
             if (Monitor.TryEnter(_lockAttendanceHook))
             {
@@ -44,9 +46,9 @@ namespace GuardianCommunication.Business.Tasks
             }
             else
             {
-                if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.AttendanceSendToKarnamaTask))
+                if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.AttendanceSendToGuardianTask))
                 {
-                    LoggingSystem.LogInfo("AttendanceSendToKarnamaTask skipped because of lock is taken");
+                    LoggingSystem.LogInfo("AttendanceSendToGuardianTask skipped because of lock is taken");
                 }
             }
         }

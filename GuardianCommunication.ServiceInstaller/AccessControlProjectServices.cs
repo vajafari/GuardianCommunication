@@ -158,7 +158,7 @@ namespace GuardianCommunication.ServiceInstaller
         {
             var allTasks = new List<TimedBaseTask>
             {
-                new AttendanceSendToKarnamaTask(TimeSpan.FromMinutes(systemConfig.AttendanceSendToKarnamaTimerInterval)),
+                new AttendanceSendToGuardianTask(TimeSpan.FromMinutes(systemConfig.AttendanceSendToKarnamaTimerInterval)),
                 new AttendanceHookTask(TimeSpan.FromMinutes(systemConfig.AttendanceHookTimerInterval)),
                 new OnlineDeviceTask(TimeSpan.FromSeconds(systemConfig.OnlineDeviceTimerInterval)),
             };

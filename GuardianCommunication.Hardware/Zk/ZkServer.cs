@@ -1212,6 +1212,7 @@ namespace GuardianCommunication.Hardware.Zk
                     DeviceAttendanceIoRetrieveType = DeviceAttendanceIoRetrieveTypeEnumeration.Push,
                     AttendanceSource = AttendanceSourceEnumeration.Device,
                     DeviceId = deviceInfo.Id,
+                    LocationId = deviceInfo.LocationId,
                     CameraId = null,
                     StatusCode = attStatus,
                     IsSentToGuardian = false,

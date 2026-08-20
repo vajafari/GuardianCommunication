@@ -387,7 +387,7 @@ namespace GuardianCommunication.Business.Component
 
         public void ConfigureApplicationEmbeddedInfo()
         {
-            var karnamaComponent = new KarnamaComponent(RepositoryFactory);
+            var karnamaComponent = new GuardianComponent(RepositoryFactory);
             var encodedConfig = karnamaComponent.GetSoftwareEncodedConfig();
             ApplicationEmbeddedInfo.Modules = encodedConfig.Modules;
             ApplicationEmbeddedInfo.ExpireDate = encodedConfig.ExpireDate;

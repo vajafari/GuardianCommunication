@@ -29,7 +29,7 @@ namespace GuardianCommunication.Business.Cache
 
         // Private cache managers
         private ICacheManager<DtoDevice> DeviceManager { get; } = new DictionaryBaseCacheManager<DtoDevice>();
-        private ICacheManager<DtoDeviceDoor> DeviceDoorManager { get; } = new DictionaryBaseCacheManager<DtoDeviceDoor>();
+        private ICacheManager<DtoDeviceDoorFullInfo> DeviceDoorManager { get; } = new DictionaryBaseCacheManager<DtoDeviceDoorFullInfo>();
         private List<DtoHookDefinition> _hookDefinitios = null;
         private DtoSystemConfig _systemConfig;
         
@@ -73,7 +73,7 @@ namespace GuardianCommunication.Business.Cache
 
         #region DeviceDoor
 
-        public DtoDeviceDoor GetDeviceDoorById(Guid deviceDoorId)
+        public DtoDeviceDoorFullInfo GetDeviceDoorById(Guid deviceDoorId)
         {
             var cached = DeviceDoorManager.GetCacheItem(deviceDoorId.ToString());
             if (cached != null) return cached;
