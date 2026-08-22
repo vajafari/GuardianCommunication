@@ -74,15 +74,13 @@ namespace GuardianCommunication.Shared.OperationResult
         [EnumMember]
         CommunicationHardwareServiceTimeout = 10000023,
         [EnumMember]
-        CommunicationStatusRandomDeviceSerialNumberError1 = 10000024,
+        DeviceNotFoundInCache = 10000024,
         [EnumMember]
-        CommunicationStatusRandomDeviceSerialNumberError2 = 10000025,
+        DeviceDoorSettingIsNotValid = 10000025,
         [EnumMember]
-        CommunicationStatusRandomDeviceSerialNumberError3 = 10000026,
+        DeviceSettingIsNotValid = 10000026,
         [EnumMember]
-        CommunicationStatusRandomDeviceSerialNumberError4 = 10000027,
-        [EnumMember]
-        CommunicationStatusRandomDeviceSerialNumberError5 = 10000028,
+        DeviceDoorNotFoundInCache = 10000027,
         [EnumMember]
         CommunicationStatusDeviceAttendanceCollectionIsNotActive = 10000029,
         [EnumMember]
@@ -1581,7 +1579,7 @@ namespace GuardianCommunication.Shared.OperationResult
         [EnumMember]
         SystemConfigStatusHardwareConfigOnlineMonitoringDevicesIntervalFromLastDataToResetIsNotValid = 10006002,
         [EnumMember]
-        SystemConfigStatusHardwareConfigKarnamaServiceUrlIsNotValid = 10006004,
+        SystemConfigStatusHardwareConfigGuardianServiceUrlIsNotValid = 10006004,
         [EnumMember]
         SystemConfigStatusHardwareConfigAttendanceHookTimerRecordCountIsNotValid = 10006005,
         [EnumMember]
@@ -1641,9 +1639,9 @@ namespace GuardianCommunication.Shared.OperationResult
         [EnumMember]
         SystemConfigStatusHardwareConfigOnlineMonitoringDevicesWaitAfterPingIsConnectedAgainInSecondIsNotValid = 10006038,
         [EnumMember]
-        SystemConfigStatusHardwareConfigAttendanceSendToKarnamaTimerIntervalIsNotValid = 10006039,
+        SystemConfigStatusHardwareConfigAttendanceSendToGuardianTimerIntervalIsNotValid = 10006039,
         [EnumMember]
-        SystemConfigStatusHardwareConfigAttendanceSendToKarnamaTimerRecordCountIsNotValid = 10006040,
+        SystemConfigStatusHardwareConfigAttendanceSendToGuardianTimerRecordCountIsNotValid = 10006040,
         [EnumMember]
         SystemConfigStatusHardwareConfigPadisMetalDetectorGateServerPushPortIsNotValid = 10006041,
         [EnumMember]

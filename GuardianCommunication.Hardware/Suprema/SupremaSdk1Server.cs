@@ -194,12 +194,12 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        public SupremaSdk1OnDemandAdapter GetDeviceAdapter(int deviceNumber)
+        public SupremaSdk1OnDemandAdapter GetDeviceAdapter(Guid deviceId)
         {
             DtoDevice device;
             lock (_currentDeviceList)
             {
-                device = _currentDeviceList.FirstOrDefault(d => d.DeviceNumber == deviceNumber);
+                device = _currentDeviceList.FirstOrDefault(d => d.Id == deviceId);
 
             }
             if (device != null)

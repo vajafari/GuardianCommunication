@@ -203,6 +203,7 @@
     <Compile Include="Dto\DtoApplicationEncodedConfig.cs" />
     <Compile Include="Dto\DtoDeviceStatistics.cs" />
     <Compile Include="Dto\DtoDeviceDoor.cs" />
+    <Compile Include="Dto\Core\DtoDeviceSpecificDoorSettingInJson.cs" />
     <Compile Include="Dto\DtoDeviceSettings.cs" />
     <Compile Include="Dto\DtoDatabaseEntityBase.cs" />
     <Compile Include="Dto\DtoDeviceInvalidAttendanceImage.cs" />

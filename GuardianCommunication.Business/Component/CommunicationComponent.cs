@@ -1,17 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using GuardianCommunication.Data.Logger;
+﻿using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
-using GuardianCommunication.Hardware.ElmOSanat;
-using GuardianCommunication.Hardware.PadisController;
-using GuardianCommunication.Hardware.Pw;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Suprema;
 using GuardianCommunication.Hardware.Timy;
 using GuardianCommunication.Hardware.Virdi;
 using GuardianCommunication.Hardware.Virdi.VirdiConcepts;
 using GuardianCommunication.Hardware.Zk;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.OperationResult;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -25,43 +28,54 @@ namespace GuardianCommunication.Business.Component
 
         #region Bulk Operations
 
-        public List<DtoEmployeeAndDeviceResult> CommunicationBulkEnrollUser(List<DtoEmployeeAndDeviceParam> allEmployeeAndDeviceInfos)
+        public List<DtoUserAndDeviceResult> CommunicationBulkEnrollUser(List<DtoUserAndDeviceParam> allUserAndDeviceInfos)
         {
             var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-            var result = new List<DtoEmployeeAndDeviceResult>();
-            if (allEmployeeAndDeviceInfos.IsCollectionNullOrEmpty())
+            var result = new List<DtoUserAndDeviceResult>();
+            if (allUserAndDeviceInfos.IsCollectionNullOrEmpty())
             {
                 return result;
             }
-            foreach (var employeeAndDeviceInfo in allEmployeeAndDeviceInfos)
+            foreach (var userAndDeviceInfo in allUserAndDeviceInfos)
             {
+                var deviceInfo = GetDeviceFromCache(userAndDeviceInfo.DeviceId, false);
                 try
                 {
-                    if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode != DeviceConnectionModeEnumeration.Push)
+                    if (deviceInfo == null)
                     {
-                        result.Add(new DtoEmployeeAndDeviceResult
+                        result.Add(new DtoUserAndDeviceResult
                         {
-                            DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                            EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                            DeviceId = userAndDeviceInfo.DeviceId,
+                            UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                            Result = OperationResultEnumeration.DeviceNotFoundInCache
+                        });
+                        continue;
+                    }
+                    if (deviceInfo.ConnectionMode != DeviceConnectionModeEnumeration.Push)
+                    {
+                        result.Add(new DtoUserAndDeviceResult
+                        {
+                            DeviceId = deviceInfo.Id,
+                            UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                             Result = OperationResultEnumeration.CommunicationStatusNotSupport
                         });
                         continue;
                     }
 
-                    if (employeeAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser && !employeeAndDeviceInfo.UserInfo.EndTime.HasValue)
+                    if (userAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser && !userAndDeviceInfo.UserInfo.EndDateTime.HasValue)
                     {
-                        result.Add(new DtoEmployeeAndDeviceResult
+                        result.Add(new DtoUserAndDeviceResult
                         {
-                            DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                            EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                            DeviceId = deviceInfo.Id,
+                            UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                             Result = OperationResultEnumeration.CommunicationStatusTempUserMustHaveEndDate
                         });
                         continue;
                     }
 
-                    ProcessStartAndEndTimeOfUser(employeeAndDeviceInfo.UserInfo);
-                    var commandConfig = commandConfigComponent.GetCommandSettingFromCache(employeeAndDeviceInfo.DeviceInfo.ProducerEnum, employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum);
+                    ProcessStartAndEndTimeOfUser(userAndDeviceInfo.UserInfo);
+                    var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
 
                     // نکات مهم در ارسال کاربران
@@ -72,66 +86,66 @@ namespace GuardianCommunication.Business.Component
                     // 2- در کاربران دائم، تنها کاربر یکبار به دستگاه ارسال می گردد و در صورت ارسال مجدد می بایست تمامی دستورات موجود قبلی 
                     //    بازنویسی شوند، همچنین در کاربران دائم دیگر ساعت شروع و پایان از اهمیت برخوردار نیست و تنها تاریخ شروع و پایان مهم است
                     //    بنابراین در هنگام ارسال در صورت پشتیبانی از دستگاه از تاریخ شروع و پایان، می توان در همان لحظه کاربر را به دستگاه ارسال نمود. 
-                    switch (employeeAndDeviceInfo.DeviceInfo.ProducerEnum)
+                    switch (deviceInfo.ProducerNumber)
                     {
                         case ProducerEnumeration.Virdi:
                             {
                                 var commands = new List<DtoDeviceCommand>();
-                                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                switch (userAndDeviceInfo.UserInfo.UserType)
                                 {
                                     case DeviceUserTypeEnumeration.PermanentUser:
                                         commands.Add(VirdiCommands.GetEnrollUserCommand(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo,
+                                            deviceInfo,
+                                            userAndDeviceInfo.UserInfo,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             null,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                     case DeviceUserTypeEnumeration.TempUser:
                                         // دستگاه های ویردی ساعت شروع و پایان را پشتیبانی نمی کنند
                                         // بنابراین می بایست در همان لحظه به دستگاه ها ارسال شوند
-                                        var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                        var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                         commands.Add(VirdiCommands.GetEnrollUserCommand(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo,
+                                            deviceInfo,
+                                            userAndDeviceInfo.UserInfo,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             visibilityTime,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         commands.Add(
                                             VirdiCommands.GetDeleteUserCommand(
-                                                employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                deviceInfo,
+                                                userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
-                                                employeeAndDeviceInfo.UserInfo.EndTime.Value,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier)
+                                                userAndDeviceInfo.UserInfo.EndDateTime.Value,
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier)
                                         );
                                         break;
                                 }
-                                RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                 commandComponent.Insert(commands);
-                                result.Add(new DtoEmployeeAndDeviceResult
+                                result.Add(new DtoUserAndDeviceResult
                                 {
-                                    DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    DeviceId = deviceInfo.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                     Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                 });
                             }
                             break;
                         case ProducerEnumeration.Zk:
                             {
-                                var commands = GetZkEnrollUserCommands(employeeAndDeviceInfo, commandConfig);
-                                RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                var commands = GetZkEnrollUserCommands(userAndDeviceInfo, commandConfig);
+                                RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                 commandComponent.Insert(commands);
-                                result.Add(new DtoEmployeeAndDeviceResult
+                                result.Add(new DtoUserAndDeviceResult
                                 {
-                                    DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    DeviceId = deviceInfo.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                     Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                 });
                             }
@@ -140,44 +154,44 @@ namespace GuardianCommunication.Business.Component
                             {
                                 var commands = new List<DtoDeviceCommand>();
 
-                                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                switch (userAndDeviceInfo.UserInfo.UserType)
                                 {
                                     case DeviceUserTypeEnumeration.PermanentUser:
                                         commands.AddRange(TimyPushCommands.GetEnrollUserCommands(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo,
+                                            deviceInfo,
+                                            userAndDeviceInfo.UserInfo,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             null,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                     case DeviceUserTypeEnumeration.TempUser:
-                                        var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                        var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                         commands.AddRange(TimyPushCommands.GetEnrollUserCommands(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo,
+                                            deviceInfo,
+                                            userAndDeviceInfo.UserInfo,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             visibilityTime,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         commands.AddRange(TimyPushCommands.GetDeleteUserCommands
-                                        (employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                        (deviceInfo,
+                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
-                                            employeeAndDeviceInfo.UserInfo.EndTime.Value,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.UserInfo.EndDateTime.Value,
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                 }
-                                RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                 commandComponent.Insert(commands);
-                                result.Add(new DtoEmployeeAndDeviceResult
+                                result.Add(new DtoUserAndDeviceResult
                                 {
-                                    DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    DeviceId = deviceInfo.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                     Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                 });
                             }
@@ -187,99 +201,99 @@ namespace GuardianCommunication.Business.Component
                                 // به دلیل اینکه دستگاه های ساپریما به صورت کلی
                                 // از تاریخ و ساعت شروع و پایان پشتیبانی می کنند، 
                                 var commands = new List<DtoDeviceCommand>();
-                                switch (employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum)
+                                switch (deviceInfo.SdkVersion)
                                 {
                                     case SdkVersionEnumeration.SdkVersion1:
                                         {
-                                            switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                            switch (userAndDeviceInfo.UserInfo.UserType)
                                             {
                                                 case DeviceUserTypeEnumeration.PermanentUser:
                                                     commands.Add(SupremaSdk1Commands.GetEnrollUserCommand(
-                                                        employeeAndDeviceInfo.DeviceInfo,
-                                                        employeeAndDeviceInfo.UserInfo,
+                                                        deviceInfo,
+                                                        userAndDeviceInfo.UserInfo,
                                                         commandConfig.MaxRetryForUserCommand,
                                                         null,
                                                         null,
-                                                        employeeAndDeviceInfo.CommandPriority,
-                                                        employeeAndDeviceInfo.CommandIdentifier));
+                                                        userAndDeviceInfo.CommandPriority,
+                                                        userAndDeviceInfo.CommandIdentifier));
                                                     break;
                                                 case DeviceUserTypeEnumeration.TempUser:
-                                                    var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                                    var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                                     commands.Add(SupremaSdk1Commands.GetEnrollUserCommand(
-                                                        employeeAndDeviceInfo.DeviceInfo,
-                                                        employeeAndDeviceInfo.UserInfo,
+                                                        deviceInfo,
+                                                        userAndDeviceInfo.UserInfo,
                                                         commandConfig.MaxRetryForUserCommand,
                                                         null,
                                                         visibilityTime,
-                                                        employeeAndDeviceInfo.CommandPriority,
-                                                        employeeAndDeviceInfo.CommandIdentifier));
+                                                        userAndDeviceInfo.CommandPriority,
+                                                        userAndDeviceInfo.CommandIdentifier));
                                                     commands.Add(SupremaSdk1Commands.GetDeleteUserCommand
-                                                    (employeeAndDeviceInfo.DeviceInfo,
-                                                        employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                    (deviceInfo,
+                                                        userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                         commandConfig.MaxRetryForUserCommand,
                                                         null,
-                                                        employeeAndDeviceInfo.UserInfo.EndTime.Value,
-                                                        employeeAndDeviceInfo.CommandPriority,
-                                                        employeeAndDeviceInfo.CommandIdentifier));
+                                                        userAndDeviceInfo.UserInfo.EndDateTime.Value,
+                                                        userAndDeviceInfo.CommandPriority,
+                                                        userAndDeviceInfo.CommandIdentifier));
                                                     break;
                                             }
-                                            RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                            RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                             commandComponent.Insert(commands);
-                                            result.Add(new DtoEmployeeAndDeviceResult
+                                            result.Add(new DtoUserAndDeviceResult
                                             {
-                                                DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                                EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                DeviceId = deviceInfo.Id,
+                                                UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                 Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                             });
                                         }
                                         break;
                                     case SdkVersionEnumeration.SdkVersion2:
                                         {
-                                            switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                            switch (userAndDeviceInfo.UserInfo.UserType)
                                             {
                                                 case DeviceUserTypeEnumeration.PermanentUser:
                                                     commands.Add(
                                                         SupremaSdk2Commands.GetEnrollUserCommand(
-                                                            employeeAndDeviceInfo.DeviceInfo,
-                                                            employeeAndDeviceInfo.UserInfo,
+                                                            deviceInfo,
+                                                            userAndDeviceInfo.UserInfo,
                                                             commandConfig.MaxRetryForUserCommand,
                                                             null,
                                                             null,
-                                                            employeeAndDeviceInfo.CommandPriority,
-                                                            employeeAndDeviceInfo.CommandIdentifier)
+                                                            userAndDeviceInfo.CommandPriority,
+                                                            userAndDeviceInfo.CommandIdentifier)
                                                     );
                                                     break;
                                                 case DeviceUserTypeEnumeration.TempUser:
-                                                    var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                                    var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                                     commands.Add(
                                                         SupremaSdk2Commands.GetEnrollUserCommand(
-                                                            employeeAndDeviceInfo.DeviceInfo,
-                                                            employeeAndDeviceInfo.UserInfo,
+                                                            deviceInfo,
+                                                            userAndDeviceInfo.UserInfo,
                                                             commandConfig.MaxRetryForUserCommand,
                                                             null,
                                                             visibilityTime,
-                                                            employeeAndDeviceInfo.CommandPriority,
-                                                            employeeAndDeviceInfo.CommandIdentifier)
+                                                            userAndDeviceInfo.CommandPriority,
+                                                            userAndDeviceInfo.CommandIdentifier)
                                                     );
                                                     commands.Add(
                                                         SupremaSdk2Commands.GetDeleteUserCommand(
-                                                            employeeAndDeviceInfo.DeviceInfo,
-                                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                            deviceInfo,
+                                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                             commandConfig.MaxRetryForUserCommand,
                                                             null,
-                                                            employeeAndDeviceInfo.UserInfo.EndTime.Value,
-                                                            employeeAndDeviceInfo.CommandPriority,
-                                                            employeeAndDeviceInfo.CommandIdentifier)
+                                                            userAndDeviceInfo.UserInfo.EndDateTime.Value,
+                                                            userAndDeviceInfo.CommandPriority,
+                                                            userAndDeviceInfo.CommandIdentifier)
                                                     );
                                                     break;
                                             }
 
-                                            RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                            RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                             commandComponent.Insert(commands);
-                                            result.Add(new DtoEmployeeAndDeviceResult
+                                            result.Add(new DtoUserAndDeviceResult
                                             {
-                                                DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                                EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                DeviceId = deviceInfo.Id,
+                                                UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                 Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                             });
                                         }
@@ -288,10 +302,10 @@ namespace GuardianCommunication.Business.Component
                             }
                             break;
                         default:
-                            result.Add(new DtoEmployeeAndDeviceResult
+                            result.Add(new DtoUserAndDeviceResult
                             {
-                                DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                DeviceId = deviceInfo.Id,
+                                UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                 Result = OperationResultEnumeration.CommunicationStatusNotSupport
                             });
                             break;
@@ -300,10 +314,10 @@ namespace GuardianCommunication.Business.Component
                 catch (Exception exp)
                 {
                     LoggingSystem.LogError(exp, "Error on insert command");
-                    result.Add(new DtoEmployeeAndDeviceResult
+                    result.Add(new DtoUserAndDeviceResult
                     {
-                        DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                        EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                        DeviceId = userAndDeviceInfo.DeviceId,
+                        UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                         Result = OperationResultEnumeration.CommunicationStatusUnknownError
                     });
                 }
@@ -313,12 +327,12 @@ namespace GuardianCommunication.Business.Component
 
         }
 
-        public List<DtoEmployeeAndDeviceResult> CommunicationBulkDeleteUser(List<DtoEmployeeAndDeviceParam> allEmployeeAndDeviceInfos)
+        public List<DtoUserAndDeviceResult> CommunicationBulkDeleteUser(List<DtoUserAndDeviceParam> allUserAndDeviceInfos)
         {
             var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-            var result = new List<DtoEmployeeAndDeviceResult>();
-            if (allEmployeeAndDeviceInfos.IsCollectionNullOrEmpty())
+            var result = new List<DtoUserAndDeviceResult>();
+            if (allUserAndDeviceInfos.IsCollectionNullOrEmpty())
             {
                 return result;
             }
@@ -328,70 +342,82 @@ namespace GuardianCommunication.Business.Component
             //  در صورتی که دستورات مربوط به اینده است و هنوز به دستگاه ارسال نشده است و نیاز است حذف شود
             //  ولی اگر دستور مربوط به همین الان بود، می بایست بلافاصله سایر درستورات مرنبط زا پاک کنیم و دستور حذفی ثبت نماییم
 
-            foreach (var employeeAndDeviceInfo in allEmployeeAndDeviceInfos)
+            foreach (var userAndDeviceInfo in allUserAndDeviceInfos)
             {
+                var deviceInCache = GetDeviceFromCache(userAndDeviceInfo.DeviceId, false);
+                
                 try
                 {
-                    if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode != DeviceConnectionModeEnumeration.Push)
+                    if (deviceInCache == null)
                     {
-                        result.Add(new DtoEmployeeAndDeviceResult
+                        result.Add(new DtoUserAndDeviceResult
                         {
-                            DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                            EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                            DeviceId = userAndDeviceInfo.DeviceId,
+                            UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                            Result = OperationResultEnumeration.DeviceNotFoundInCache
+                        });
+                        continue;
+                    }
+                    if (deviceInCache.ConnectionMode != DeviceConnectionModeEnumeration.Push)
+                    {
+                        result.Add(new DtoUserAndDeviceResult
+                        {
+                            DeviceId = deviceInCache.Id,
+                            UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                             Result = OperationResultEnumeration.CommunicationStatusNotSupport
                         });
                         continue;
                     }
-                    if (employeeAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser && !employeeAndDeviceInfo.UserInfo.EndTime.HasValue)
+                    if (userAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser && !userAndDeviceInfo.UserInfo.EndDateTime.HasValue)
                     {
-                        result.Add(new DtoEmployeeAndDeviceResult
+                        result.Add(new DtoUserAndDeviceResult
                         {
-                            DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                            EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                            DeviceId = deviceInCache.Id,
+                            UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                             Result = OperationResultEnumeration.CommunicationStatusTempUserMustHaveEndDate
                         });
                         continue;
                     }
-                    var commandConfig = commandConfigComponent.GetCommandSettingFromCache(employeeAndDeviceInfo.DeviceInfo.ProducerEnum, employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum);
-                    switch (employeeAndDeviceInfo.DeviceInfo.ProducerEnum)
+                    var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInCache.ProducerNumber, deviceInCache.SdkVersion);
+                    switch (deviceInCache.ProducerNumber)
                     {
                         case ProducerEnumeration.Virdi:
                             {
                                 var commands = new List<DtoDeviceCommand>();
-                                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                switch (userAndDeviceInfo.UserInfo.UserType)
                                 {
                                     case DeviceUserTypeEnumeration.PermanentUser:
                                         commands.Add(VirdiCommands.GetDeleteUserCommand(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                            deviceInCache,
+                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             null,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                     case DeviceUserTypeEnumeration.TempUser:
-                                        if (employeeAndDeviceInfo.UserInfo.StartTime < DateTime.Now)
+                                        if (userAndDeviceInfo.UserInfo.StartDateTime < DateTime.Now)
                                         {
                                             commands.Add(
                                                 VirdiCommands.GetDeleteUserCommand(
-                                                    employeeAndDeviceInfo.DeviceInfo,
-                                                    employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                    deviceInCache,
+                                                    userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                     commandConfig.MaxRetryForUserCommand,
                                                     null,
                                                     null,
-                                                    employeeAndDeviceInfo.CommandPriority,
-                                                    employeeAndDeviceInfo.CommandIdentifier)
+                                                    userAndDeviceInfo.CommandPriority,
+                                                    userAndDeviceInfo.CommandIdentifier)
                                             );
                                         }
                                         break;
                                 }
-                                RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                                 commandComponent.Insert(commands);
-                                result.Add(new DtoEmployeeAndDeviceResult
+                                result.Add(new DtoUserAndDeviceResult
                                 {
-                                    DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    DeviceId = deviceInCache.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                     Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                 });
 
@@ -400,41 +426,41 @@ namespace GuardianCommunication.Business.Component
                         case ProducerEnumeration.Zk:
                             {
                                 var commands = new List<DtoDeviceCommand>();
-                                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                switch (userAndDeviceInfo.UserInfo.UserType)
                                 {
                                     case DeviceUserTypeEnumeration.PermanentUser:
                                         commands.Add(ZkPushCommands.GetDeleteUserCommands
-                                        (employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                        (deviceInCache,
+                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             null,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                     case DeviceUserTypeEnumeration.TempUser:
-                                        if (employeeAndDeviceInfo.UserInfo.StartTime < DateTime.Now)
+                                        if (userAndDeviceInfo.UserInfo.StartDateTime < DateTime.Now)
                                         {
                                             commands.Add(
                                                 ZkPushCommands.GetDeleteUserCommands(
-                                                    employeeAndDeviceInfo.DeviceInfo,
-                                                    employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                    deviceInCache,
+                                                    userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                     commandConfig.MaxRetryForUserCommand,
                                                     null,
                                                     null,
-                                                    employeeAndDeviceInfo.CommandPriority,
-                                                    employeeAndDeviceInfo.CommandIdentifier)
+                                                    userAndDeviceInfo.CommandPriority,
+                                                    userAndDeviceInfo.CommandIdentifier)
                                             );
                                         }
                                         break;
                                 }
 
-                                RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                                 commandComponent.Insert(commands);
-                                result.Add(new DtoEmployeeAndDeviceResult
+                                result.Add(new DtoUserAndDeviceResult
                                 {
-                                    DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    DeviceId = deviceInCache.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                     Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                 });
                             }
@@ -442,39 +468,39 @@ namespace GuardianCommunication.Business.Component
                         case ProducerEnumeration.Timy:
                             {
                                 var commands = new List<DtoDeviceCommand>();
-                                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                switch (userAndDeviceInfo.UserInfo.UserType)
                                 {
                                     case DeviceUserTypeEnumeration.PermanentUser:
                                         commands.AddRange(TimyPushCommands.GetDeleteUserCommands(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                            deviceInCache,
+                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             null,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                     case DeviceUserTypeEnumeration.TempUser:
-                                        if (employeeAndDeviceInfo.UserInfo.StartTime < DateTime.Now)
+                                        if (userAndDeviceInfo.UserInfo.StartDateTime < DateTime.Now)
                                         {
                                             commands.AddRange(TimyPushCommands.GetDeleteUserCommands(
-                                                employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                deviceInCache,
+                                                userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 null,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier));
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier));
                                         }
                                         break;
                                 }
-                                RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
 
                                 commandComponent.Insert(commands);
-                                result.Add(new DtoEmployeeAndDeviceResult
+                                result.Add(new DtoUserAndDeviceResult
                                 {
-                                    DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                    EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    DeviceId = deviceInCache.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                     Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                 });
                             }
@@ -482,44 +508,44 @@ namespace GuardianCommunication.Business.Component
 
                         case ProducerEnumeration.Suprema:
                             {
-                                switch (employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum)
+                                switch (deviceInCache.SdkVersion)
                                 {
                                     case SdkVersionEnumeration.SdkVersion1:
                                         {
                                             var commands = new List<DtoDeviceCommand>();
-                                            switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                            switch (userAndDeviceInfo.UserInfo.UserType)
                                             {
                                                 case DeviceUserTypeEnumeration.PermanentUser:
                                                     commands.Add(SupremaSdk1Commands.GetDeleteUserCommand(
-                                                        employeeAndDeviceInfo.DeviceInfo,
-                                                        employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                        deviceInCache,
+                                                        userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                         commandConfig.MaxRetryForUserCommand,
                                                         null,
                                                         null,
-                                                        employeeAndDeviceInfo.CommandPriority,
-                                                        employeeAndDeviceInfo.CommandIdentifier));
+                                                        userAndDeviceInfo.CommandPriority,
+                                                        userAndDeviceInfo.CommandIdentifier));
                                                     break;
                                                 case DeviceUserTypeEnumeration.TempUser:
-                                                    if (employeeAndDeviceInfo.UserInfo.StartTime < DateTime.Now)
+                                                    if (userAndDeviceInfo.UserInfo.StartDateTime < DateTime.Now)
                                                     {
                                                         commands.Add(SupremaSdk1Commands.GetDeleteUserCommand(
-                                                            employeeAndDeviceInfo.DeviceInfo,
-                                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                            deviceInCache,
+                                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                             commandConfig.MaxRetryForUserCommand,
                                                             null,
                                                             null,
-                                                            employeeAndDeviceInfo.CommandPriority,
-                                                            employeeAndDeviceInfo.CommandIdentifier));
+                                                            userAndDeviceInfo.CommandPriority,
+                                                            userAndDeviceInfo.CommandIdentifier));
                                                     }
                                                     break;
                                             }
-                                            RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                            RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
 
                                             commandComponent.Insert(commands);
-                                            result.Add(new DtoEmployeeAndDeviceResult
+                                            result.Add(new DtoUserAndDeviceResult
                                             {
-                                                DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                                EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                DeviceId = deviceInCache.Id,
+                                                UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                 Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                             });
                                         }
@@ -527,38 +553,38 @@ namespace GuardianCommunication.Business.Component
                                     case SdkVersionEnumeration.SdkVersion2:
                                         {
                                             var commands = new List<DtoDeviceCommand>();
-                                            switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                            switch (userAndDeviceInfo.UserInfo.UserType)
                                             {
                                                 case DeviceUserTypeEnumeration.PermanentUser:
                                                     commands.Add(SupremaSdk2Commands.GetDeleteUserCommand(
-                                                        employeeAndDeviceInfo.DeviceInfo,
-                                                        employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                        deviceInCache,
+                                                        userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                         commandConfig.MaxRetryForUserCommand,
                                                         null,
                                                         null,
-                                                        employeeAndDeviceInfo.CommandPriority,
-                                                        employeeAndDeviceInfo.CommandIdentifier));
+                                                        userAndDeviceInfo.CommandPriority,
+                                                        userAndDeviceInfo.CommandIdentifier));
                                                     break;
                                                 case DeviceUserTypeEnumeration.TempUser:
-                                                    if (employeeAndDeviceInfo.UserInfo.StartTime < DateTime.Now)
+                                                    if (userAndDeviceInfo.UserInfo.StartDateTime < DateTime.Now)
                                                     {
                                                         commands.Add(SupremaSdk2Commands.GetDeleteUserCommand(
-                                                            employeeAndDeviceInfo.DeviceInfo,
-                                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                            deviceInCache,
+                                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                             commandConfig.MaxRetryForUserCommand,
                                                             null,
                                                             null,
-                                                            employeeAndDeviceInfo.CommandPriority,
-                                                            employeeAndDeviceInfo.CommandIdentifier));
+                                                            userAndDeviceInfo.CommandPriority,
+                                                            userAndDeviceInfo.CommandIdentifier));
                                                     }
                                                     break;
                                             }
-                                            RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                            RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                                             commandComponent.Insert(commands);
-                                            result.Add(new DtoEmployeeAndDeviceResult
+                                            result.Add(new DtoUserAndDeviceResult
                                             {
-                                                DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                                EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                DeviceId = deviceInCache.Id,
+                                                UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                                 Result = OperationResultEnumeration.CommunicationStatusSuccessful
                                             });
                                         }
@@ -567,10 +593,10 @@ namespace GuardianCommunication.Business.Component
                             }
                             break;
                         default:
-                            result.Add(new DtoEmployeeAndDeviceResult
+                            result.Add(new DtoUserAndDeviceResult
                             {
-                                DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                                EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                DeviceId = deviceInCache.Id,
+                                UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                                 Result = OperationResultEnumeration.CommunicationStatusNotSupport
                             });
                             break;
@@ -579,10 +605,10 @@ namespace GuardianCommunication.Business.Component
                 catch (Exception exp)
                 {
                     LoggingSystem.LogError(exp, "Error on insert command");
-                    result.Add(new DtoEmployeeAndDeviceResult
+                    result.Add(new DtoUserAndDeviceResult
                     {
-                        DeviceNumber = employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
-                        EmployeeNumber = employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                        DeviceId = userAndDeviceInfo.DeviceId,
+                        UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
                         Result = OperationResultEnumeration.CommunicationStatusUnknownError
                     });
                 }
@@ -598,10 +624,11 @@ namespace GuardianCommunication.Business.Component
 
         #region Normal Communication
 
-        public void RebootDevice(DtoCommunicationDeviceData deviceInfo)
+        public void RebootDevice(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     switch (deviceInfo.ConnectionMode)
@@ -647,7 +674,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -684,31 +711,15 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.RebootDevice();
-                            }
-                        }
-                        else
-                        {
-                            var command = PadisControllerPushCommands.GetRebootCommand(deviceInfo, 1, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
-                        }
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
 
         }
 
-        public List<DtoAttendance> CommunicationGetUnreadAttendanceForClientFromSdk(DtoCommunicationDeviceData deviceInfo, bool deleteAttendance)
+        public List<DtoAttendance> CommunicationGetUnreadAttendanceForClientFromSdk(Guid deviceId, bool deleteAttendance)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var allAttendances = CommunicationGetUnreadAttendancesFromSdk(deviceInfo);
             if (allAttendances.IsCollectionNullOrEmpty())
@@ -717,11 +728,11 @@ namespace GuardianCommunication.Business.Component
             }
             foreach (var item in allAttendances)
             {
-                item.IsSent = true;
+                item.IsSentToGuardian = true;
             }
 
             var attendanceComponent = new AttendanceComponent(RepositoryFactory);
-            var saveResult = attendanceComponent.SaveAttendance(allAttendances, true, true, true);
+            var saveResult = attendanceComponent.SaveAttendance(allAttendances, true, true);
             var result = new List<DtoAttendance>();
             if (saveResult.ExistingRecords.IsCollectionNotNullOrEmpty())
             {
@@ -746,137 +757,133 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public void CommunicationEnrollUserWithTemplate(DtoEmployeeAndDeviceParam employeeAndDeviceInfo)
+        public void CommunicationEnrollUserWithTemplate(DtoUserAndDeviceParam userAndDeviceInfo)
         {
-            CheckActiveProducer(employeeAndDeviceInfo.DeviceInfo);
-            ProcessStartAndEndTimeOfUser(employeeAndDeviceInfo.UserInfo);
+            var deviceInfo = GetDeviceFromCache(userAndDeviceInfo.DeviceId);
+            CheckActiveProducer(deviceInfo);
+            ProcessStartAndEndTimeOfUser(userAndDeviceInfo.UserInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(employeeAndDeviceInfo.DeviceInfo.ProducerEnum, employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
-            if (employeeAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser && !employeeAndDeviceInfo.UserInfo.EndTime.HasValue)
+            if (userAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser && !userAndDeviceInfo.UserInfo.EndDateTime.HasValue)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration
                     .CommunicationStatusTempUserMustHaveEndDate);
             }
 
-            switch (employeeAndDeviceInfo.DeviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
                         var commands = new List<DtoDeviceCommand>();
-                        switch (employeeAndDeviceInfo.UserInfo.UserType)
+                        switch (userAndDeviceInfo.UserInfo.UserType)
                         {
                             case DeviceUserTypeEnumeration.PermanentUser:
                                 commands.Add(VirdiCommands.GetEnrollUserCommand(
-                                    employeeAndDeviceInfo.DeviceInfo,
-                                    employeeAndDeviceInfo.UserInfo,
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo,
                                     commandConfig.MaxRetryForUserCommand,
                                     null,
                                     null,
-                                    employeeAndDeviceInfo.CommandPriority,
-                                    employeeAndDeviceInfo.CommandIdentifier));
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier));
                                 break;
                             case DeviceUserTypeEnumeration.TempUser:
-                                var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                 commands.Add(VirdiCommands.GetEnrollUserCommand(
-                                    employeeAndDeviceInfo.DeviceInfo,
-                                    employeeAndDeviceInfo.UserInfo,
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo,
                                     commandConfig.MaxRetryForUserCommand,
                                     null,
                                     visibilityTime,
-                                    employeeAndDeviceInfo.CommandPriority,
-                                    employeeAndDeviceInfo.CommandIdentifier));
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier));
                                 commands.Add(
                                     VirdiCommands.GetDeleteUserCommand(
-                                        employeeAndDeviceInfo.DeviceInfo,
-                                        employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                        deviceInfo,
+                                        userAndDeviceInfo.UserInfo.userIdOnDevice,
                                         commandConfig.MaxRetryForUserCommand,
                                         null,
                                         // ReSharper disable PossibleInvalidOperationException
-                                        employeeAndDeviceInfo.UserInfo.EndTime.Value,
+                                        userAndDeviceInfo.UserInfo.EndDateTime.Value,
                                         // ReSharper restore PossibleInvalidOperationException
-                                        employeeAndDeviceInfo.CommandPriority,
-                                        employeeAndDeviceInfo.CommandIdentifier)
+                                        userAndDeviceInfo.CommandPriority,
+                                        userAndDeviceInfo.CommandIdentifier)
                                 );
                                 break;
                         }
-                        RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                        RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                         commandComponent.Insert(commands);
                     }
                     break;
                 case ProducerEnumeration.Zk:
-                    switch (employeeAndDeviceInfo.DeviceInfo.ConnectionMode)
+                    switch (deviceInfo.ConnectionMode)
                     {
                         case DeviceConnectionModeEnumeration.Push:
-                            var commands = GetZkEnrollUserCommands(
-                                new DtoEmployeeAndDeviceParam { UserInfo = employeeAndDeviceInfo.UserInfo, DeviceInfo = employeeAndDeviceInfo.DeviceInfo }
+                            var commands = GetZkEnrollUserCommands(userAndDeviceInfo
                                 , commandConfig);
-                            RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                            RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                             commandComponent.Insert(commands);
                             break;
                         default:
-                            using (var deviceDriver = new ZkOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                            using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                deviceDriver.SetUserInfoWithTemplate(employeeAndDeviceInfo.UserInfo);
-                                if (employeeAndDeviceInfo.UserInfo.TimeZones.IsCollectionNotNullOrEmpty())
-                                {
-                                    deviceDriver.SendUserTimeZone(employeeAndDeviceInfo.UserInfo.EmployeeNumber, employeeAndDeviceInfo.UserInfo.TimeZones);
-                                }
+                                deviceDriver.SetUserInfoWithTemplate(userAndDeviceInfo.UserInfo);
                             }
                             break;
                     }
                     break;
                 case ProducerEnumeration.Timy:
-                    switch (employeeAndDeviceInfo.DeviceInfo.ConnectionMode)
+                    switch (deviceInfo.ConnectionMode)
                     {
                         case DeviceConnectionModeEnumeration.Push:
                             {
                                 var commands = new List<DtoDeviceCommand>();
-                                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                switch (userAndDeviceInfo.UserInfo.UserType)
                                 {
                                     case DeviceUserTypeEnumeration.PermanentUser:
                                         commands.AddRange(TimyPushCommands.GetEnrollUserCommands
-                                        (employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo,
+                                        (deviceInfo,
+                                            userAndDeviceInfo.UserInfo,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             null,
                                             null,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                     case DeviceUserTypeEnumeration.TempUser:
-                                        var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                        var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                         commands.AddRange(TimyPushCommands.GetEnrollUserCommands(
-                                            employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo,
+                                            deviceInfo,
+                                            userAndDeviceInfo.UserInfo,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             visibilityTime,
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         commands.AddRange(TimyPushCommands.GetDeleteUserCommands
-                                        (employeeAndDeviceInfo.DeviceInfo,
-                                            employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                        (deviceInfo,
+                                            userAndDeviceInfo.UserInfo.userIdOnDevice,
                                             commandConfig.MaxRetryForUserCommand,
                                             null,
                                             // ReSharper disable PossibleInvalidOperationException
-                                            employeeAndDeviceInfo.UserInfo.EndTime.Value,
+                                            userAndDeviceInfo.UserInfo.EndDateTime.Value,
                                             // ReSharper restore PossibleInvalidOperationException
-                                            employeeAndDeviceInfo.CommandPriority,
-                                            employeeAndDeviceInfo.CommandIdentifier));
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier));
                                         break;
                                 }
-                                RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                 commandComponent.Insert(commands);
                             }
                             break;
                         case DeviceConnectionModeEnumeration.Standalone:
-                            using (var deviceDriver = new TimyOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                            using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                deviceDriver.SetUserInfoWithTemplate(employeeAndDeviceInfo.UserInfo);
+                                deviceDriver.SetUserInfoWithTemplate(userAndDeviceInfo.UserInfo);
                             }
                             break;
 
@@ -885,161 +892,116 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
-                                if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
+                                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                 {
-                                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        deviceDriver.SetUserInfoWithTemplate(employeeAndDeviceInfo.UserInfo);
+                                        deviceDriver.SetUserInfoWithTemplate(userAndDeviceInfo.UserInfo);
                                     }
                                 }
                                 else
                                 {
                                     var commands = new List<DtoDeviceCommand>();
-                                    switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                    switch (userAndDeviceInfo.UserInfo.UserType)
                                     {
                                         case DeviceUserTypeEnumeration.PermanentUser:
                                             commands.Add(SupremaSdk1Commands.GetEnrollUserCommand
-                                            (employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo,
+                                            (deviceInfo,
+                                                userAndDeviceInfo.UserInfo,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 null,
                                                 null,
-                                                employeeAndDeviceInfo.CommandIdentifier));
+                                                userAndDeviceInfo.CommandIdentifier));
                                             break;
                                         case DeviceUserTypeEnumeration.TempUser:
-                                            var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                            var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                             commands.Add(SupremaSdk1Commands.GetEnrollUserCommand(
-                                                employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo,
+                                                deviceInfo,
+                                                userAndDeviceInfo.UserInfo,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 visibilityTime,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier));
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier));
                                             commands.Add(SupremaSdk1Commands.GetDeleteUserCommand
-                                            (employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                            (deviceInfo,
+                                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 // ReSharper disable PossibleInvalidOperationException
-                                                employeeAndDeviceInfo.UserInfo.EndTime.Value,
+                                                userAndDeviceInfo.UserInfo.EndDateTime.Value,
                                                 // ReSharper restore PossibleInvalidOperationException
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier));
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier));
                                             break;
                                     }
-                                    RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                    RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                     commandComponent.Insert(commands);
                                 }
                                 break;
                             case SdkVersionEnumeration.SdkVersion2:
-                                if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
+                                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                 {
-                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        deviceDriver.SetUserInfoWithTemplate(employeeAndDeviceInfo.UserInfo);
+                                        deviceDriver.SetUserInfoWithTemplate(userAndDeviceInfo.UserInfo);
                                     }
                                 }
                                 else
                                 {
                                     var commands = new List<DtoDeviceCommand>();
-                                    switch (employeeAndDeviceInfo.UserInfo.UserType)
+                                    switch (userAndDeviceInfo.UserInfo.UserType)
                                     {
                                         case DeviceUserTypeEnumeration.PermanentUser:
                                             commands.Add(
                                                 SupremaSdk2Commands.GetEnrollUserCommand(
-                                                    employeeAndDeviceInfo.DeviceInfo,
-                                                    employeeAndDeviceInfo.UserInfo,
+                                                    deviceInfo,
+                                                    userAndDeviceInfo.UserInfo,
                                                     commandConfig.MaxRetryForUserCommand,
                                                     null,
                                                     null,
-                                                    employeeAndDeviceInfo.CommandPriority,
-                                                    employeeAndDeviceInfo.CommandIdentifier)
+                                                    userAndDeviceInfo.CommandPriority,
+                                                    userAndDeviceInfo.CommandIdentifier)
                                             );
                                             break;
                                         case DeviceUserTypeEnumeration.TempUser:
-                                            var visibilityTime = ProcessVisibilityTime(employeeAndDeviceInfo);
+                                            var visibilityTime = ProcessVisibilityTime(userAndDeviceInfo);
                                             commands.Add(
                                                 SupremaSdk2Commands.GetEnrollUserCommand(
-                                                    employeeAndDeviceInfo.DeviceInfo,
-                                                    employeeAndDeviceInfo.UserInfo,
+                                                    deviceInfo,
+                                                    userAndDeviceInfo.UserInfo,
                                                     commandConfig.MaxRetryForUserCommand,
                                                     null,
                                                     visibilityTime,
-                                                    employeeAndDeviceInfo.CommandPriority,
-                                                    employeeAndDeviceInfo.CommandIdentifier)
+                                                    userAndDeviceInfo.CommandPriority,
+                                                    userAndDeviceInfo.CommandIdentifier)
                                             );
                                             commands.Add(
                                                 SupremaSdk2Commands.GetDeleteUserCommand(
-                                                    employeeAndDeviceInfo.DeviceInfo,
-                                                    employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                    deviceInfo,
+                                                    userAndDeviceInfo.UserInfo.userIdOnDevice,
                                                     commandConfig.MaxRetryForUserCommand,
                                                     null,
                                                     // ReSharper disable PossibleInvalidOperationException
-                                                    employeeAndDeviceInfo.UserInfo.EndTime.Value,
+                                                    userAndDeviceInfo.UserInfo.EndDateTime.Value,
                                                     // ReSharper restore PossibleInvalidOperationException
-                                                    employeeAndDeviceInfo.CommandPriority,
-                                                    employeeAndDeviceInfo.CommandIdentifier)
+                                                    userAndDeviceInfo.CommandPriority,
+                                                    userAndDeviceInfo.CommandIdentifier)
                                             );
                                             break;
                                     }
 
-                                    RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
+                                    RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
                                     commandComponent.Insert(commands);
                                 }
                                 break;
                         }
-                    }
-                    break;
-
-                case ProducerEnumeration.Padis:
-                    {
-                        if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
-                            {
-                                deviceDriver.SetUserInfo(employeeAndDeviceInfo.UserInfo);
-                            }
-                        }
-                        else
-                        {
-                            var commands = PadisControllerPushCommands.GetUserInfoCommand
-                                  (employeeAndDeviceInfo.DeviceInfo,
-                                      employeeAndDeviceInfo.UserInfo.EmployeeNumber,
-                                      commandConfig.MaxRetryForUserCommand,
-                                      null,
-                                      null,
-                                      null,
-                                      employeeAndDeviceInfo.CommandIdentifier);
-                            RemoveNecessaryCommandsOnEnrollUser(employeeAndDeviceInfo, commandComponent);
-                            commandComponent.Insert(commands);
-                        }
-                    }
-                    break;
-
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        switch (employeeAndDeviceInfo.DeviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Push:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                            default:
-                                {
-                                    using (var deviceDriver = new PwOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
-                                    {
-                                        deviceDriver.Connect();
-                                        deviceDriver.SetUserInfoWithTemplate(new List<DtoEmployeeDeviceRelatedData> { employeeAndDeviceInfo.UserInfo });
-                                    }
-                                }
-                                break;
-                        }
-
                     }
                     break;
                 default:
@@ -1047,24 +1009,26 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CommunicationSendUser(DtoEmployeeAndDeviceParam employeeAndDeviceParam)
+        public void CommunicationSendUser(DtoUserAndDeviceParam UserAndDeviceParam)
         {
-            employeeAndDeviceParam.UserInfo.ClearTemplateData();
-            CommunicationEnrollUserWithTemplate(employeeAndDeviceParam);
+            UserAndDeviceParam.UserInfo.ClearTemplateData();
+            CommunicationEnrollUserWithTemplate(UserAndDeviceParam);
         }
 
-        public DtoEmployeeDeviceRelatedData CommunicationGetUserById(DtoCommunicationDeviceData deviceInfo, long employeeNumber, TemplateTypeEnumeration templateType)
+        public DtoUserDeviceRelatedData CommunicationGetUserById(Guid deviceId, long userIdOnDevice, TemplateTypeEnumeration templateType)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+
             CheckActiveProducer(deviceInfo);
-            DtoEmployeeDeviceRelatedData result = null;
+            DtoUserDeviceRelatedData result = null;
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-            switch (deviceInfo.ProducerEnum)
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
                         var commands = VirdiCommands.GetUserInfoCommand
-                            (deviceInfo, employeeNumber, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
+                            (deviceInfo, userIdOnDevice, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
                         var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                         commandComponent.Insert(commands);
                     }
@@ -1075,7 +1039,7 @@ namespace GuardianCommunication.Business.Component
                         case DeviceConnectionModeEnumeration.Push:
                             {
                                 var commands = ZkPushCommands.GetUserInfoCommand
-                                    (deviceInfo, employeeNumber, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
+                                    (deviceInfo, userIdOnDevice, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
                                 var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                 commandComponent.Insert(commands);
                             }
@@ -1084,7 +1048,7 @@ namespace GuardianCommunication.Business.Component
                             using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                result = deviceDriver.GetUserInfoByUserId(employeeNumber, templateType);
+                                result = deviceDriver.GetUserInfoByUserId(userIdOnDevice, templateType);
                             }
                             break;
                     }
@@ -1095,7 +1059,7 @@ namespace GuardianCommunication.Business.Component
                         case DeviceConnectionModeEnumeration.Push:
                             {
                                 var commands = TimyPushCommands.GetUserInfoCommand
-                                    (deviceInfo, employeeNumber, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
+                                    (deviceInfo, userIdOnDevice, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
                                 var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                 commandComponent.Insert(commands);
                             }
@@ -1104,14 +1068,14 @@ namespace GuardianCommunication.Business.Component
                             using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                result = deviceDriver.GetUserInfoByUserId(employeeNumber, templateType);
+                                result = deviceDriver.GetUserInfoByUserId(userIdOnDevice, templateType);
                             }
                             break;
                     }
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -1119,13 +1083,13 @@ namespace GuardianCommunication.Business.Component
                                     using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        result = deviceDriver.GetUserInfoByUserId(employeeNumber, templateType);
+                                        result = deviceDriver.GetUserInfoByUserId(userIdOnDevice, templateType);
                                     }
                                 }
                                 else
                                 {
                                     var commands = SupremaSdk1Commands.GetUserInfoCommand
-                                        (deviceInfo, employeeNumber, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
+                                        (deviceInfo, userIdOnDevice, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
                                     var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                     commandComponent.Insert(commands);
                                 }
@@ -1136,7 +1100,7 @@ namespace GuardianCommunication.Business.Component
                                     using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        result = deviceDriver.GetUserById(employeeNumber, templateType);
+                                        result = deviceDriver.GetUserById(userIdOnDevice, templateType);
                                         if (result == null)
                                         {
                                             throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusSupremaSdk2UserIdIsNotValid);
@@ -1146,7 +1110,7 @@ namespace GuardianCommunication.Business.Component
                                 else
                                 {
                                     var commands = SupremaSdk2Commands.GetUserInfoCommand
-                                        (deviceInfo, employeeNumber, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
+                                        (deviceInfo, userIdOnDevice, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
                                     var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                     commandComponent.Insert(commands);
                                 }
@@ -1155,52 +1119,19 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                            {
-                                result = deviceDriver.GetUserInfoByUserId(employeeNumber);
-                            }
-                        }
-                        else
-                        {
-                            var commands = PadisControllerPushCommands.GetUserInfoCommand
-                                (deviceInfo, employeeNumber, commandConfig.MaxRetryForUserCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(commands);
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                    {
-                        using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            result = deviceDriver.GetUserInfoByUserId(employeeNumber, templateType);
-                        }
-                    }
-                    else
-                    {
-                        var commands = PwCommands.GetUserInfoCommand
-                            (deviceInfo, employeeNumber, templateType, commandConfig.MaxRetryForUserCommand, null, null, null);
-                        var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                        commandComponent.Insert(commands);
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
             return result;
         }
 
-        public List<DtoUserInfoDefinedOnDevice> CommunicationGetUsersInfoDefinedOnDevice(DtoCommunicationDeviceData deviceInfo)
+        public List<DtoUserInfoDefinedOnDevice> CommunicationGetUsersInfoDefinedOnDevice(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+
             CheckActiveProducer(deviceInfo);
             var result = new List<DtoUserInfoDefinedOnDevice>();
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
@@ -1218,7 +1149,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -1231,7 +1162,7 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    result = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber).GetAllUsersInfo();
+                                    result = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceId).GetAllUsersInfo();
                                 }
 
                                 break;
@@ -1247,25 +1178,9 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    result = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber).GetAllUsersInfo();
+                                    result = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId).GetAllUsersInfo();
                                 }
                                 break;
-                        }
-
-                    }
-                    break;
-                case ProducerEnumeration.Padis:
-                    using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                    {
-                        result = deviceDriver.GetAllUsers();
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            result = deviceDriver.GetAllUsersInfo();
                         }
                     }
                     break;
@@ -1275,12 +1190,13 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public void CommunicationCancelOperation(DtoCommunicationDeviceData deviceInfo)
+        public void CommunicationCancelOperation(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     {
@@ -1316,13 +1232,14 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CommunicationSetDateAndTime(DtoCommunicationDeviceData deviceInfo)
+        public void CommunicationSetDateAndTime(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     {
@@ -1351,7 +1268,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -1391,59 +1308,17 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    {
-                        switch (deviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Standalone:
-                                using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                                {
-                                    deviceDriver.SetDateTime(DateTime.Now);
-                                }
-                                break;
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                deviceDriver.SetDateTime(DateTime.Now);
-                            }
-                        }
-                        else
-                        {
-                            var commands = PwCommands.SetDateAndTimeCommand
-                                            (deviceInfo, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(commands);
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.ElmOSanat:
-                    {
-                        using (var deviceDriver = new ElmoSanatOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            deviceDriver.SetDateTime();
-                        }
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
         }
 
-        public DateTime CommunicationGetDateAndTime(DtoCommunicationDeviceData deviceInfo)
+        public DateTime CommunicationGetDateAndTime(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     {
@@ -1463,7 +1338,7 @@ namespace GuardianCommunication.Business.Component
                     }
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 {
@@ -1477,7 +1352,7 @@ namespace GuardianCommunication.Business.Component
                                     }
                                     else
                                     {
-                                        var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber);
+                                        var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceId);
                                         return deviceDriver.GetDateTime();
                                     }
                                 }
@@ -1492,44 +1367,22 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
+                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId);
                                     return deviceDriver.GetDateTime();
                                 }
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            return deviceDriver.GetDateTime();
-                        }
-                    }
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                        {
-                            var result = deviceDriver.Connect(true);
-                            return result.DeviceDateTime;
-                        }
-                    }
-                case ProducerEnumeration.ElmOSanat:
-                    {
-                        using (var deviceDriver = new ElmoSanatOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            return deviceDriver.GetDateTime();
-                        }
-                    }
             }
             throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
         }
 
-        public string CommunicationGetFirmwareVersion(DtoCommunicationDeviceData deviceInfo)
+        public string CommunicationGetFirmwareVersion(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
@@ -1539,7 +1392,7 @@ namespace GuardianCommunication.Business.Component
                     }
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion2:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -1552,28 +1405,24 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
+                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId);
                                     return deviceDriver.GetFirmwareVersion();
                                 }
                             default:
                                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                         }
                     }
-                case ProducerEnumeration.Padis:
-                    using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                    {
-                        return deviceDriver.GetFirmwareVersion();
-                    }
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
         }
 
-        public void CommunicationUpgradeFirmware(DtoCommunicationDeviceData deviceInfo, string fileName, byte[] firmwareFile)
+        public void CommunicationUpgradeFirmware(Guid deviceId, string fileName, byte[] firmwareFile)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
@@ -1584,7 +1433,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion2:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -1597,7 +1446,7 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
+                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId);
                                     deviceDriver.UpgradeFirmware(fileName, firmwareFile);
                                 }
                                 break;
@@ -1611,12 +1460,13 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CommunicationClearData(DtoCommunicationDeviceData deviceInfo)
+        public void CommunicationClearData(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-            switch (deviceInfo.ProducerEnum)
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     switch (deviceInfo.ConnectionMode)
@@ -1660,7 +1510,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -1710,64 +1560,20 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    switch (deviceInfo.ConnectionMode)
-                    {
-                        case DeviceConnectionModeEnumeration.Push:
-                            {
-                                var command = PadisControllerPushCommands.GetClearDataCommand
-                                    (deviceInfo, DeviceLogTypeEnumeration.Attendance, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(command);
-                            }
-                            break;
-                        default:
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.ClearData();
-                            }
-                            break;
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        switch (deviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Push:
-                                var commands = PwCommands.GetClearDataCommand
-                                         (deviceInfo,
-                                         DeviceLogTypeEnumeration.Attendance,
-                                         commandConfig.MaxRetryForOtherCommand,
-                                         null,
-                                         null,
-                                         null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(commands);
-                                break;
-                            default:
-                                using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                                {
-                                    deviceDriver.Connect();
-                                    deviceDriver.ClearData();
-                                }
-                                break;
-                        }
-
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
         }
 
-        public int CommunicationRecordCount(DtoCommunicationDeviceData deviceInfo)
+        public int CommunicationRecordCount(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
             var result = 0;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
@@ -1813,12 +1619,12 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 var deviceComponent = new DeviceComponent(RepositoryFactory);
                                 var deviceCommunicationData = deviceComponent
-                                    .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                    .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                     .FirstOrDefault();
                                 var startDate = DateTime.Now.AddDays(-3);
                                 if (deviceCommunicationData?.LastAttendanceLogDateTime != null)
@@ -1916,14 +1722,15 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public int CommunicationFaceCount(DtoCommunicationDeviceData deviceInfo)
+        public int CommunicationFaceCount(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
             var result = 0;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
 
                 case ProducerEnumeration.Zk:
@@ -1962,7 +1769,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -2007,14 +1814,15 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public int CommunicationFingerCount(DtoCommunicationDeviceData deviceInfo)
+        public int CommunicationFingerCount(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
             var result = 0;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     switch (deviceInfo.ConnectionMode)
@@ -2052,7 +1860,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -2097,14 +1905,15 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public int CommunicationUserCount(DtoCommunicationDeviceData deviceInfo)
+        public int CommunicationUserCount(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
             var result = 0;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
@@ -2150,7 +1959,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -2189,121 +1998,84 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    switch (deviceInfo.ConnectionMode)
-                    {
-                        case DeviceConnectionModeEnumeration.Push:
-                            {
-                                var command = PadisControllerPushCommands.GetDeviceStatisticsCommand
-                                    (deviceInfo, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(command);
-                            }
-                            break;
-                        default:
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                            {
-                                result = deviceDriver.GetUserCount();
-                            }
-                            break;
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                result = deviceDriver.GetUserCount();
-                            }
-                        }
-                        else
-                        {
-                            var command = PwCommands.GetUserCount
-                            (deviceInfo, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
-                        }
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
             return result;
         }
 
-        public void CommunicationDeleteUserByInfo(DtoEmployeeAndDeviceParam employeeAndDeviceInfo)
+        public void CommunicationDeleteUserByInfo(DtoUserAndDeviceParam userAndDeviceInfo)
         {
             // در اینجا نیاز است که کاربر در همین لحطه و همین الان از روی دیتابیس حذف شود
             // بنابراین دستورات برای همین الان بر روی دیتابیس ثبت می شود. همچنین می بایست
             // در صورتی که دستورات مرتبطی با ارسال و یا حذف وجود دارد، از دیتابیس حذف شوند. 
 
-            CheckActiveProducer(employeeAndDeviceInfo.DeviceInfo);
+            var deviceInfo = GetDeviceFromCache(userAndDeviceInfo.DeviceId, true);
+            CheckActiveProducer(deviceInfo);
             var configCache = new SystemConfigComponent(RepositoryFactory);
             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-            var commandConfig = configCache.GetCommandSettingFromCache(employeeAndDeviceInfo.DeviceInfo.ProducerEnum, employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum);
+            var commandConfig = configCache.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
-            switch (employeeAndDeviceInfo.DeviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
                         var commands = new List<DtoDeviceCommand>();
-                        switch (employeeAndDeviceInfo.UserInfo.UserType)
+                        switch (userAndDeviceInfo.UserInfo.UserType)
                         {
                             case DeviceUserTypeEnumeration.PermanentUser:
                                 commands.Add(VirdiCommands.GetDeleteUserCommand(
-                                    employeeAndDeviceInfo.DeviceInfo,
-                                    employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo.userIdOnDevice,
                                     commandConfig.MaxRetryForUserCommand,
                                     null,
                                     null,
-                                    employeeAndDeviceInfo.CommandPriority,
-                                    employeeAndDeviceInfo.CommandIdentifier));
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier));
                                 break;
                             case DeviceUserTypeEnumeration.TempUser:
                                 commands.Add(
                                     VirdiCommands.GetDeleteUserCommand(
-                                        employeeAndDeviceInfo.DeviceInfo,
-                                        employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                        deviceInfo,
+                                        userAndDeviceInfo.UserInfo.userIdOnDevice,
                                         commandConfig.MaxRetryForUserCommand,
                                         null,
                                         null,
-                                        employeeAndDeviceInfo.CommandPriority,
-                                        employeeAndDeviceInfo.CommandIdentifier)
+                                        userAndDeviceInfo.CommandPriority,
+                                        userAndDeviceInfo.CommandIdentifier)
                                 );
                                 break;
                         }
-                        RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                        RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                         commandComponent.Insert(commands);
                     }
 
                     break;
                 case ProducerEnumeration.Zk:
                     {
-                        switch (employeeAndDeviceInfo.DeviceInfo.ConnectionMode)
+                        switch (deviceInfo.ConnectionMode)
                         {
                             case DeviceConnectionModeEnumeration.Push:
                                 {
                                     var commands = new List<DtoDeviceCommand>();
                                     commands.Add(ZkPushCommands.GetDeleteUserCommands
-                                            (employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                            (deviceInfo,
+                                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 null,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier)
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier)
                                             );
-                                    RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                    RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                                     commandComponent.Insert(commands);
                                 }
                                 break;
                             default:
-                                using (var deviceDriver = new ZkOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                                using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                                 {
                                     deviceDriver.Connect();
-                                    deviceDriver.DeleteUserById(employeeAndDeviceInfo.UserInfo.EmployeeNumber);
+                                    deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.userIdOnDevice);
                                 }
                                 break;
                         }
@@ -2311,26 +2083,26 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Timy:
                     {
-                        if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
+                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                         {
-                            using (var deviceDriver = new TimyOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                            using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                deviceDriver.DeleteUserById(employeeAndDeviceInfo.UserInfo.EmployeeNumber);
+                                deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.userIdOnDevice);
                             }
                         }
                         else
                         {
                             var commands = new List<DtoDeviceCommand>();
                             commands.AddRange(TimyPushCommands.GetDeleteUserCommands(
-                                employeeAndDeviceInfo.DeviceInfo,
-                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                deviceInfo,
+                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                 commandConfig.MaxRetryForUserCommand,
                                 null,
                                 null,
-                                employeeAndDeviceInfo.CommandPriority,
-                                employeeAndDeviceInfo.CommandIdentifier));
-                            RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                userAndDeviceInfo.CommandPriority,
+                                userAndDeviceInfo.CommandIdentifier));
+                            RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                             commandComponent.Insert(commands);
                         }
 
@@ -2338,102 +2110,57 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
-                                if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
+                                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                 {
-                                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        deviceDriver.DeleteUserById(employeeAndDeviceInfo.UserInfo.EmployeeNumber);
+                                        deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.userIdOnDevice);
                                     }
                                 }
                                 else
                                 {
                                     var commands = new List<DtoDeviceCommand>();
                                     commands.Add(SupremaSdk1Commands.GetDeleteUserCommand(
-                                                employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                deviceInfo,
+                                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 null,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier));
-                                    RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier));
+                                    RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                                     commandComponent.Insert(commands);
                                 }
                                 break;
                             case SdkVersionEnumeration.SdkVersion2:
-                                if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
+                                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                 {
-                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
+                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        deviceDriver.DeleteUserById(employeeAndDeviceInfo.UserInfo.EmployeeNumber);
+                                        deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.userIdOnDevice);
                                     }
                                 }
                                 else
                                 {
                                     var commands = new List<DtoDeviceCommand>();
                                     commands.Add(SupremaSdk2Commands.GetDeleteUserCommand(
-                                                employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                                deviceInfo,
+                                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                                 commandConfig.MaxRetryForUserCommand,
                                                 null,
                                                 null,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier));
-                                    RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
+                                                userAndDeviceInfo.CommandPriority,
+                                                userAndDeviceInfo.CommandIdentifier));
+                                    RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
                                     commandComponent.Insert(commands);
 
                                 }
                                 break;
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.Padis:
-                    {
-                        switch (employeeAndDeviceInfo.DeviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Push:
-                                {
-                                    var commands = new List<DtoDeviceCommand>();
-                                    commands.Add(PadisControllerPushCommands.GetDeleteUserCommands
-                                            (employeeAndDeviceInfo.DeviceInfo,
-                                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
-                                                commandConfig.MaxRetryForUserCommand,
-                                                null,
-                                                null,
-                                                employeeAndDeviceInfo.CommandPriority,
-                                                employeeAndDeviceInfo.CommandIdentifier)
-                                            );
-                                    RemoveNecessaryCommandsOnRemoveUser(employeeAndDeviceInfo, commandComponent);
-                                    commandComponent.Insert(commands);
-                                }
-                                break;
-                            default:
-                                using (var deviceDriver = new PadisControllerOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
-                                {
-                                    deviceDriver.DeleteUserById(employeeAndDeviceInfo.UserInfo.EmployeeNumber);
-                                }
-                                break;
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        if (employeeAndDeviceInfo.DeviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PwOnDemandAdapter(employeeAndDeviceInfo.DeviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                deviceDriver.DeleteUserById(employeeAndDeviceInfo.UserInfo.EmployeeNumber);
-                            }
-                        }
-                        else
-                        {
-                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                         }
                     }
                     break;
@@ -2442,14 +2169,15 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CommunicationDeleteUserByUserId(DtoCommunicationDeviceData deviceInfo, long employeeNumber)
+        public void CommunicationDeleteUserByUserId(Guid deviceId, long userIdOnDevice)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
@@ -2457,14 +2185,14 @@ namespace GuardianCommunication.Business.Component
                         {
                             VirdiCommands.GetDeleteUserCommand(
                                 deviceInfo,
-                                employeeNumber,
+                                userIdOnDevice,
                                 commandConfig.MaxRetryForUserCommand,
                                 null,
                                 null,
                                 null)
                         };
-                        commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                            (employeeNumber, deviceInfo.DeviceNumber, VirdiCommands.GetDefineAndDeleteUserCommandTypes());
+                        commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                            (userIdOnDevice, deviceInfo.DeviceId, VirdiCommands.GetDefineAndDeleteUserCommandTypes());
                         commandComponent.Insert(commands);
                     }
 
@@ -2478,21 +2206,21 @@ namespace GuardianCommunication.Business.Component
                                 {
                                     ZkPushCommands.GetDeleteUserCommands(
                                         deviceInfo,
-                                        employeeNumber,
+                                        userIdOnDevice,
                                         commandConfig.MaxRetryForUserCommand,
                                         null,
                                         null,
                                         null)
                                 };
-                                commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                                    (employeeNumber, deviceInfo.DeviceNumber, ZkPushCommands.GetDefineAndDeleteUserCommandTypes());
+                                commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                                    (userIdOnDevice, deviceInfo.DeviceId, ZkPushCommands.GetDefineAndDeleteUserCommandTypes());
                                 commandComponent.Insert(commands);
                                 break;
                             default:
                                 using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                                 {
                                     deviceDriver.Connect();
-                                    deviceDriver.DeleteUserById(employeeNumber);
+                                    deviceDriver.DeleteUserById(userIdOnDevice);
                                 }
                                 break;
                         }
@@ -2505,7 +2233,7 @@ namespace GuardianCommunication.Business.Component
                             using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                deviceDriver.DeleteUserById(employeeNumber);
+                                deviceDriver.DeleteUserById(userIdOnDevice);
                             }
                         }
                         else
@@ -2513,20 +2241,20 @@ namespace GuardianCommunication.Business.Component
                             var commands = new List<DtoDeviceCommand>();
                             commands.AddRange(TimyPushCommands.GetDeleteUserCommands(
                                 deviceInfo
-                                , employeeNumber
+                                , userIdOnDevice
                                 , commandConfig.MaxRetryForUserCommand
                                 , null
                                 , null
                                 , null));
-                            commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                                (employeeNumber, deviceInfo.DeviceNumber, TimyPushCommands.GetDefineAndDeleteUserCommandTypes());
+                            commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                                (userIdOnDevice, deviceInfo.DeviceId, TimyPushCommands.GetDefineAndDeleteUserCommandTypes());
                             commandComponent.Insert(commands);
                         }
                     }
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -2534,7 +2262,7 @@ namespace GuardianCommunication.Business.Component
                                     using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        deviceDriver.DeleteUserById(employeeNumber);
+                                        deviceDriver.DeleteUserById(userIdOnDevice);
                                     }
                                 }
                                 else
@@ -2543,14 +2271,14 @@ namespace GuardianCommunication.Business.Component
                                     {
                                         SupremaSdk1Commands.GetDeleteUserCommand(
                                             deviceInfo
-                                            , employeeNumber
+                                            , userIdOnDevice
                                             , commandConfig.MaxRetryForUserCommand
                                             , null
                                             , null
                                             , null)
                                     };
-                                    commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                                        (employeeNumber, deviceInfo.DeviceNumber, SupremaSdk1Commands.GetDefineAndDeleteUserCommandTypes());
+                                    commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                                        (userIdOnDevice, deviceInfo.DeviceId, SupremaSdk1Commands.GetDefineAndDeleteUserCommandTypes());
                                     commandComponent.Insert(commands);
                                 }
                                 break;
@@ -2560,7 +2288,7 @@ namespace GuardianCommunication.Business.Component
                                     using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        deviceDriver.DeleteUserById(employeeNumber);
+                                        deviceDriver.DeleteUserById(userIdOnDevice);
                                     }
                                 }
                                 else
@@ -2569,14 +2297,14 @@ namespace GuardianCommunication.Business.Component
                                     {
                                         SupremaSdk2Commands.GetDeleteUserCommand(
                                             deviceInfo
-                                            , employeeNumber
+                                            , userIdOnDevice
                                             , commandConfig.MaxRetryForUserCommand
                                             , null
                                             , null
                                             , null)
                                     };
-                                    commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                                        (employeeNumber, deviceInfo.DeviceNumber, SupremaSdk2Commands.GetDefineAndDeleteUserCommandTypes());
+                                    commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                                        (userIdOnDevice, deviceInfo.DeviceId, SupremaSdk2Commands.GetDefineAndDeleteUserCommandTypes());
                                     commandComponent.Insert(commands);
                                 }
                                 break;
@@ -2592,20 +2320,20 @@ namespace GuardianCommunication.Business.Component
                                 {
                                     PadisControllerPushCommands.GetDeleteUserCommands(
                                         deviceInfo,
-                                        employeeNumber,
+                                        userIdOnDevice,
                                         commandConfig.MaxRetryForUserCommand,
                                         null,
                                         null,
                                         null)
                                 };
-                                commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                                    (employeeNumber, deviceInfo.DeviceNumber, ZkPushCommands.GetDefineAndDeleteUserCommandTypes());
+                                commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                                    (userIdOnDevice, deviceInfo.DeviceId, ZkPushCommands.GetDefineAndDeleteUserCommandTypes());
                                 commandComponent.Insert(commands);
                                 break;
                             default:
                                 using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
                                 {
-                                    deviceDriver.DeleteUserById(employeeNumber);
+                                    deviceDriver.DeleteUserById(userIdOnDevice);
                                 }
                                 break;
                         }
@@ -2618,7 +2346,7 @@ namespace GuardianCommunication.Business.Component
                             using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                deviceDriver.DeleteUserById(employeeNumber);
+                                deviceDriver.DeleteUserById(userIdOnDevice);
                             }
                         }
                         else
@@ -2632,75 +2360,13 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CommunicationSendWithoutFinger(DtoCommunicationDeviceData deviceInfo, List<DtoEmployeeDeviceRelatedData> userInfos)
+        public void CommunicationDeleteAllUsers(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                deviceDriver.SendWithoutFinger(userInfos);
-                            }
-                        }
-                        else
-                        {
-                            var command = PwCommands.GetSendWithoutFingerCommand
-                           (deviceInfo, userInfos, commandConfig.MaxRetryForUserCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void CommunicationSendValidInvalid(DtoCommunicationDeviceData deviceInfo, List<DtoEmployeeDeviceRelatedData> userInfos)
-        {
-            CheckActiveProducer(deviceInfo);
-            var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                deviceDriver.SetValidInvalidList(userInfos);
-                            }
-                        }
-                        else
-                        {
-                            var command = PwCommands.GetSendValidInvalidCommand
-                           (deviceInfo, userInfos, commandConfig.MaxRetryForUserCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void CommunicationDeleteAllUsers(DtoCommunicationDeviceData deviceInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-            switch (deviceInfo.ProducerEnum)
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
@@ -2753,7 +2419,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -2803,61 +2469,17 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    switch (deviceInfo.ConnectionMode)
-                    {
-                        case DeviceConnectionModeEnumeration.Push:
-                            {
-                                var command = PadisControllerPushCommands.GetClearDataCommand
-                                    (deviceInfo, DeviceLogTypeEnumeration.Users, commandConfig.MaxRetryForUserCommand, null, null, null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(command);
-                            }
-                            break;
-                        default:
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.DeleteAllUsers();
-                            }
-                            break;
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        switch (deviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Push:
-                                var commands = PwCommands.GetClearDataCommand
-                                         (deviceInfo,
-                                         DeviceLogTypeEnumeration.Users,
-                                         commandConfig.MaxRetryForUserCommand,
-                                         null,
-                                         null,
-                                         null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(commands);
-                                break;
-                            default:
-                                using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                                {
-                                    deviceDriver.Connect();
-                                    deviceDriver.DeleteAllUsers();
-                                }
-                                break;
-                        }
-
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
         }
 
-        public string CommunicationGetSerialNumber(DtoCommunicationDeviceData deviceInfo)
+        public string CommunicationGetSerialNumber(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             string result;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     {
@@ -2880,7 +2502,7 @@ namespace GuardianCommunication.Business.Component
 
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -2893,7 +2515,7 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    result = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber).DeviceId.ToString();
+                                    result = GetSupremaSdk1DeviceAdapter(deviceInfo.Id).DeviceId.ToString();
                                 }
                                 break;
                             case SdkVersionEnumeration.SdkVersion2:
@@ -2908,20 +2530,12 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    result = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber).DeviceId.ToString();
+                                    result = GetSupremaSdk2DeviceAdapter(deviceInfo.Id).DeviceId.ToString();
                                 }
                                 break;
                             default:
                                 result = string.Empty;
                                 return result;
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            result = deviceDriver.GetSerialNumber();
                         }
                     }
                     break;
@@ -2931,14 +2545,15 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public OperationResultEnumeration CommunicationTestConnection(DtoCommunicationDeviceData deviceInfo)
+        public OperationResultEnumeration CommunicationTestConnection(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var result = OperationResultEnumeration.CommunicationStatusCannotConnect;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
-                    bool isConnected = VirdiServer.Instance.GetConnectedDeviceNumbers().Contains(deviceInfo.DeviceNumber);
+                    bool isConnected = VirdiServer.Instance.GetConnectedDeviceIds().Contains(deviceInfo.DeviceId);
                     return isConnected
                         ? OperationResultEnumeration.CommunicationStatusSuccessful
                         : OperationResultEnumeration.CommunicationStatusSupremaSdk2SocketIsNotConnected;
@@ -2990,7 +2605,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -3004,7 +2619,7 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    result = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber).IsDeviceConnected
+                                    result = GetSupremaSdk1DeviceAdapter(deviceInfo.Id).IsDeviceConnected
                                         ? OperationResultEnumeration.CommunicationStatusCannotConnect
                                         : OperationResultEnumeration.CommunicationStatusSuccessful;
                                 }
@@ -3021,58 +2636,12 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    result = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber).IsDeviceConnected
+                                    result = GetSupremaSdk2DeviceAdapter(deviceInfo.Id).IsDeviceConnected
                                         ? OperationResultEnumeration.CommunicationStatusCannotConnect
                                         : OperationResultEnumeration.CommunicationStatusSuccessful;
                                 }
 
                                 break;
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.Padis:
-                    if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Push)
-                    {
-                        throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                    }
-                    using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                    {
-                        try
-                        {
-                            result = !deviceDriver.TestConnection()
-                                ? OperationResultEnumeration.CommunicationStatusCannotConnect
-                                : OperationResultEnumeration.CommunicationStatusSuccessful;
-                        }
-                        catch (OperationCannotBeDoneException exp)
-                        {
-                            return exp.OperationResult.Errors.IsCollectionNotNullOrEmpty()
-                                ? exp.OperationResult.Errors.First()
-                                : OperationResultEnumeration.CommunicationStatusCannotConnect;
-                        }
-                        catch (Exception)
-                        {
-                            return OperationResultEnumeration.CommunicationStatusCannotConnect;
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                        {
-                            var resultOfPwConnect = deviceDriver.Connect();
-                            result = !resultOfPwConnect.IsConnected
-                                ? OperationResultEnumeration.CommunicationStatusCannotConnect
-                                : OperationResultEnumeration.CommunicationStatusSuccessful;
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.ElmOSanat:
-                    {
-                        using (var deviceDriver = new ElmoSanatOnDemandAdapter(deviceInfo))
-                        {
-                            result = !deviceDriver.TestConnection()
-                                ? OperationResultEnumeration.CommunicationStatusCannotConnect
-                                : OperationResultEnumeration.CommunicationStatusSuccessful;
                         }
                     }
                     break;
@@ -3082,17 +2651,18 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public DtoDeviceStatistics CommunicationGetDeviceStatistics(DtoCommunicationDeviceData deviceInfo)
+        public DtoDeviceStatistics CommunicationGetDeviceStatistics(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var config = new SystemConfigComponent(RepositoryFactory);
-            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
+            var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
 
             var result = new DtoDeviceStatistics
             {
                 IsConnected = true,
             };
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
@@ -3203,7 +2773,7 @@ namespace GuardianCommunication.Business.Component
                     }
                     break;
                 case ProducerEnumeration.Suprema:
-                    switch (deviceInfo.SdkVersionEnum)
+                    switch (deviceInfo.SdkVersion)
                     {
                         case SdkVersionEnumeration.SdkVersion1:
                             {
@@ -3225,7 +2795,7 @@ namespace GuardianCommunication.Business.Component
                                         {
                                             var deviceComponent = new DeviceComponent(RepositoryFactory);
                                             var deviceCommunicationData = deviceComponent
-                                                .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                                .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                                 .FirstOrDefault();
                                             result.CountOfUnreadAttendance = deviceCommunicationData?.LastAttendanceLogDateTime != null
                                                 ? deviceDriver.GetRecordCount(deviceCommunicationData.LastAttendanceLogDateTime.Value, DateTime.Now)
@@ -3286,110 +2856,22 @@ namespace GuardianCommunication.Business.Component
                             break;
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    switch (deviceInfo.ConnectionMode)
-                    {
-                        case DeviceConnectionModeEnumeration.Push:
-                            {
-                                var command = PadisControllerPushCommands.GetDeviceStatisticsCommand
-                                    (deviceInfo, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(command);
-                            }
-                            break;
-                        default:
-                            using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                            {
-                                try
-                                {
-                                    result.CountOfUsers = deviceDriver.GetUserCount();
-                                }
-                                catch (Exception exp)
-                                {
-                                    LoggingSystem.LogError(exp);
-                                }
-
-                                try
-                                {
-                                    result.CountOfUnreadAttendance = deviceDriver.GetRecordCount();
-                                }
-                                catch (Exception exp)
-                                {
-                                    LoggingSystem.LogError(exp);
-                                }
-                            }
-                            break;
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                        {
-                            using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                            {
-                                var resultOfPwConnect = deviceDriver.Connect();
-                                try
-                                {
-                                    result.CountOfUsers = deviceDriver.GetUserCount();
-                                }
-                                catch (Exception exp)
-                                {
-                                    LoggingSystem.LogError(exp);
-                                }
-
-                                try
-                                {
-                                    result.CountOfUnreadAttendance = resultOfPwConnect.RecordCount;
-                                }
-                                catch (Exception exp)
-                                {
-                                    LoggingSystem.LogError(exp);
-                                }
-
-                                try
-                                {
-                                    result.CountOfFaces = 0;
-                                }
-                                catch (Exception exp)
-                                {
-                                    LoggingSystem.LogError(exp);
-                                }
-
-                                try
-                                {
-                                    result.CountOfFingers = deviceDriver.GetFingerCount();
-                                }
-                                catch (Exception exp)
-                                {
-                                    LoggingSystem.LogError(exp);
-                                }
-                            }
-                        }
-                        else
-                        {
-
-                            var command = SupremaSdk1Commands.GetFaceCount
-                                (deviceInfo, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
-                        }
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
             return result;
         }
 
-        public DtoEmployeeFace ScanFace(DtoCommunicationDeviceData deviceInfo, DtoEmployeeDeviceRelatedData userInfo)
+        public DtoUserFace ScanFace(Guid deviceId, DtoUserDeviceRelatedData userInfo)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            DtoEmployeeFace result = null;
-            switch (deviceInfo.ProducerEnum)
+            DtoUserFace result = null;
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
-                        var command = VirdiCommands.ScanFace(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                        var command = VirdiCommands.ScanFace(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                         var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                         commandComponent.Insert(command);
                     }
@@ -3398,7 +2880,7 @@ namespace GuardianCommunication.Business.Component
                     switch (deviceInfo.ConnectionMode)
                     {
                         case DeviceConnectionModeEnumeration.Push:
-                            var command = ZkPushCommands.GetScanFaceCommand(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                            var command = ZkPushCommands.GetScanFaceCommand(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                             commandComponent.Insert(command);
                             break;
@@ -3406,7 +2888,7 @@ namespace GuardianCommunication.Business.Component
                             using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                result = deviceDriver.ScanFace(userInfo.EmployeeNumber);
+                                result = deviceDriver.ScanFace(userInfo.userIdOnDevice);
                             }
                             break;
                     }
@@ -3430,7 +2912,7 @@ namespace GuardianCommunication.Business.Component
                     break;
 
                 case ProducerEnumeration.Suprema:
-                    switch (deviceInfo.SdkVersionEnum)
+                    switch (deviceInfo.SdkVersion)
                     {
                         case SdkVersionEnumeration.SdkVersion1:
                             if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -3438,12 +2920,12 @@ namespace GuardianCommunication.Business.Component
                                 using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                                 {
                                     deviceDriver.Connect();
-                                    result = deviceDriver.ScanFace(userInfo.EmployeeNumber);
+                                    result = deviceDriver.ScanFace(userInfo.userIdOnDevice);
                                 }
                             }
                             else
                             {
-                                var command = SupremaSdk1Commands.ScanFace(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                                var command = SupremaSdk1Commands.ScanFace(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                                 var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                 commandComponent.Insert(command);
                             }
@@ -3454,12 +2936,12 @@ namespace GuardianCommunication.Business.Component
                                 using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                                 {
                                     deviceDriver.Connect();
-                                    result = deviceDriver.ScanFace(userInfo.EmployeeNumber);
+                                    result = deviceDriver.ScanFace(userInfo.userIdOnDevice);
                                 }
                             }
                             else
                             {
-                                var command = SupremaSdk2Commands.ScanFace(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                                var command = SupremaSdk2Commands.ScanFace(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                                 var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                 commandComponent.Insert(command);
                             }
@@ -3476,15 +2958,16 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public DtoEmployeeFace ScanFaceStandalone(DtoCommunicationDeviceData deviceInfo, DtoEmployeeDeviceRelatedData userInfo)
+        public DtoUserFace ScanFaceStandalone(Guid deviceId, DtoUserDeviceRelatedData userInfo)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            DtoEmployeeFace result = null;
-            switch (deviceInfo.ProducerEnum)
+            DtoUserFace result = null;
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
-                        var command = VirdiCommands.ScanFace(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                        var command = VirdiCommands.ScanFace(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                         var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                         commandComponent.Insert(command);
                     }
@@ -3493,7 +2976,7 @@ namespace GuardianCommunication.Business.Component
                     using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                     {
                         deviceDriver.Connect();
-                        result = deviceDriver.ScanFace(userInfo.EmployeeNumber);
+                        result = deviceDriver.ScanFace(userInfo.userIdOnDevice);
                     }
                     break;
                 case ProducerEnumeration.Timy:
@@ -3505,21 +2988,21 @@ namespace GuardianCommunication.Business.Component
                     break;
 
                 case ProducerEnumeration.Suprema:
-                    switch (deviceInfo.SdkVersionEnum)
+                    switch (deviceInfo.SdkVersion)
                     {
 
                         case SdkVersionEnumeration.SdkVersion1:
                             using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                result = deviceDriver.ScanFace(userInfo.EmployeeNumber);
+                                result = deviceDriver.ScanFace(userInfo.userIdOnDevice);
                             }
                             break;
                         case SdkVersionEnumeration.SdkVersion2:
                             using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                result = deviceDriver.ScanFace(userInfo.EmployeeNumber);
+                                result = deviceDriver.ScanFace(userInfo.userIdOnDevice);
                             }
                             break;
                         default:
@@ -3534,14 +3017,15 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public DtoEmployeeIris ScanIris(DtoCommunicationDeviceData deviceInfo, DtoEmployeeDeviceRelatedData userInfo)
+        public DtoUserIris ScanIris(Guid deviceId, DtoUserDeviceRelatedData userInfo)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
-                        var command = VirdiCommands.ScanIris(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                        var command = VirdiCommands.ScanIris(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                         var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                         commandComponent.Insert(command);
                     }
@@ -3553,11 +3037,12 @@ namespace GuardianCommunication.Business.Component
             return null;
         }
 
-        public string ScanCard(DtoCommunicationDeviceData deviceInfo, DtoEmployeeDeviceRelatedData userInfo)
+        public string ScanCard(Guid deviceId, DtoUserDeviceRelatedData userInfo)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             string result = null;
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Timy:
                     switch (deviceInfo.ConnectionMode)
@@ -3579,7 +3064,7 @@ namespace GuardianCommunication.Business.Component
 
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -3592,7 +3077,7 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    var command = SupremaSdk1Commands.ScanCard(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                                    var command = SupremaSdk1Commands.ScanCard(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                                     var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                     commandComponent.Insert(command);
                                 }
@@ -3608,7 +3093,7 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 else
                                 {
-                                    var command = SupremaSdk2Commands.ScanCard(deviceInfo, userInfo.EmployeeNumber, 1, DeadlineScan, null, null);
+                                    var command = SupremaSdk2Commands.ScanCard(deviceInfo, userInfo.userIdOnDevice, 1, DeadlineScan, null, null);
                                     var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                     commandComponent.Insert(command);
                                 }
@@ -3623,15 +3108,16 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public DtoEmployeeFinger ScanFinger(DtoCommunicationDeviceData deviceInfo, DtoEmployeeDeviceRelatedData userInfo, int fingerIndex)
+        public DtoUserFinger ScanFinger(Guid deviceId, DtoUserDeviceRelatedData userInfo, int fingerIndex)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            DtoEmployeeFinger result = null;
-            switch (deviceInfo.ProducerEnum)
+            DtoUserFinger result = null;
+            switch (deviceInfo.ProducerNumber)
             {
                 //case ProducerEnumeration.Virdi:
                 //    {
-                //        var command = VirdiCommands.ScanFinger(deviceInfo, employeeNumber, fingerIndex, 1, DeadlineScan, null, null);
+                //        var command = VirdiCommands.ScanFinger(deviceInfo, userIdOnDevice, fingerIndex, 1, DeadlineScan, null, null);
                 //        var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                 //        commandComponent.Insert(command);
                 //    }
@@ -3640,7 +3126,7 @@ namespace GuardianCommunication.Business.Component
                     switch (deviceInfo.ConnectionMode)
                     {
                         case DeviceConnectionModeEnumeration.Push:
-                            var command = ZkPushCommands.GetScanFingerCommand(deviceInfo, userInfo.EmployeeNumber, fingerIndex, 1, DeadlineScan, null, null);
+                            var command = ZkPushCommands.GetScanFingerCommand(deviceInfo, userInfo.userIdOnDevice, fingerIndex, 1, DeadlineScan, null, null);
                             var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                             commandComponent.Insert(command);
                             break;
@@ -3648,7 +3134,7 @@ namespace GuardianCommunication.Business.Component
                             using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                             {
                                 deviceDriver.Connect();
-                                result = deviceDriver.ScanFinger(userInfo.EmployeeNumber, fingerIndex);
+                                result = deviceDriver.ScanFinger(userInfo.userIdOnDevice, fingerIndex);
                             }
                             break;
                     }
@@ -3673,7 +3159,7 @@ namespace GuardianCommunication.Business.Component
 
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -3681,12 +3167,12 @@ namespace GuardianCommunication.Business.Component
                                     using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        result = deviceDriver.ScanFinger(userInfo.EmployeeNumber, fingerIndex);
+                                        result = deviceDriver.ScanFinger(userInfo.userIdOnDevice, fingerIndex);
                                     }
                                 }
                                 else
                                 {
-                                    var command = SupremaSdk1Commands.ScanFinger(deviceInfo, userInfo.EmployeeNumber, fingerIndex, 1, DeadlineScan, null, null);
+                                    var command = SupremaSdk1Commands.ScanFinger(deviceInfo, userInfo.userIdOnDevice, fingerIndex, 1, DeadlineScan, null, null);
                                     var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                     commandComponent.Insert(command);
                                 }
@@ -3697,12 +3183,12 @@ namespace GuardianCommunication.Business.Component
                                     using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
                                     {
                                         deviceDriver.Connect();
-                                        result = deviceDriver.ScanFinger(userInfo.EmployeeNumber, fingerIndex);
+                                        result = deviceDriver.ScanFinger(userInfo.userIdOnDevice, fingerIndex);
                                     }
                                 }
                                 else
                                 {
-                                    var command = SupremaSdk2Commands.ScanFinger(deviceInfo, userInfo.EmployeeNumber, fingerIndex, 1, DeadlineScan, null, null);
+                                    var command = SupremaSdk2Commands.ScanFinger(deviceInfo, userInfo.userIdOnDevice, fingerIndex, 1, DeadlineScan, null, null);
                                     var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                                     commandComponent.Insert(command);
                                 }
@@ -3717,10 +3203,11 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public void CommunicationCheck(DtoCommunicationDeviceData deviceInfo)
+        public void CommunicationCheck(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     switch (deviceInfo.ConnectionMode)
@@ -3740,11 +3227,12 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public List<DtoAttendance> CommunicationReadoutFromDevice(DtoCommunicationDeviceData deviceInfo, DateTime startDate, DateTime endDate)
+        public List<DtoAttendance> CommunicationReadoutFromDevice(Guid deviceId, DateTime startDate, DateTime endDate)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var resultOfReadout = new List<DtoAttendance>();
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
@@ -3753,36 +3241,6 @@ namespace GuardianCommunication.Business.Component
                         var commandComponent = new DeviceCommandComponent(RepositoryFactory);
                         commandComponent.Insert(command);
 
-                    }
-                    break;
-                case ProducerEnumeration.ProcessingWorld:
-                    {
-                        switch (deviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Push:
-                                {
-                                    var commands = PwCommands.GetReadoutFromDeviceCommand
-                                             (deviceInfo,
-                                             startDate,
-                                             endDate,
-                                             1,
-                                             null,
-                                             null,
-                                             null);
-                                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                    commandComponent.Insert(commands);
-                                }
-                                break;
-                            default:
-                                {
-                                    using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
-                                    {
-                                        deviceDriver.Connect();
-                                        resultOfReadout = deviceDriver.Readout(startDate, endDate);
-                                    }
-                                }
-                                break;
-                        }
                     }
                     break;
                 case ProducerEnumeration.Zk:
@@ -3824,7 +3282,7 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
@@ -3863,34 +3321,13 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
-                case ProducerEnumeration.Padis:
-                    switch (deviceInfo.ConnectionMode)
-                    {
-                        case DeviceConnectionModeEnumeration.Push:
-                            {
-                                var command = PadisControllerPushCommands.GetReadoutFromDeviceCommand
-                                    (deviceInfo, startDate, endDate, 1, null, null, null);
-                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                                commandComponent.Insert(command);
-                            }
-                            break;
-                        default:
-                            {
-                                using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                                {
-                                    resultOfReadout = deviceDriver.GetAttendances(startDate, endDate);
-                                }
-                            }
-                            break;
-                    }
-                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
 
 
             var attendanceComponent = new AttendanceComponent(RepositoryFactory);
-            var saveResult = attendanceComponent.SaveAttendance(resultOfReadout, true, true, true);
+            var saveResult = attendanceComponent.SaveAttendance(resultOfReadout, true, true);
             var result = new List<DtoAttendance>();
 
             if (saveResult.ExistingRecords.IsCollectionNotNullOrEmpty())
@@ -3914,27 +3351,29 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public byte[] CommunicationGetAttendanceImage(DtoCommunicationDeviceData deviceInfo, long employeeNumber, DateTime attendanceDateTime)
+        public byte[] CommunicationGetAttendanceImage(Guid deviceId, long userIdOnDevice, DateTime attendanceDateTime)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            return AttendanceImageHelpers.GetImageContent(employeeNumber, deviceInfo.DeviceNumber, attendanceDateTime, AttendanceImageHelpers.GetAttendanceImageExtention(deviceInfo.ProducerEnum));
+            return AttendanceImageHelpers.GetImageContent(userIdOnDevice, deviceInfo.Id, attendanceDateTime, AttendanceImageHelpers.GetAttendanceImageExtension(deviceInfo.ProducerNumber));
         }
 
-        public List<DtoDeviceEventLog> CommunicationGetUnreadLogs(DtoCommunicationDeviceData deviceInfo)
+        public List<DtoDeviceEventLog> CommunicationGetUnreadLogs(Guid deviceId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
             var result = new List<DtoDeviceEventLog>();
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 {
                                     var deviceComponent = new DeviceComponent(RepositoryFactory);
                                     var deviceCommunicationData = deviceComponent
-                                        .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                        .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                         .FirstOrDefault();
                                     if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                     {
@@ -3949,9 +3388,9 @@ namespace GuardianCommunication.Business.Component
                                     else
                                     {
                                         result.AddRange(deviceCommunicationData?.LastLogDateTime != null
-                                            ? GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber)
+                                            ? GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceId)
                                                 .GetLog(deviceCommunicationData.LastLogDateTime, DateTime.Now)
-                                            : GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber)
+                                            : GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceId)
                                                 .GetLogWithDefaultDates());
                                     }
 
@@ -3966,7 +3405,7 @@ namespace GuardianCommunication.Business.Component
                                         {
                                             deviceCommunicationData = new DtoDeviceCommunicationData
                                             {
-                                                DeviceNumber = deviceInfo.DeviceNumber,
+                                                DeviceId = deviceInfo.DeviceId,
                                                 LastLogDateTime = lastReadTime,
                                             };
                                         }
@@ -3978,7 +3417,7 @@ namespace GuardianCommunication.Business.Component
                                 {
                                     var deviceComponent = new DeviceComponent(RepositoryFactory);
                                     var deviceCommunicationData = deviceComponent
-                                        .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                        .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                         .FirstOrDefault();
                                     if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                     {
@@ -3993,9 +3432,9 @@ namespace GuardianCommunication.Business.Component
                                     else
                                     {
                                         result.AddRange(deviceCommunicationData?.LastLogId != null
-                                            ? GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber)
+                                            ? GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId)
                                                 .GetLog((uint)deviceCommunicationData.LastLogId.Value)
-                                            : GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber).GetLogWithDefault());
+                                            : GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId).GetLogWithDefault());
                                     }
 
                                     if (result.IsCollectionNotNullOrEmpty())
@@ -4011,7 +3450,7 @@ namespace GuardianCommunication.Business.Component
                                         {
                                             deviceCommunicationData = new DtoDeviceCommunicationData
                                             {
-                                                DeviceNumber = deviceInfo.DeviceNumber,
+                                                DeviceId = deviceInfo.DeviceId,
                                                 LastLogId = lastEventId,
                                                 LastLogDateTime = lastReadTime,
                                             };
@@ -4028,155 +3467,26 @@ namespace GuardianCommunication.Business.Component
             return result;
         }
 
-        public void CommunicationSendFunctionTitles(DtoCommunicationDeviceData deviceInfo, List<string> titles)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Zk:
-                    {
-                        using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            deviceDriver.SendDeviceFunctionTitles(titles);
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.Suprema:
-                    {
-                        switch (deviceInfo.SdkVersionEnum)
-                        {
-                            case SdkVersionEnumeration.SdkVersion2:
-                                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Push)
-                                {
-                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
-                                    if (deviceDriver != null)
-                                    {
-                                        deviceDriver.SendDeviceFunctionTitles(titles);
-                                    }
-                                }
-                                else
-                                {
-                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                                    {
-                                        deviceDriver.Connect();
-                                        deviceDriver.SendDeviceFunctionTitles(titles);
-                                    }
-                                }
-                                break;
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-
-        }
-
-        public void CommunicationDisableFunctionTitles(DtoCommunicationDeviceData deviceInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Zk:
-                    {
-                        using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            deviceDriver.DisableDeviceFunctionTitles();
-                        }
-                    }
-                    break;
-                case ProducerEnumeration.Suprema:
-                    {
-                        switch (deviceInfo.SdkVersionEnum)
-                        {
-                            case SdkVersionEnumeration.SdkVersion2:
-                                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Push)
-                                {
-                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
-                                    if (deviceDriver != null)
-                                    {
-                                        deviceDriver.DisableDeviceFunctionTitles();
-                                    }
-                                }
-                                else
-                                {
-                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                                    {
-                                        deviceDriver.Connect();
-                                        deviceDriver.DisableDeviceFunctionTitles();
-                                    }
-                                }
-                                break;
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-
-        }
-
-        public void CommunicationReconnectOnlineMonitoringDevice(DtoCommunicationDeviceData deviceInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Zk && deviceInfo.OnlineMonitoringMode)
-            {
-                ZkServer.Instance.ReconnectOnlineMonitoringDevice(deviceInfo.DeviceNumber);
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-
         #endregion
 
 
         #region Access Control
 
-
-        public void OpenDoor(DtoCommunicationDeviceData deviceInfo, DtoDeviceDoorBase doorBaseInfo)
+        public void OpenDoor(Guid deviceId, Guid doorId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId, true);
+
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
 
-                    if (deviceInfo.OnlineMonitoringMode)
+                    using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                     {
-                        var agent = ZkServer.Instance.GetOnlineMonitoringAgent(deviceInfo.DeviceNumber);
-                        if (agent != null && agent.IsDeviceConnected)
-                        {
-                            agent.OpenDoor(doorBaseInfo.OpenDoorDelay);
-                        }
-                        else
-                        {
-                            using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                deviceDriver.OpenDoor(doorBaseInfo.OpenDoorDelay);
-                            }
-                            agent?.ResetOnlineMonitoring("Disconnect on open door");
-                        }
+                        deviceDriver.Connect();
+                        deviceDriver.OpenDoor(doorInfo.OpenDoorDelay);
                     }
-                    else
-                    {
-                        using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            deviceDriver.OpenDoor(doorBaseInfo.OpenDoorDelay);
-                        }
-                    }
-
                     break;
                 case ProducerEnumeration.Timy:
                     switch (deviceInfo.ConnectionMode)
@@ -4193,7 +3503,7 @@ namespace GuardianCommunication.Business.Component
                                 using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
                                 {
                                     deviceDriver.Connect();
-                                    deviceDriver.OpenDoor(doorBaseInfo.OpenDoorDelay);
+                                    deviceDriver.OpenDoor(doorInfo.OpenDoorDelay);
                                 }
                             }
                             break;
@@ -4202,42 +3512,74 @@ namespace GuardianCommunication.Business.Component
                 case ProducerEnumeration.Virdi:
                     VirdiServer.Instance.OpenDoor(1, deviceInfo.DeviceNumber);
                     break;
+                case ProducerEnumeration.Suprema:
+                {
+                    switch (deviceInfo.SdkVersion)
+                    {
+                        case SdkVersionEnumeration.SdkVersion2:
+                            switch (deviceInfo.ConnectionMode)
+                            {
+                                case DeviceConnectionModeEnumeration.Push:
+                                {
+                                    var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.Id);
+                                    deviceDriver.OpenDoor(doorInfo);
+                                }
+                                    break;
+                                default:
+                                {
+                                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
+                                    {
+                                        deviceDriver.Connect();
+                                        deviceDriver.OpenDoor(doorInfo);
+                                    }
+                                }
+                                    break;
+                            }
+                            break;
+                        case SdkVersionEnumeration.SdkVersion1:
+                            switch (deviceInfo.ConnectionMode)
+                            {
+                                case DeviceConnectionModeEnumeration.Push:
+                                {
+                                    var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.Id);
+                                    deviceDriver.OpenDoor(doorInfo);
+                                }
+                                    break;
+                                default:
+                                {
+                                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
+                                    {
+                                        deviceDriver.Connect();
+                                        deviceDriver.OpenDoor(doorInfo);
+                                    }
+                                }
+                                    break;
+                            }
+                            break;
+                            default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
         }
 
-        public void OpenDoorWithDelay(DtoCommunicationDeviceData deviceInfo, int delayInSecond)
+        public void OpenDoorWithDelay(Guid deviceId, int delayInSecond)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
-                    if (deviceInfo.OnlineMonitoringMode)
+
+                    using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                     {
-                        var agent = ZkServer.Instance.GetOnlineMonitoringAgent(deviceInfo.DeviceNumber);
-                        if (agent != null && agent.IsDeviceConnected)
-                        {
-                            agent.OpenDoor(delayInSecond);
-                        }
-                        else
-                        {
-                            using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                            {
-                                deviceDriver.Connect();
-                                deviceDriver.OpenDoor(delayInSecond);
-                            }
-                            agent?.ResetOnlineMonitoring("disconnect on open door with delay");
-                        }
+                        deviceDriver.Connect();
+                        deviceDriver.OpenDoor(delayInSecond);
                     }
-                    else
-                    {
-                        using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            deviceDriver.OpenDoor(delayInSecond);
-                        }
-                    }
+
                     break;
                 case ProducerEnumeration.Timy:
                     switch (deviceInfo.ConnectionMode)
@@ -4268,65 +3610,29 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void OpenCabinetDoor(DtoCommunicationDeviceData deviceInfo, int cabinetNumber)
+        public void OpenCabinetDoor(Guid deviceId, int cabinetNumber)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Timy:
                     switch (deviceInfo.ConnectionMode)
                     {
                         case DeviceConnectionModeEnumeration.Push:
-                        {
-                            var command = TimyPushCommands.GetUnlockLockerDoorCommand(deviceInfo, cabinetNumber, cabinetNumber, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
-                        }
-                            break;
-                        default:
-                        {
-                            using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
                             {
-                                deviceDriver.Connect();
-                                deviceDriver.OpenDoor(cabinetNumber);
+                                var command = TimyPushCommands.GetUnlockLockerDoorCommand(deviceInfo, cabinetNumber, cabinetNumber, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
                             }
-                        }
-                            break;
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-
-        #region ZK
-
-        public void SetZkDeviceDoorInfo(DtoCommunicationDeviceData deviceInfo, DtoZkDeviceDoor deviceDoorInfo)
-        {
-            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-        }
-
-        public void SendTimezone(DtoCommunicationDeviceData deviceInfo, DtoTimezone timezone)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Zk:
-                    switch (deviceInfo.ConnectionMode)
-                    {
-                        case DeviceConnectionModeEnumeration.Push:
-                            var config = new SystemConfigComponent(RepositoryFactory);
-                            var configCache = config.GetSystemConfigCache();
-                            var command = ZkPushCommands.GetAcTimezoneCommands(deviceInfo, timezone, configCache.MaxRetryForZkOtherCommand, null, null, null);
-                            var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                            commandComponent.Insert(command);
                             break;
                         default:
-                            using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                             {
-                                deviceDriver.Connect();
-                                deviceDriver.SendTimeZone(timezone);
+                                using (var deviceDriver = new TimyOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.Connect();
+                                    deviceDriver.OpenDoor(cabinetNumber);
+                                }
                             }
                             break;
                     }
@@ -4334,199 +3640,28 @@ namespace GuardianCommunication.Business.Component
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
-
         }
-
-        public void SendHolidays(DtoCommunicationDeviceData deviceInfo, List<DtoDeviceHoliday> holidays)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Zk)
-            {
-                switch (deviceInfo.ConnectionMode)
-                {
-                    case DeviceConnectionModeEnumeration.Push:
-                        var config = new SystemConfigComponent(RepositoryFactory);
-                        var configCache = config.GetSystemConfigCache();
-                        var commands = ZkPushCommands.GetAcHolidayCommands(deviceInfo, holidays, configCache.MaxRetryForZkOtherCommand, null, null, null);
-                        var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                        commandComponent.Insert(commands);
-                        break;
-                    default:
-                        using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.Connect();
-                            deviceDriver.SendHolidays(holidays);
-                        }
-                        break;
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        #endregion
 
 
         #region Suprema 1
 
-        public void SendSupremaSdk1Holidays(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk1DeviceHolidayGroup> holidayGroups)
+        public void OpenSupremaSdk1DoorPermanent(Guid deviceId, Guid doorId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId);
             CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion1)
-            {
-
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SendHolidays(holidayGroups);
-                    }
-                }
-                else
-                {
-                    var configComponent = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = configComponent.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk1Commands.SendHolidays(deviceInfo
-                        , holidayGroups
-                        , commandConfig.MaxRetryForOtherCommand
-                        , null
-                        , null
-                        , CommandPriorityEnumeration.Medium);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk1Timezones(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk1Timezone> timezones)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion1)
-            {
-
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetTimezones(timezones);
-                    }
-                }
-                else
-                {
-                    var configComponent = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = configComponent.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-
-                    var command = SupremaSdk1Commands.SendTimezones(deviceInfo
-                        , timezones
-                        , commandConfig.MaxRetryForOtherCommand
-                        , null
-                        , null
-                        , CommandPriorityEnumeration.Medium);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk1AccessGroups(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk1AccessGroup> accessGroups)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion1)
-            {
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetAccessGroups(accessGroups);
-                    }
-                }
-                else
-                {
-                    var configComponent = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = configComponent.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-
-                    var command = SupremaSdk1Commands.SendAccessGroups(deviceInfo
-                        , accessGroups
-                        , commandConfig.MaxRetryForOtherCommand
-                        , null
-                        , null
-                        , CommandPriorityEnumeration.Medium);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk1DoorInfo(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk1DeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion1)
-            {
-
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetDoorInfo(doorInfo);
-                    }
-                }
-                else
-                {
-                    var configComponent = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = configComponent.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk1Commands.SetDoorInfo(deviceInfo
-                        , doorInfo
-                        , commandConfig.MaxRetryForOtherCommand
-                        , null
-                        , null
-                        , CommandPriorityEnumeration.Medium);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenSupremaSdk1DoorPermanent(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk1DeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 switch (deviceInfo.ConnectionMode)
                                 {
                                     case DeviceConnectionModeEnumeration.Push:
                                         {
-                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber);
+                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.Id);
                                             deviceDriver.OpenDoorPermanent(doorInfo);
                                         }
                                         break;
@@ -4552,21 +3687,23 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CloseSupremaSdk1DoorPermanent(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk1DeviceDoor doorInfo)
+        public void CloseSupremaSdk1DoorPermanent(Guid deviceId, Guid doorId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 switch (deviceInfo.ConnectionMode)
                                 {
                                     case DeviceConnectionModeEnumeration.Push:
                                         {
-                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber);
+                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.Id);
                                             deviceDriver.CloseDoorPermanent(doorInfo);
                                         }
                                         break;
@@ -4592,61 +3729,23 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void OpenSupremaSdk1Door(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk1DeviceDoor doorInfo)
+        public void OpenSupremaSdk1DoorWithDelay(Guid deviceId, Guid doorId, int delayInSecond)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 switch (deviceInfo.ConnectionMode)
                                 {
                                     case DeviceConnectionModeEnumeration.Push:
                                         {
-                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber);
-                                            deviceDriver.OpenDoor(doorInfo);
-                                        }
-                                        break;
-                                    default:
-                                        {
-                                            using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
-                                            {
-                                                deviceDriver.Connect();
-                                                deviceDriver.OpenDoor(doorInfo);
-                                            }
-                                        }
-                                        break;
-                                }
-                                break;
-                            case SdkVersionEnumeration.SdkVersion2:
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenSupremaSdk1DoorWithDelay(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk1DeviceDoor doorInfo, int delayInSecond)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Suprema:
-                    {
-                        switch (deviceInfo.SdkVersionEnum)
-                        {
-                            case SdkVersionEnumeration.SdkVersion1:
-                                switch (deviceInfo.ConnectionMode)
-                                {
-                                    case DeviceConnectionModeEnumeration.Push:
-                                        {
-                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber);
+                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.Id);
                                             deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
                                         }
                                         break;
@@ -4677,174 +3776,23 @@ namespace GuardianCommunication.Business.Component
 
         #region Suprema 2
 
-        public void SendSupremaSdk2Holidays(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk2DeviceHolidayGroup> holidayGroups)
+        public void OpenSupremaSdk2DoorPermanent(Guid deviceId, Guid doorId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId);
             CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion2)
-            {
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SendHolidays(holidayGroups);
-                    }
-                }
-                else
-                {
-                    var config = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk2Commands.GetSendHolidayGroupCommands
-                        (deviceInfo, holidayGroups, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk2AccessSchedules(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk2AccessSchedule> accessSchedules)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion2)
-            {
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetAccessSchedules(accessSchedules);
-                    }
-                }
-                else
-                {
-                    var config = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk2Commands.GetSendAccessScheduleCommands
-                        (deviceInfo, accessSchedules, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk2AccessLevels(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk2AccessLevel> accessLevels)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion2)
-            {
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetAccessLevels(accessLevels);
-                    }
-                }
-                else
-                {
-                    var config = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk2Commands.GetSendAccessLevelCommands
-                        (deviceInfo, accessLevels, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk2AccessGroups(DtoCommunicationDeviceData deviceInfo, List<DtoSupremaSdk2AccessGroup> accessGroups)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion2)
-            {
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetAccessGroups(accessGroups);
-                    }
-                }
-                else
-                {
-                    var config = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk2Commands.GetSendAccessGroupCommands
-                        (deviceInfo, accessGroups, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void SendSupremaSdk2DoorInfo(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk2DeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema
-                && deviceInfo.SdkVersionEnum == SdkVersionEnumeration.SdkVersion2)
-            {
-                if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
-                {
-                    using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SetDoorInfo(new List<DtoSupremaSdk2DeviceDoor> { doorInfo });
-                    }
-                }
-                else
-                {
-                    var config = new SystemConfigComponent(RepositoryFactory);
-                    var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                    var command = SupremaSdk2Commands.GetSendDoorCommands
-                        (deviceInfo, doorInfo, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                    var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                    commandComponent.Insert(command);
-
-
-                    GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber).SetDoorInfo(new List<DtoSupremaSdk2DeviceDoor>() { doorInfo });
-                }
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenSupremaSdk2DoorPermanent(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk2DeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion2:
                                 switch (deviceInfo.ConnectionMode)
                                 {
                                     case DeviceConnectionModeEnumeration.Push:
                                         {
-                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
+                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId);
                                             deviceDriver.OpenDoorPermanent(doorInfo);
                                         }
                                         break;
@@ -4870,21 +3818,23 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void CloseSupremaSdk2DoorPermanent(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk2DeviceDoor doorInfo)
+        public void CloseSupremaSdk2DoorPermanent(Guid deviceId, Guid doorId)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion2:
                                 switch (deviceInfo.ConnectionMode)
                                 {
                                     case DeviceConnectionModeEnumeration.Push:
                                         {
-                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
+                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.Id);
                                             deviceDriver.CloseDoorPermanent(doorInfo);
                                         }
                                         break;
@@ -4910,61 +3860,23 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void OpenSupremaSdk2Door(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk2DeviceDoor doorInfo)
+        public void OpenSupremaSdk2DoorWithDelay(Guid deviceId, Guid doorId, int delayInSecond)
         {
+            var deviceInfo = GetDeviceFromCache(deviceId, true);
+            var doorInfo = GetDoorFromCache(doorId);
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion2:
                                 switch (deviceInfo.ConnectionMode)
                                 {
                                     case DeviceConnectionModeEnumeration.Push:
                                         {
-                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
-                                            deviceDriver.OpenDoor(doorInfo);
-                                        }
-                                        break;
-                                    default:
-                                        {
-                                            using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                                            {
-                                                deviceDriver.Connect();
-                                                deviceDriver.OpenDoor(doorInfo);
-                                            }
-                                        }
-                                        break;
-                                }
-                                break;
-                            case SdkVersionEnumeration.SdkVersion1:
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenSupremaSdk2DoorWithDelay(DtoCommunicationDeviceData deviceInfo, DtoSupremaSdk2DeviceDoor doorInfo, int delayInSecond)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Suprema:
-                    {
-                        switch (deviceInfo.SdkVersionEnum)
-                        {
-                            case SdkVersionEnumeration.SdkVersion2:
-                                switch (deviceInfo.ConnectionMode)
-                                {
-                                    case DeviceConnectionModeEnumeration.Push:
-                                        {
-                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber);
+                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.Id);
                                             deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
                                         }
                                         break;
@@ -4993,330 +3905,12 @@ namespace GuardianCommunication.Business.Component
         #endregion
 
 
-        #region Timy
-
-        public void TimySetDayTimezone(DtoCommunicationDeviceData deviceInfo, List<DtoTimyDayTimezoneGroup> dayTimezoneGroups)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Timy)
-            {
-                var config = new SystemConfigComponent(RepositoryFactory);
-                var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                var command = TimyPushCommands.GetDayTimezoneControlCommand
-                    (deviceInfo, dayTimezoneGroups, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                commandComponent.Insert(command);
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void TimySetWeekTimezone(DtoCommunicationDeviceData deviceInfo, List<DtoTimyWeekTimezoneGroup> weekTimezoneGroups)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Timy)
-            {
-                var config = new SystemConfigComponent(RepositoryFactory);
-                var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                var command = TimyPushCommands.GetWeekTimezoneControlCommand
-                    (deviceInfo, weekTimezoneGroups, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                commandComponent.Insert(command);
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void TimySetHolidays(DtoCommunicationDeviceData deviceInfo, List<DtoTimyHoliday> holidays)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Timy)
-            {
-                var config = new SystemConfigComponent(RepositoryFactory);
-                var commandConfig = config.GetCommandSettingFromCache(deviceInfo.ProducerEnum, deviceInfo.SdkVersionEnum);
-                var command = TimyPushCommands.GetHolidayCommand
-                    (deviceInfo, holidays, commandConfig.MaxRetryForOtherCommand, null, null, null);
-                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                commandComponent.Insert(command);
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        #endregion
-
-
-        #region Padis Controller
-
-        public void OpenPadisControllerDoorPermanent(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerDeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        switch (deviceInfo.ConnectionMode)
-                        {
-                            case DeviceConnectionModeEnumeration.Standalone:
-                                using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                                {
-                                    deviceDriver.ChangeDoorStatus(doorInfo.Id, 1, null);
-                                }
-                                break;
-                            case DeviceConnectionModeEnumeration.Push:
-                                break;
-                        }
-
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void ClosePadisControllerDoorPermanent(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerDeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.ChangeDoorStatus(doorInfo.Id, 0, null);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenPadisControllerDoor(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerDeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.ChangeDoorStatus(doorInfo.Id, 1, doorInfo.OpenDoorDelay);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenPadisControllerDoorWithDelay(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerDeviceDoor doorInfo, int delayInSecond)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.ChangeDoorStatus(doorInfo.Id, 1, delayInSecond);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetDoor(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerDeviceDoor doorInfo)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetDoor(doorInfo);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetRelay(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerRelay relay)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetRelay(relay);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetIoPort(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerIoPort ioPort)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetIoPort(ioPort);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetWiegand(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerWiegand wiegand)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetWiegand(wiegand);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetCalendar(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerCalendar calendar)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetCalendar(calendar);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetAccessLevel(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerAccessLevel calendar)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetAccessLevel(calendar);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void PadisControllerSetAccessGroup(DtoCommunicationDeviceData deviceInfo, DtoPadisControllerAccessGroup calendar)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Padis:
-                    {
-                        using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
-                        {
-                            deviceDriver.SetAccessGroup(calendar);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-
-        #endregion
-
-
-        #region Virdi
-
-
-        public void VirdiSendAccessControlData(DtoCommunicationDeviceData deviceInfo, DtoVirdiAccessControlData accessControlData)
-        {
-            CheckActiveProducer(deviceInfo);
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Virdi)
-            {
-                var config = new SystemConfigComponent(RepositoryFactory);
-                var configCache = config.GetSystemConfigCache();
-                var commands = VirdiCommands.GetSendAccessControlDataCommand(
-                    deviceInfo
-                    , accessControlData
-                    , configCache.MaxRetryForZkOtherCommand
-                    , null
-                    , null
-                    , null);
-                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
-                commandComponent.Insert(commands);
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-
-        #endregion
-
-
-        public void SendUserTimeZones(DtoCommunicationDeviceData deviceInfo, long employeeNumber, List<int> timeZoneNumbers)
-        {
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
-            {
-                case ProducerEnumeration.Zk:
-                    using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
-                    {
-                        deviceDriver.Connect();
-                        deviceDriver.SendUserTimeZone(employeeNumber, timeZoneNumbers);
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
         #endregion
 
 
         #region Internal Method
 
-        internal DtoAttendanceSaveResult DownloadAndSaveUnreadAttendancesFromSdk(DtoCommunicationDeviceData deviceInfo)
+        internal DtoAttendanceSaveResult DownloadAndSaveUnreadAttendancesFromSdk(DtoDevice deviceInfo)
         {
             CheckActiveProducer(deviceInfo);
             var allAttendances = CommunicationGetUnreadAttendancesFromSdk(deviceInfo);
@@ -5329,10 +3923,10 @@ namespace GuardianCommunication.Business.Component
             return attendanceComponent.SaveAttendance(allAttendances, true, true, true);
         }
 
-        internal DtoPwAutoCollectClearDataResult CommunicationPwClearDataWithRecordCount(DtoCommunicationDeviceData deviceInfo, int previousRecordCount)
+        internal DtoPwAutoCollectClearDataResult CommunicationPwClearDataWithRecordCount(DtoDevice deviceInfo, int previousRecordCount)
         {
             CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.ProcessingWorld:
                     using (var deviceDriver = new PwOnDemandAdapter(deviceInfo))
@@ -5367,25 +3961,47 @@ namespace GuardianCommunication.Business.Component
 
         #region Private Method
 
-        private static void CheckActiveProducer(DtoCommunicationDeviceData deviceInfo)
+        private static void CheckActiveProducer(DtoDevice deviceInfo)
         {
-            if (!ApplicationEmbeddedInfo.ActiveProducers.HasFlag(deviceInfo.ProducerEnum))
+            if (!ApplicationEmbeddedInfo.ActiveProducers.HasFlag(deviceInfo.ProducerNumber))
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusProducerNotSupport);
             }
 
-            if (deviceInfo.ProducerEnum == ProducerEnumeration.Suprema)
+            if (deviceInfo.ProducerNumber == ProducerEnumeration.Suprema)
             {
-                if (!ApplicationEmbeddedInfo.SupremaProducerVersions.HasFlag(deviceInfo.SdkVersionEnum))
+                if (!ApplicationEmbeddedInfo.SupremaProducerVersions.Contains(deviceInfo.SdkVersion))
                 {
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusProducerNotSupport);
                 }
             }
         }
 
-        private static SupremaSdk1OnDemandAdapter GetSupremaSdk1DeviceAdapter(int deviceNumber)
+        private DtoDevice GetDeviceFromCache(Guid deviceId, bool throwError = true)
         {
-            var deviceAdapter = SupremaSdk1Server.Instance.GetDeviceAdapter(deviceNumber);
+            var deviceComponent = new DeviceComponent(RepositoryFactory);
+            var deviceInfo = deviceComponent.GetDeviceCache(deviceId);
+            if (deviceInfo == null && throwError)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceNotFoundInCache);
+            }
+            return deviceInfo;
+        }
+
+        private DtoDeviceDoorFullInfo GetDoorFromCache(Guid deviceDoorId, bool throwError = true)
+        {
+            var deviceComponent = new DeviceComponent(RepositoryFactory);
+            var deviceDoorInfo = deviceComponent.GetDeviceDoorCache(deviceDoorId);
+            if (deviceDoorInfo == null && throwError)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceDoorNotFoundInCache);
+            }
+            return deviceDoorInfo;
+        }
+
+        private static SupremaSdk1OnDemandAdapter GetSupremaSdk1DeviceAdapter(Guid deviceId)
+        {
+            var deviceAdapter = SupremaSdk1Server.Instance.GetDeviceAdapter(deviceId);
             if (deviceAdapter == null)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusCannotConnect);
@@ -5394,9 +4010,9 @@ namespace GuardianCommunication.Business.Component
             return deviceAdapter;
         }
 
-        private static SupremaSdk2OnDemandAdapter GetSupremaSdk2DeviceAdapter(int deviceNumber)
+        private static SupremaSdk2OnDemandAdapter GetSupremaSdk2DeviceAdapter(Guid deviceId)
         {
-            var deviceAdapter = SupremaSdk2Server.Instance.GetDeviceAdapter(deviceNumber);
+            var deviceAdapter = SupremaSdk2Server.Instance.GetDeviceAdapter(deviceId);
             if (deviceAdapter == null)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusCannotConnect);
@@ -5405,15 +4021,15 @@ namespace GuardianCommunication.Business.Component
             return deviceAdapter;
         }
 
-        private List<DtoAttendance> CommunicationGetUnreadAttendancesFromSdk(DtoCommunicationDeviceData deviceInfo)
+        private List<DtoAttendance> CommunicationGetUnreadAttendancesFromSdk(DtoDevice deviceInfo)
         {
             var result = new List<DtoAttendance>();
 
-            switch (deviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Virdi:
                     {
-                        VirdiServer.Instance.GetLogAsync(1, deviceInfo.DeviceNumber, VirdiDeviceLogTypeEnum.New);
+                        VirdiServer.Instance.GetLogAsync(1, deviceInfo.DeviceId, VirdiDeviceLogTypeEnum.New);
                     }
                     break;
                 case ProducerEnumeration.Zk:
@@ -5436,7 +4052,7 @@ namespace GuardianCommunication.Business.Component
                         {
                             var deviceComponent = new DeviceComponent(RepositoryFactory);
                             var deviceCommunicationData = deviceComponent
-                                .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                 .FirstOrDefault();
                             using (var deviceDriver = new ZkOnDemandAdapter(deviceInfo))
                             {
@@ -5456,7 +4072,7 @@ namespace GuardianCommunication.Business.Component
                                 {
                                     deviceCommunicationData = new DtoDeviceCommunicationData
                                     {
-                                        DeviceNumber = deviceInfo.DeviceNumber,
+                                        DeviceId = deviceInfo.DeviceId,
                                         LastAttendanceLogDateTime = lastReadTime,
                                     };
                                 }
@@ -5477,13 +4093,13 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Suprema:
                     {
-                        switch (deviceInfo.SdkVersionEnum)
+                        switch (deviceInfo.SdkVersion)
                         {
                             case SdkVersionEnumeration.SdkVersion1:
                                 {
                                     var deviceComponent = new DeviceComponent(RepositoryFactory);
                                     var deviceCommunicationData = deviceComponent
-                                        .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                        .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                         .FirstOrDefault();
                                     if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                     {
@@ -5498,9 +4114,9 @@ namespace GuardianCommunication.Business.Component
                                     else
                                     {
                                         result.AddRange(deviceCommunicationData?.LastAttendanceLogDateTime != null
-                                            ? GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber)
+                                            ? GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceId)
                                                 .GetData(deviceCommunicationData.LastAttendanceLogDateTime, DateTime.Now)
-                                            : GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceNumber)
+                                            : GetSupremaSdk1DeviceAdapter(deviceInfo.DeviceId)
                                                 .GetDataWithDefaultDates());
                                     }
 
@@ -5515,7 +4131,7 @@ namespace GuardianCommunication.Business.Component
                                         {
                                             deviceCommunicationData = new DtoDeviceCommunicationData
                                             {
-                                                DeviceNumber = deviceInfo.DeviceNumber,
+                                                DeviceId = deviceInfo.DeviceId,
                                                 LastAttendanceLogDateTime = lastReadTime,
                                             };
                                         }
@@ -5527,7 +4143,7 @@ namespace GuardianCommunication.Business.Component
                                 {
                                     var deviceComponent = new DeviceComponent(RepositoryFactory);
                                     var deviceCommunicationData = deviceComponent
-                                        .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                                        .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                                         .FirstOrDefault();
                                     if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Standalone)
                                     {
@@ -5542,9 +4158,9 @@ namespace GuardianCommunication.Business.Component
                                     else
                                     {
                                         result.AddRange(deviceCommunicationData?.LastAttendanceLogId != null
-                                            ? GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber)
+                                            ? GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId)
                                                 .GetData((uint)deviceCommunicationData.LastAttendanceLogId.Value)
-                                            : GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceNumber).GetDataWithDefault());
+                                            : GetSupremaSdk2DeviceAdapter(deviceInfo.DeviceId).GetDataWithDefault());
                                     }
 
                                     if (result.IsCollectionNotNullOrEmpty())
@@ -5560,7 +4176,7 @@ namespace GuardianCommunication.Business.Component
                                         {
                                             deviceCommunicationData = new DtoDeviceCommunicationData
                                             {
-                                                DeviceNumber = deviceInfo.DeviceNumber,
+                                                DeviceId = deviceInfo.DeviceId,
                                                 LastAttendanceLogId = lastEventId,
                                                 LastAttendanceLogDateTime = lastReadTime,
                                             };
@@ -5595,7 +4211,7 @@ namespace GuardianCommunication.Business.Component
                     {
                         var deviceComponent = new DeviceComponent(RepositoryFactory);
                         var deviceCommunicationData = deviceComponent
-                            .GetDeviceCommunicationDataByDeviceNumbers(new List<int> { deviceInfo.DeviceNumber })
+                            .GetDeviceCommunicationDataByDeviceIds(new List<int> { deviceInfo.DeviceId })
                             .FirstOrDefault();
                         using (var deviceDriver = new PadisControllerOnDemandAdapter(deviceInfo))
                         {
@@ -5614,7 +4230,7 @@ namespace GuardianCommunication.Business.Component
                             {
                                 deviceCommunicationData = new DtoDeviceCommunicationData
                                 {
-                                    DeviceNumber = deviceInfo.DeviceNumber,
+                                    DeviceId = deviceInfo.DeviceId,
                                     LastAttendanceLogDateTime = lastReadTime,
                                 };
                             }
@@ -5631,38 +4247,38 @@ namespace GuardianCommunication.Business.Component
         }
 
         private static List<DtoDeviceCommand> GetZkEnrollUserCommands(
-            DtoEmployeeAndDeviceParam employeeAndDeviceInfo
+            DtoUserAndDeviceParam userAndDeviceInfo
             , DtoSystemConfigDeviceCommandSetting commandConfig)
         {
             // در مورد دستگاه های زد-کا، به دلیل عدم پشتیبانی از تاریخ شروع و پایان، 
             // کاربران عادی و کاربران موقت می بایست در تاریه شروع به دستگاه ارسال شوند
 
             var commands = new List<DtoDeviceCommand>();
-            switch (employeeAndDeviceInfo.UserInfo.UserType)
+            switch (userAndDeviceInfo.UserInfo.UserType)
             {
                 case DeviceUserTypeEnumeration.PermanentUser:
                     {
 
-                        if (employeeAndDeviceInfo.UserInfo.EndTime.HasValue &&
-                            employeeAndDeviceInfo.UserInfo.EndTime < DateTime.Now)
+                        if (userAndDeviceInfo.UserInfo.EndDateTime.HasValue &&
+                            userAndDeviceInfo.UserInfo.EndDateTime < DateTime.Now)
                         {
                             // در صورتی که کابر دائم بود و تاریخ پایان مربوط به گذشته بود، می بایست
                             // کاربر بلافاصله از روی دیتگاه حذف شود
                             commands.Add(ZkPushCommands.GetDeleteUserCommands(
-                                employeeAndDeviceInfo.DeviceInfo,
-                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                deviceInfo,
+                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                 commandConfig.MaxRetryForUserCommand,
                                 null,
                                 null,
-                                employeeAndDeviceInfo.CommandPriority,
-                                employeeAndDeviceInfo.CommandIdentifier));
+                                userAndDeviceInfo.CommandPriority,
+                                userAndDeviceInfo.CommandIdentifier));
                         }
                         else
                         {
                             // این تاریخ پایان کاربر دائمی در اینده است. حال می بایست تاریخ شروع را بررسی کنیم و بر اساس آن 
                             // تصمیم بگیریم. در صورتی که تاریخ شروع نیز در اینده بود، بلافاصله می بایست کاربر را از روی سخت افزار حذف نماییم
                             // و سپس در زمان اینده مجددا آن را ارسال نماییم. 
-                            DateTime? defineUserVisibilityDateTime = employeeAndDeviceInfo.UserInfo.StartTime;
+                            DateTime? defineUserVisibilityDateTime = userAndDeviceInfo.UserInfo.StartDateTime;
                             if (defineUserVisibilityDateTime < DateTime.Now)
                             {
                                 defineUserVisibilityDateTime = null;
@@ -5671,34 +4287,34 @@ namespace GuardianCommunication.Business.Component
                             {
                                 // یعنی زمان شروع در اینده است و می بایست کاربر الان از روی ساعت حذف شود
                                 commands.Add(ZkPushCommands.GetDeleteUserCommands(
-                                    employeeAndDeviceInfo.DeviceInfo,
-                                    employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo.userIdOnDevice,
                                     commandConfig.MaxRetryForUserCommand,
                                     null,
                                     null,
-                                    employeeAndDeviceInfo.CommandPriority,
-                                    employeeAndDeviceInfo.CommandIdentifier));
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier));
                             }
 
                             commands.AddRange(ZkPushCommands.GetEnrollUserCommands(
-                                employeeAndDeviceInfo.DeviceInfo,
-                                employeeAndDeviceInfo.UserInfo,
+                                deviceInfo,
+                                userAndDeviceInfo.UserInfo,
                                 commandConfig.MaxRetryForUserCommand,
                                 null,
                                 defineUserVisibilityDateTime,
-                                employeeAndDeviceInfo.CommandPriority,
-                                employeeAndDeviceInfo.CommandIdentifier));
+                                userAndDeviceInfo.CommandPriority,
+                                userAndDeviceInfo.CommandIdentifier));
 
-                            if (employeeAndDeviceInfo.UserInfo.EndTime.HasValue)
+                            if (userAndDeviceInfo.UserInfo.EndDateTime.HasValue)
                             {
                                 commands.Add(ZkPushCommands.GetDeleteUserCommands(
-                                    employeeAndDeviceInfo.DeviceInfo,
-                                    employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo.userIdOnDevice,
                                     commandConfig.MaxRetryForUserCommand,
                                     null,
-                                    employeeAndDeviceInfo.UserInfo.EndTime.Value,
-                                    employeeAndDeviceInfo.CommandPriority,
-                                    employeeAndDeviceInfo.CommandIdentifier));
+                                    userAndDeviceInfo.UserInfo.EndDateTime.Value,
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier));
                             }
                         }
                     }
@@ -5711,31 +4327,31 @@ namespace GuardianCommunication.Business.Component
                         // نیز از دستگاه فقط در تاریخ پایان دستور فعلی حذف می کنیم 
                         // چون ممکن کاربر با دستورات و مجوز های موقت دیگری اکنون بر روی دستگاه وجود داشته باشد. 
 
-                        DateTime? defineUserVisibilityDateTime = employeeAndDeviceInfo.UserInfo.StartTime;
+                        DateTime? defineUserVisibilityDateTime = userAndDeviceInfo.UserInfo.StartTime;
                         if (defineUserVisibilityDateTime < DateTime.Now)
                         {
                             defineUserVisibilityDateTime = null;
                         }
 
                         commands.AddRange(ZkPushCommands.GetEnrollUserCommands(
-                            employeeAndDeviceInfo.DeviceInfo,
-                            employeeAndDeviceInfo.UserInfo,
+                            deviceInfo,
+                            userAndDeviceInfo.UserInfo,
                             commandConfig.MaxRetryForUserCommand,
                             null,
                             defineUserVisibilityDateTime,
-                            employeeAndDeviceInfo.CommandPriority,
-                            employeeAndDeviceInfo.CommandIdentifier));
+                            userAndDeviceInfo.CommandPriority,
+                            userAndDeviceInfo.CommandIdentifier));
 
-                        if (employeeAndDeviceInfo.UserInfo.EndTime.HasValue)
+                        if (userAndDeviceInfo.UserInfo.EndDateTime.HasValue)
                         {
                             commands.Add(ZkPushCommands.GetDeleteUserCommands(
-                                employeeAndDeviceInfo.DeviceInfo,
-                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
+                                deviceInfo,
+                                userAndDeviceInfo.UserInfo.userIdOnDevice,
                                 commandConfig.MaxRetryForUserCommand,
                                 null,
-                                employeeAndDeviceInfo.UserInfo.EndTime.Value,
-                                employeeAndDeviceInfo.CommandPriority,
-                                employeeAndDeviceInfo.CommandIdentifier));
+                                userAndDeviceInfo.UserInfo.EndDateTime.Value,
+                                userAndDeviceInfo.CommandPriority,
+                                userAndDeviceInfo.CommandIdentifier));
                         }
 
                     }
@@ -5745,23 +4361,23 @@ namespace GuardianCommunication.Business.Component
 
         }
 
-        private static void ProcessStartAndEndTimeOfUser(DtoEmployeeDeviceRelatedData userInfo)
+        private static void ProcessStartAndEndTimeOfUser(DtoUserDeviceRelatedData userInfo)
         {
             if (userInfo.UserType == DeviceUserTypeEnumeration.PermanentUser)
             {
                 userInfo.StartTime = userInfo.StartTime.Date;
-                if (userInfo.EndTime.HasValue)
+                if (userInfo.EndDateTime.HasValue)
                 {
-                    userInfo.EndTime = DateTimeHelper.GetEndOf(userInfo.EndTime.Value, DateTimeHelper.DateInterval.Day);
+                    userInfo.EndDateTime = DateTimeHelper.GetEndOf(userInfo.EndDateTime.Value, DateTimeHelper.DateInterval.Day);
                 }
             }
         }
 
-        private static void RemoveNecessaryCommandsOnEnrollUser(DtoEmployeeAndDeviceParam employeeAndDeviceInfo
+        private static void RemoveNecessaryCommandsOnEnrollUser(DtoUserAndDeviceParam userAndDeviceInfo
                 , DeviceCommandComponent commandComponent)
         {
             var commandTypes = new List<DeviceCommandTypeEnumeration>();
-            switch (employeeAndDeviceInfo.DeviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     commandTypes = ZkPushCommands.GetDefineAndDeleteUserCommandTypes();
@@ -5770,7 +4386,7 @@ namespace GuardianCommunication.Business.Component
                     commandTypes = TimyPushCommands.GetDefineAndDeleteUserCommandTypes();
                     break;
                 case ProducerEnumeration.Suprema:
-                    switch (employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum)
+                    switch (deviceInfo.SdkVersion)
                     {
                         case SdkVersionEnumeration.SdkVersion1:
                             commandTypes = SupremaSdk1Commands.GetDefineAndDeleteUserCommandTypes();
@@ -5787,43 +4403,43 @@ namespace GuardianCommunication.Business.Component
 
             if (commandTypes.IsCollectionNotNullOrEmpty())
             {
-                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                switch (userAndDeviceInfo.UserInfo.UserType)
                 {
                     case DeviceUserTypeEnumeration.PermanentUser:
                         // در صورتی که کاربر دائمی بود، می بایست هر دستور معرفی و یا حذفی که برای کاربر جاری و بر
                         // روی دستگاه جاری وجود دارد، را حذف نماییم
-                        commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                        (employeeAndDeviceInfo.UserInfo.EmployeeNumber
-                            , employeeAndDeviceInfo.DeviceInfo.DeviceNumber
+                        commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                        (userAndDeviceInfo.UserInfo.userIdOnDevice
+                            , deviceInfo.DeviceId
                             , commandTypes);
                         break;
                     case DeviceUserTypeEnumeration.TempUser:
-                        if (employeeAndDeviceInfo.CommandIdentifier.HasValue)
+                        if (userAndDeviceInfo.CommandIdentifier.HasValue)
                         {
                             // در صورتی که کاربر موقت است و دستوراتی مرتبط با دستور جاری وجود دارد، فقط همان دستورات را حذف می کنیم
                             // و به سایر دستور مربوط به کاربر جاری بر روی دستگاه جاری کاری نداریم.
                             // برای مثال فرض کنیم که کاربر مراجعه کننده است و در دو تاریخ مجزا قرار است که به سازمان مراجعه نماید
                             // تاریخ یکی از مراجعه ها تغییر کرده است، فقط می بایست دستورات مربوط به آن مراجعه حذف شوند
                             // و با دستورات سایر مراجعه ها کاری نداشته باشیم
-                            commandComponent.DeleteNotSentByEmployeeDeviceCommandTypesAndCommandIdentifier
-                            (employeeAndDeviceInfo.UserInfo.EmployeeNumber,
-                                employeeAndDeviceInfo.DeviceInfo.DeviceNumber
+                            commandComponent.DeleteNotSentByUserDeviceCommandTypesAndCommandIdentifier
+                            (userAndDeviceInfo.UserInfo.userIdOnDevice,
+                                deviceInfo.DeviceId
                                 , commandTypes
-                                , new List<Guid> { employeeAndDeviceInfo.CommandIdentifier.Value });
+                                , new List<Guid> { userAndDeviceInfo.CommandIdentifier.Value });
 
                             // حال در صورتی که کاربر دستورت حذفی در بازه کاربر جاری دارد برای جلوگیری از تداخل می بایست 
                             // آن دستور قبل از ثبت دستورات جدید از سیستم حذف شود. 
                             // چون در حالت های دیگر تمامی دستورات کاربر بر روی آن دستگاه حذف می شوند و فقط در این حالت است که
                             // می بایست در صورتی که دستور حذفی در بین بازه فعال بودن کاربر وجود داشت
-                            commandComponent.DeleteNotSentByEmployeeDeviceCommandTypesAndCommandDateInterval(
-                                employeeAndDeviceInfo.UserInfo.EmployeeNumber,
-                                employeeAndDeviceInfo.DeviceInfo.DeviceNumber,
+                            commandComponent.DeleteNotSentByUserDeviceCommandTypesAndCommandDateInterval(
+                                userAndDeviceInfo.UserInfo.userIdOnDevice,
+                                deviceInfo.DeviceId,
                                 new List<DeviceCommandTypeEnumeration>
                                 {
                                     DeviceCommandTypeEnumeration.DeleteUser
                                 }
                                 // ReSharper disable PossibleInvalidOperationException
-                                , employeeAndDeviceInfo.UserInfo.StartTime, employeeAndDeviceInfo.UserInfo.EndTime.Value
+                                , userAndDeviceInfo.UserInfo.StartTime, userAndDeviceInfo.UserInfo.EndDateTime.Value
                             // ReSharper restore PossibleInvalidOperationException
                             );
                         }
@@ -5832,9 +4448,9 @@ namespace GuardianCommunication.Business.Component
                             // در صورتی که کاربر موقت باشد ولی دستورات مرتبط پیشین نداشته باشد، 
                             // می بایست هر دستور معرفی و یا حذفی که برای کاربر جاری و بر
                             // روی دستگاه جاری وجود دارد، را حذف نماییم
-                            commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                            (employeeAndDeviceInfo.UserInfo.EmployeeNumber
-                                , employeeAndDeviceInfo.DeviceInfo.DeviceNumber
+                            commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                            (userAndDeviceInfo.UserInfo.userIdOnDevice
+                                , deviceInfo.DeviceId
                                 , commandTypes);
                         }
 
@@ -5844,11 +4460,11 @@ namespace GuardianCommunication.Business.Component
 
         }
 
-        private static void RemoveNecessaryCommandsOnRemoveUser(DtoEmployeeAndDeviceParam employeeAndDeviceInfo
+        private static void RemoveNecessaryCommandsOnRemoveUser(DtoUserAndDeviceParam userAndDeviceInfo
                 , DeviceCommandComponent commandComponent)
         {
             var commandTypes = new List<DeviceCommandTypeEnumeration>();
-            switch (employeeAndDeviceInfo.DeviceInfo.ProducerEnum)
+            switch (deviceInfo.ProducerNumber)
             {
                 case ProducerEnumeration.Zk:
                     commandTypes = ZkPushCommands.GetDefineAndDeleteUserCommandTypes();
@@ -5857,7 +4473,7 @@ namespace GuardianCommunication.Business.Component
                     commandTypes = TimyPushCommands.GetDefineAndDeleteUserCommandTypes();
                     break;
                 case ProducerEnumeration.Suprema:
-                    switch (employeeAndDeviceInfo.DeviceInfo.SdkVersionEnum)
+                    switch (deviceInfo.SdkVersion)
                     {
                         case SdkVersionEnumeration.SdkVersion1:
                             commandTypes = SupremaSdk1Commands.GetDefineAndDeleteUserCommandTypes();
@@ -5874,38 +4490,38 @@ namespace GuardianCommunication.Business.Component
 
             if (commandTypes.IsCollectionNotNullOrEmpty())
             {
-                switch (employeeAndDeviceInfo.UserInfo.UserType)
+                switch (userAndDeviceInfo.UserInfo.UserType)
                 {
                     case DeviceUserTypeEnumeration.PermanentUser:
                         // در صورتی که کاربر دائمی بود، می بایست هر دستور معرفی و یا حذفی که برای کاربر جاری و بر
                         // روی دستگاه جاری وجود دارد، را حذف نماییم
-                        commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                        (employeeAndDeviceInfo.UserInfo.EmployeeNumber
-                            , employeeAndDeviceInfo.DeviceInfo.DeviceNumber
+                        commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                        (userAndDeviceInfo.UserInfo.userIdOnDevice
+                            , deviceInfo.DeviceId
                             , commandTypes);
                         break;
                     case DeviceUserTypeEnumeration.TempUser:
-                        if (employeeAndDeviceInfo.CommandIdentifier.HasValue)
+                        if (userAndDeviceInfo.CommandIdentifier.HasValue)
                         {
                             // در صورتی که کاربر موقت است و دستوراتی مرتبط با دستور جاری وجود دارد، فقط همان دستورات را حذف می کنیم
                             // و به سایر دستور مربوط به کاربر جاری بر روی دستگاه جاری کاری نداریم.
                             // برای مثال فرض کنیم که کاربر مراجعه کننده است و در دو تاریخ مجزا قرار است که به سازمان مراجعه نماید
                             // تاریخ یکی از مراجعه ها تغییر کرده است، فقط می بایست دستورات مربوط به آن مراجعه حذف شوند
                             // و با دستورات سایر مراجعه ها کاری نداشته باشیم
-                            commandComponent.DeleteNotSentByEmployeeDeviceCommandTypesAndCommandIdentifier
-                            (employeeAndDeviceInfo.UserInfo.EmployeeNumber,
-                                employeeAndDeviceInfo.DeviceInfo.DeviceNumber
+                            commandComponent.DeleteNotSentByUserDeviceCommandTypesAndCommandIdentifier
+                            (userAndDeviceInfo.UserInfo.userIdOnDevice,
+                                deviceInfo.DeviceId
                                 , commandTypes
-                                , new List<Guid> { employeeAndDeviceInfo.CommandIdentifier.Value });
+                                , new List<Guid> { userAndDeviceInfo.CommandIdentifier.Value });
                         }
                         else
                         {
                             // در صورتی که کاربر موقت باشد ولی دستورات مرتبط پیشین نداشته باشد، 
                             // می بایست هر دستور معرفی و یا حذفی که برای کاربر جاری و بر
                             // روی دستگاه جاری وجود دارد، را حذف نماییم
-                            commandComponent.DeleteNotSentByEmployeeDeviceAndCommandTypes
-                            (employeeAndDeviceInfo.UserInfo.EmployeeNumber
-                                , employeeAndDeviceInfo.DeviceInfo.DeviceNumber
+                            commandComponent.DeleteNotSentByUserDeviceAndCommandTypes
+                            (userAndDeviceInfo.UserInfo.userIdOnDevice
+                                , deviceInfo.DeviceId
                                 , commandTypes);
                         }
 
@@ -5915,9 +4531,9 @@ namespace GuardianCommunication.Business.Component
 
         }
 
-        private static DateTime? ProcessVisibilityTime(DtoEmployeeAndDeviceParam dataToProcess)
+        private static DateTime? ProcessVisibilityTime(DtoUserAndDeviceParam dataToProcess)
         {
-            DateTime? visibilityTime = dataToProcess.UserInfo.StartTime;
+            DateTime? visibilityTime = dataToProcess.UserInfo.StartDateTime;
             if (visibilityTime < DateTime.Now)
             {
                 visibilityTime = null;

@@ -252,6 +252,8 @@ CREATE TABLE [core].[DeviceDoorBase](
 	[DoorNumber] [int] NOT NULL,
 	[Title] [nvarchar](200) NOT NULL,
 	[IsActive] [bit] NOT NULL,
+	[OpenDoorDelay] [int] NOT NULL,
+	[DeviceSpecificDoorSettingInJson] [nvarchar](max) NOT NULL,
 	[ReaderDeviceId] [uniqueidentifier] NULL,
 	[ReaderCameraId] [uniqueidentifier] NULL,
 	[InsertedAt] [datetime2](7) NOT NULL,
@@ -478,6 +480,16 @@ GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_IsActive]') AND type = 'D')
 BEGIN
 ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_IsActive]  DEFAULT ((1)) FOR [IsActive]
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_OpenDoorDelay]') AND type = 'D')
+BEGIN
+ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_OpenDoorDelay]  DEFAULT ((0)) FOR [OpenDoorDelay]
+END
+GO
+IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_DeviceSpecificDoorSettingInJson]') AND type = 'D')
+BEGIN
+ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_DeviceSpecificDoorSettingInJson]  DEFAULT ('') FOR [DeviceSpecificDoorSettingInJson]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_InsertedAt]') AND type = 'D')
@@ -1038,6 +1050,12 @@ IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'S
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'core', N'TABLE',N'DeviceDoorBase', N'COLUMN',N'IsActive'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'آیا این رکورد در حال حاضر فعال است؟ برخی از موجودیت های سیستم قابلیت حذف شدن را به دلیل اینکه اطلاعات و وایستگی ها را ندارد. به همین دلیل باید آنها را غیر فعال نمود که در این فیلد مشخص می شود ' , @level0type=N'SCHEMA',@level0name=N'core', @level1type=N'TABLE',@level1name=N'DeviceDoorBase', @level2type=N'COLUMN',@level2name=N'IsActive'
+GO
+IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'core', N'TABLE',N'DeviceDoorBase', N'COLUMN',N'OpenDoorDelay'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'مدت زمان تاخیر برای بسته شدن درب پس از باز شدن (بر حسب ثانیه)' , @level0type=N'SCHEMA',@level0name=N'core', @level1type=N'TABLE',@level1name=N'DeviceDoorBase', @level2type=N'COLUMN',@level2name=N'OpenDoorDelay'
+GO
+IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'core', N'TABLE',N'DeviceDoorBase', N'COLUMN',N'DeviceSpecificDoorSettingInJson'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'تنظیمات اختصاصی درب بر حسب نوع دستگاه، به صورت Json' , @level0type=N'SCHEMA',@level0name=N'core', @level1type=N'TABLE',@level1name=N'DeviceDoorBase', @level2type=N'COLUMN',@level2name=N'DeviceSpecificDoorSettingInJson'
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'core', N'TABLE',N'DeviceDoorBase', N'COLUMN',N'InsertedAt'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'تاریخ درج' , @level0type=N'SCHEMA',@level0name=N'core', @level1type=N'TABLE',@level1name=N'DeviceDoorBase', @level2type=N'COLUMN',@level2name=N'InsertedAt'

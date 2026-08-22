@@ -22,6 +22,9 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public bool IsActive { get; set; }
 
         [DataMember]
+        public int OpenDoorDelay { get; set; }
+
+        [DataMember]
         public Guid? ReaderDeviceId { get; set; }
 
         [DataMember]

@@ -144,7 +144,7 @@ namespace GuardianCommunication.Hardware.Timy
             var userFullName = userInfoProcessed.UserName; //  userInfoProcessed.UserName;
 
             // ReSharper disable PossibleInvalidOperationException
-            var startDate = userInfoProcessed.StartDateTime.Value.ToString("yyyy-MM-dd HH:mm");
+            var startDate = userInfoProcessed.StartDateTime.ToString("yyyy-MM-dd HH:mm");
             var endDate = userInfoProcessed.EndDateTime.Value.ToString("yyyy-MM-dd HH:mm");
             // ReSharper restore PossibleInvalidOperationException
 

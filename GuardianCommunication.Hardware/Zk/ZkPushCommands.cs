@@ -133,7 +133,7 @@ namespace GuardianCommunication.Hardware.Zk
             }
             result.Add(new DtoDeviceCommand
             {
-                CommandContent = $"DATA UPDATE USERINFO PIN={userInfoForDevice.UserIdOnDevice}\tName={userInfoForDevice.UserName}\tPri={userInfoForDevice.Privilege}\tPasswd={(userInfoForDevice.IsEnable ? password : ZkUtils.ZkForbiddenPassword)}\tCard={rfCardNumber}\tGrp={0}\tTZ={0}{verificationStyle}\tStartDatetime={startDateProcessed:yyyy-MM-dd}\tEndDatetime={endDateProcessed:yyyy-MM-dd}\tViceCard=\tUserValidTimeFun=1",
+                CommandContent = $"DATA UPDATE USERINFO PIN={userInfoForDevice.UserIdOnDevice}\tName={userInfoForDevice.UserName}\tPri={userInfoForDevice.Privilege}\tPasswd={(userInfoForDevice.IsEnable ? password : ZkUtils.ZkForbiddenPassword)}\tCard={rfCardNumber}\tGrp={0}\tTZ={0}{verificationStyle}\tStartDatetime={userInfoForDevice.StartDateTime:yyyy-MM-dd}\tEndDatetime={userInfoForDevice.EndDateTime.Value:yyyy-MM-dd}\tViceCard=\tUserValidTimeFun=1",
                 CommitTime = DateTime.Now.ToUniversalTime(),
                 DeviceSerialNumber = deviceInfo.SerialNumber.ToNotNullString(),
                 RetryCount = 0,

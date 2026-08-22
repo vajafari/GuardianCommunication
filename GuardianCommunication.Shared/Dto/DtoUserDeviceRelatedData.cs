@@ -34,7 +34,7 @@ namespace GuardianCommunication.Shared.Dto
 
         public string CabinetInfoInJsonFormat { get; set; }
 
-        public DateTime? StartDateTime { get; set; }
+        public DateTime StartDateTime { get; set; }
 
         public DateTime? EndDateTime { get; set; }
 

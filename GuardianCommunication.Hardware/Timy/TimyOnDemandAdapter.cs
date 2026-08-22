@@ -1341,7 +1341,7 @@ namespace GuardianCommunication.Hardware.Timy
 
 
                 // ReSharper disable PossibleInvalidOperationException
-                var startTime = TimyHelpers.GetTimeStamp(userInfoForDevice.StartDateTime.Value);
+                var startTime = TimyHelpers.GetTimeStamp(userInfoForDevice.StartDateTime);
                 var endTime = TimyHelpers.GetTimeStamp(userInfoForDevice.EndDateTime.Value);
                 // ReSharper restore PossibleInvalidOperationException
                 const int birthDay = 0;
@@ -1399,9 +1399,9 @@ namespace GuardianCommunication.Hardware.Timy
                             , 0
                             , 0
                             , cabinetNumbers.First()
-                            , userInfoForDevice.StartDateTime.Value.Year
-                            , userInfoForDevice.StartDateTime.Value.Month
-                            , userInfoForDevice.StartDateTime.Value.Day
+                            , userInfoForDevice.StartDateTime.Year
+                            , userInfoForDevice.StartDateTime.Month
+                            , userInfoForDevice.StartDateTime.Day
                             , userInfoForDevice.EndDateTime.Value.Year
                             , userInfoForDevice.EndDateTime.Value.Month
                             , userInfoForDevice.EndDateTime.Value.Day
@@ -1545,9 +1545,9 @@ namespace GuardianCommunication.Hardware.Timy
                             , (int)userInfoForDevice.UserIdOnDevice
                             , 0
                             , cabinetNumbers.First()
-                            , userInfoForDevice.StartDateTime.Value.Year
-                            , userInfoForDevice.StartDateTime.Value.Month
-                            , userInfoForDevice.StartDateTime.Value.Day
+                            , userInfoForDevice.StartDateTime.Year
+                            , userInfoForDevice.StartDateTime.Month
+                            , userInfoForDevice.StartDateTime.Day
                             , userInfoForDevice.EndDateTime.Value.Year
                             , userInfoForDevice.EndDateTime.Value.Month
                             , userInfoForDevice.EndDateTime.Value.Day

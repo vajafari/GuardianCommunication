@@ -4,6 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V1;
@@ -1475,7 +1476,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         userHdr.cardFlag = 0;
                         // ReSharper disable PossibleInvalidOperationException
                         userHdr.startTime =
-                            (int)DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                            (int)DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                         userHdr.expiryTime =
                             (int)DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                         // ReSharper restore PossibleInvalidOperationException
@@ -1575,7 +1576,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
                         // ReSharper disable PossibleInvalidOperationException
                         userHdr.startDateTime =
-                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                         userHdr.expireDateTime =
                             DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                         // ReSharper restore PossibleInvalidOperationException
@@ -1695,7 +1696,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
                         // ReSharper disable PossibleInvalidOperationException
                         userHdr.startDateTime =
-                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                         userHdr.expireDateTime =
                             DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                         // ReSharper restore PossibleInvalidOperationException
@@ -1759,7 +1760,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
                         // ReSharper disable PossibleInvalidOperationException
                         userHdr.startDateTime =
-                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                         userHdr.expireDateTime =
                             DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                         // ReSharper restore PossibleInvalidOperationException
@@ -1831,7 +1832,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
                         // ReSharper disable PossibleInvalidOperationException
                         userHdr.startDateTime =
-                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                            DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                         userHdr.expireDateTime =
                             DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                         // ReSharper restore PossibleInvalidOperationException
@@ -1905,7 +1906,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
                             // ReSharper disable PossibleInvalidOperationException
                             userHdr.startDateTime =
-                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                             userHdr.expireDateTime =
                                 DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                             // ReSharper restore PossibleInvalidOperationException
@@ -2076,7 +2077,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             userHdr.bypassCard = 0; //normal=0 -- Bypass = 1
                             // ReSharper disable PossibleInvalidOperationException
                             userHdr.startDateTime =
-                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value);
+                                DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime);
                             userHdr.expireDateTime =
                                 DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value);
                             // ReSharper restore PossibleInvalidOperationException
@@ -2509,32 +2510,42 @@ namespace GuardianCommunication.Hardware.Suprema
 
         #region Access Control
 
-        //public void OpenDoorPermanent(DtoDeviceDoor doorInfo)
-        //{
-        //    var result = BSSDK.BS_RelayControlEx(_deviceHandle, doorInfo.RelayDeviceId, doorInfo.DoorSensor, true);
-        //    RaiseErrorIfRequired(result);
-        //}
+        public void OpenDoorPermanent(DtoDeviceDoorFullInfo doorInfo)
+        {
+            if (doorInfo.DeviceSpecificDoorSetting?.Suprema1DoorSetting == null)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceDoorSettingIsNotValid);
+            }
+            var result = BSSDK.BS_RelayControlEx(_deviceHandle
+                , doorInfo.DeviceSpecificDoorSetting.Suprema1DoorSetting.RelayDeviceId
+                , doorInfo.DeviceSpecificDoorSetting.Suprema1DoorSetting.DoorSensor
+                , true);
+            RaiseErrorIfRequired(result);
+        }
 
-        //public void CloseDoorPermanent(DtoDeviceDoor doorInfo)
-        //{
-        //    var result = BSSDK.BS_RelayControlEx(_deviceHandle, doorInfo.RelayDeviceId, doorInfo.DoorSensor, false);
-        //    RaiseErrorIfRequired(result);
-        //}
+        public void CloseDoorPermanent(DtoDeviceDoorFullInfo doorInfo)
+        {
+            var result = BSSDK.BS_RelayControlEx(_deviceHandle
+                , doorInfo.DeviceSpecificDoorSetting.Suprema1DoorSetting.RelayDeviceId
+                , doorInfo.DeviceSpecificDoorSetting.Suprema1DoorSetting.DoorSensor
+                , false);
+            RaiseErrorIfRequired(result);
+        }
 
 
-        //public void OpenDoor(DtoDeviceDoor doorInfo)
-        //{
-        //    OpenDoorPermanent(doorInfo);
-        //    Thread.Sleep(doorInfo.OpenDoorDelay * 1000);
-        //    CloseDoorPermanent(doorInfo);
-        //}
+        public void OpenDoor(DtoDeviceDoorFullInfo doorInfo)
+        {
+            OpenDoorPermanent(doorInfo);
+            Thread.Sleep(doorInfo.OpenDoorDelay * 1000);
+            CloseDoorPermanent(doorInfo);
+        }
 
-        //public void OpenDoorWithDelay(DtoDeviceDoor doorInfo, int delayInSecond)
-        //{
-        //    OpenDoorPermanent(doorInfo);
-        //    Thread.Sleep(delayInSecond * 1000);
-        //    CloseDoorPermanent(doorInfo);
-        //}
+        public void OpenDoorWithDelay(DtoDeviceDoorFullInfo doorInfo, int delayInSecond)
+        {
+            OpenDoorPermanent(doorInfo);
+            Thread.Sleep(delayInSecond * 1000);
+            CloseDoorPermanent(doorInfo);
+        }
 
         #endregion
 

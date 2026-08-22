@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2;
@@ -112,7 +113,7 @@ namespace GuardianCommunication.Hardware.Suprema
             }
             if (!IsDeviceConnected)
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusConnectTheDeviceFirst);
-            
+
 
 
             var timestamp = (uint)DateTimeHelper.ConvertUtcToUnixTimestamp(DateTime.UtcNow);
@@ -844,10 +845,13 @@ namespace GuardianCommunication.Hardware.Suprema
                     Length = faceEx[0].imageData.Length,
                     FaceIndex = 1,
                     TemplateData = faceEx[0].imageData,
-                    SupremaSdk2FaceFlag = faceEx[0].flag,
-                    SupremaSdk2FaceImageData = faceEx[0].imageData,
-                    SupremaSdk2FaceImageLen = faceEx[0].imageData.Length,
-                    SupremaSdk2FaceNumOfTemplate = faceEx[0].numOfTemplate,
+                    SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData()
+                    {
+                        SupremaSdk2FaceFlag = faceEx[0].flag,
+                        SupremaSdk2FaceImageData = faceEx[0].imageData,
+                        SupremaSdk2FaceImageLen = faceEx[0].imageData.Length,
+                        SupremaSdk2FaceNumOfTemplate = faceEx[0].numOfTemplate,
+                    }
                 };
                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.Scan))
                 {
@@ -871,10 +875,13 @@ namespace GuardianCommunication.Hardware.Suprema
                     Length = faces[0].templateData.Length,
                     FaceIndex = 1,
                     TemplateData = faces[0].templateData,
-                    SupremaSdk2FaceFlag = faces[0].flag,
-                    SupremaSdk2FaceImageData = faces[0].imageData,
-                    SupremaSdk2FaceImageLen = faces[0].imageLen,
-                    SupremaSdk2FaceNumOfTemplate = faces[0].numOfTemplate,
+                    SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData()
+                    {
+                        SupremaSdk2FaceFlag = faces[0].flag,
+                        SupremaSdk2FaceImageData = faces[0].imageData,
+                        SupremaSdk2FaceImageLen = faces[0].imageLen,
+                        SupremaSdk2FaceNumOfTemplate = faces[0].numOfTemplate,
+                    }
                 };
                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.Scan))
                 {
@@ -969,7 +976,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
                 //StartTime And EndTime
                 // ReSharper disable PossibleInvalidOperationException
-                var startTime = DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.Value.ToUniversalTime());
+                var startTime = DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.StartDateTime.ToUniversalTime());
                 var endTime = DateTimeHelper.ConvertUtcToUnixTimestamp(userInfoForDevice.EndDateTime.Value.ToUniversalTime());
                 // ReSharper restore PossibleInvalidOperationException
                 userBlob.setting.startTime = startTime;
@@ -1229,7 +1236,9 @@ namespace GuardianCommunication.Hardware.Suprema
 
 
                         var face = userInfoForDevice.FaceDataList[i];
-                        if (face.SupremaSdk2FaceImageData.IsCollectionNotNullOrEmpty() && face.SupremaSdk2FaceImageData.Length > BS2Environment.BS2_FACE_IMAGE_SIZE)
+                        if (face.SupremaSdk2AdditionalData == null || (
+                                face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData.IsCollectionNotNullOrEmpty()
+                                && face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData.Length > BS2Environment.BS2_FACE_IMAGE_SIZE))
                         {
                             LoggingSystem.LogInfo("Suprema SDK 2 face data is not valid. ImageData len is to long", new { Face = face, DeviceNumber = DeviceInfo.DeviceNumber });
                             continue;
@@ -1242,10 +1251,10 @@ namespace GuardianCommunication.Hardware.Suprema
                         var faceStructure = AllocateStructure<BS2Face>();
                         faceStructure.templateData = face.TemplateData;
                         faceStructure.faceIndex = (byte)i;
-                        faceStructure.flag = (byte)face.SupremaSdk2FaceFlag;
-                        faceStructure.imageData = face.SupremaSdk2FaceImageData;
-                        faceStructure.imageLen = (ushort)face.SupremaSdk2FaceImageLen;
-                        faceStructure.numOfTemplate = (byte)face.SupremaSdk2FaceNumOfTemplate;
+                        faceStructure.flag = (byte)face.SupremaSdk2AdditionalData.SupremaSdk2FaceFlag;
+                        faceStructure.imageData = face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData;
+                        faceStructure.imageLen = (ushort)face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageLen;
+                        faceStructure.numOfTemplate = (byte)face.SupremaSdk2AdditionalData.SupremaSdk2FaceNumOfTemplate;
                         Marshal.StructureToPtr(faceStructure, curFacePtr, false);
                         curFacePtr += faceStructSize;
                     }
@@ -1387,10 +1396,13 @@ namespace GuardianCommunication.Hardware.Suprema
                                 FaceIndex = face.faceIndex,
                                 TemplateData = face.templateData,
                                 Length = face.templateData.Length,
-                                SupremaSdk2FaceFlag = face.flag,
-                                SupremaSdk2FaceImageData = face.imageData,
-                                SupremaSdk2FaceImageLen = face.imageLen,
-                                SupremaSdk2FaceNumOfTemplate = face.numOfTemplate,
+                                SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData
+                                {
+                                    SupremaSdk2FaceFlag = face.flag,
+                                    SupremaSdk2FaceImageData = face.imageData,
+                                    SupremaSdk2FaceImageLen = face.imageLen,
+                                    SupremaSdk2FaceNumOfTemplate = face.numOfTemplate,
+                                }
                             };
                             result.FaceDataList.Add(dtoFace);
                         }
@@ -1429,111 +1441,129 @@ namespace GuardianCommunication.Hardware.Suprema
         //#region Access Control
 
 
-        //public void OpenDoorPermanent(DtoDeviceDoor doorInfo)
-        //{
-        //    var doorIdObj = Marshal.AllocHGlobal(4 * /*(Count)*/1);
-        //    var currentDoorIdObj = doorIdObj;
-        //    try
-        //    {
-        //        var doorIds = new List<int> { doorInfo.Id };
-        //        foreach (uint item in doorIds)
-        //        {
-        //            Marshal.WriteInt32(currentDoorIdObj, (int)item);
-        //            currentDoorIdObj = (IntPtr)((long)currentDoorIdObj + 4);
-        //        }
-        //        var resultOfNativeMethodCall = ApiV2.BS2_UnlockDoor(SdkContext, _deviceId, doorInfo.UnlockFlag, doorIdObj, 1);
-        //        if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.OpenDoor))
-        //        {
-        //            LoggingSystem.LogInfo("Suprema 2 OpenDoorPermanent", new
-        //            {
-        //                DeviceInfo,
-        //                Result = resultOfNativeMethodCall
-        //            });
-        //        }
-        //        RaiseErrorIfRequired(resultOfNativeMethodCall);
-        //    }
-        //    finally
-        //    {
-        //        Marshal.FreeHGlobal(doorIdObj);
-        //    }
-        //}
+        public void OpenDoorPermanent(DtoDeviceDoorFullInfo doorInfo)
+        {
+            if (doorInfo.DeviceSpecificDoorSetting?.Suprema2DoorSetting == null)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceDoorSettingIsNotValid);
+            }
+            var doorIdObj = Marshal.AllocHGlobal(4 * /*(Count)*/1);
+            var currentDoorIdObj = doorIdObj;
+            try
+            {
+                var doorIds = new List<int> { doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.DeviceDoorId };
+                foreach (uint item in doorIds)
+                {
+                    Marshal.WriteInt32(currentDoorIdObj, (int)item);
+                    currentDoorIdObj = (IntPtr)((long)currentDoorIdObj + 4);
+                }
+                var resultOfNativeMethodCall = ApiV2.BS2_UnlockDoor(SdkContext, _deviceId
+                    , doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.UnlockFlag, doorIdObj, 1);
+                if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.OpenDoor))
+                {
+                    LoggingSystem.LogInfo("Suprema 2 OpenDoorPermanent", new
+                    {
+                        DeviceInfo,
+                        Result = resultOfNativeMethodCall
+                    });
+                }
+                RaiseErrorIfRequired(resultOfNativeMethodCall);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(doorIdObj);
+            }
+        }
 
-        //public void CloseDoorPermanent(DtoDeviceDoor doorInfo)
-        //{
-        //    var doorIdObj = Marshal.AllocHGlobal(4 * /*(Count)*/1);
-        //    var currentDoorIdObj = doorIdObj;
-        //    try
-        //    {
-        //        var doorIds = new List<int> { doorInfo.DeviceDoorId };
-        //        foreach (uint item in doorIds)
-        //        {
-        //            Marshal.WriteInt32(currentDoorIdObj, (int)item);
-        //            currentDoorIdObj = (IntPtr)((long)currentDoorIdObj + 4);
-        //        }
-        //        var resultOfNativeMethodCall = ApiV2.BS2_LockDoor(SdkContext, _deviceId, doorInfo.LockFlags, doorIdObj, 1);
-        //        if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.OpenDoor))
-        //        {
-        //            LoggingSystem.LogInfo("Suprema 2 OpenDoorPermanent", new
-        //            {
-        //                DeviceInfo,
-        //                Result = resultOfNativeMethodCall
-        //            });
-        //        }
-        //        RaiseErrorIfRequired(resultOfNativeMethodCall);
-        //    }
-        //    finally
-        //    {
-        //        Marshal.FreeHGlobal(doorIdObj);
-        //    }
-        //}
+        public void CloseDoorPermanent(DtoDeviceDoorFullInfo doorInfo)
+        {
+            if (doorInfo.DeviceSpecificDoorSetting?.Suprema2DoorSetting == null)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceDoorSettingIsNotValid);
+            }
+            var doorIdObj = Marshal.AllocHGlobal(4 * /*(Count)*/1);
+            var currentDoorIdObj = doorIdObj;
+            try
+            {
+                var doorIds = new List<int> { doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.DeviceDoorId };
+                foreach (uint item in doorIds)
+                {
+                    Marshal.WriteInt32(currentDoorIdObj, (int)item);
+                    currentDoorIdObj = (IntPtr)((long)currentDoorIdObj + 4);
+                }
+                var resultOfNativeMethodCall = ApiV2.BS2_LockDoor(SdkContext, _deviceId
+                    , doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.LockFlag, doorIdObj, 1);
+                if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.OpenDoor))
+                {
+                    LoggingSystem.LogInfo("Suprema 2 OpenDoorPermanent", new
+                    {
+                        DeviceInfo,
+                        Result = resultOfNativeMethodCall
+                    });
+                }
+                RaiseErrorIfRequired(resultOfNativeMethodCall);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(doorIdObj);
+            }
+        }
 
-        //public void OpenDoor(DtoSupremaSdk2DeviceDoor doorInfo)
-        //{
-        //    OpenDoorPermanent(doorInfo);
-        //    Thread.Sleep(doorInfo.AutoLockTimeout * 1000);
-        //    ReleaseDoor(doorInfo);
-        //}
+        public void OpenDoor(DtoDeviceDoorFullInfo doorInfo)
+        {
+            if (doorInfo.DeviceSpecificDoorSetting?.Suprema2DoorSetting == null)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceDoorSettingIsNotValid);
+            }
+            OpenDoorPermanent(doorInfo);
+            Thread.Sleep(doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.AutoLockTimeout * 1000);
+            ReleaseDoor(doorInfo);
+        }
 
-        //public void OpenDoorWithDelay(DtoSupremaSdk2DeviceDoor doorInfo, int delayInSecond)
-        //{
-        //    OpenDoorPermanent(doorInfo);
-        //    Thread.Sleep(delayInSecond * 1000);
-        //    ReleaseDoor(doorInfo);
-        //}
+        public void OpenDoorWithDelay(DtoDeviceDoorFullInfo doorInfo, int delayInSecond)
+        {
+            OpenDoorPermanent(doorInfo);
+            Thread.Sleep(delayInSecond * 1000);
+            ReleaseDoor(doorInfo);
+        }
 
-        //private void ReleaseDoor(DtoSupremaSdk2DeviceDoor doorInfo)
-        //{
-        //    var doorIdObj = Marshal.AllocHGlobal(4 * /*(Count)*/1);
-        //    var currentDoorIdObj = doorIdObj;
-        //    try
-        //    {
-        //        var doorIds = new List<int> { doorInfo.DeviceDoorId };
-        //        foreach (uint item in doorIds)
-        //        {
-        //            Marshal.WriteInt32(currentDoorIdObj, (int)item);
-        //            currentDoorIdObj = (IntPtr)((long)currentDoorIdObj + 4);
-        //        }
-        //        var resultOfNativeMethodCall = ApiV2.BS2_ReleaseDoor(SdkContext, _deviceId, doorInfo.LockFlags, doorIdObj, 1);
-        //        if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.OpenDoor))
-        //        {
-        //            LoggingSystem.LogInfo("Suprema 2 OpenDoorPermanent", new
-        //            {
-        //                DeviceInfo,
-        //                Result = resultOfNativeMethodCall
-        //            });
-        //        }
-        //        RaiseErrorIfRequired(resultOfNativeMethodCall);
-        //    }
-        //    finally
-        //    {
-        //        Marshal.FreeHGlobal(doorIdObj);
-        //    }
-        //}
+        private void ReleaseDoor(DtoDeviceDoorFullInfo doorInfo)
+        {
+            if (doorInfo.DeviceSpecificDoorSetting?.Suprema2DoorSetting == null)
+            {
+                throw new OperationCannotBeDoneException(OperationResultEnumeration.DeviceDoorSettingIsNotValid);
+            }
+            var doorIdObj = Marshal.AllocHGlobal(4 * /*(Count)*/1);
+            var currentDoorIdObj = doorIdObj;
+            try
+            {
+                var doorIds = new List<int> { doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.DeviceDoorId };
+                foreach (uint item in doorIds)
+                {
+                    Marshal.WriteInt32(currentDoorIdObj, (int)item);
+                    currentDoorIdObj = (IntPtr)((long)currentDoorIdObj + 4);
+                }
+                var resultOfNativeMethodCall = ApiV2.BS2_ReleaseDoor(SdkContext, _deviceId
+                    , doorInfo.DeviceSpecificDoorSetting.Suprema2DoorSetting.LockFlag, doorIdObj, 1);
+                if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.OpenDoor))
+                {
+                    LoggingSystem.LogInfo("Suprema 2 OpenDoorPermanent", new
+                    {
+                        DeviceInfo,
+                        Result = resultOfNativeMethodCall
+                    });
+                }
+                RaiseErrorIfRequired(resultOfNativeMethodCall);
+            }
+            finally
+            {
+                Marshal.FreeHGlobal(doorIdObj);
+            }
+        }
 
-
-        //#endregion
 
         #endregion
+
 
 
         #region Utilities

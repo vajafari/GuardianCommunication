@@ -853,7 +853,7 @@ namespace GuardianCommunication.Hardware.Zk
             }
             var userInfoForDevice = userInfo.WithDeviceLocalDates(DeviceInfo);
             // ReSharper disable PossibleInvalidOperationException
-            var startDateString = userInfoForDevice.StartDateTime.Value.ToString("yyyy-M-d HH:mm:ss");
+            var startDateString = userInfoForDevice.StartDateTime.ToString("yyyy-M-d HH:mm:ss");
             var endDateString = userInfoForDevice.EndDateTime.Value.ToString("yyyy-M-d HH:mm:ss");
             // ReSharper restore PossibleInvalidOperationException
             var culture = CultureInfo.CurrentCulture.Name;

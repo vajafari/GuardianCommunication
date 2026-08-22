@@ -1,5 +1,7 @@
 using System;
 using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto.Core;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
 using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.Dto
@@ -11,8 +13,27 @@ namespace GuardianCommunication.Shared.Dto
         public int DoorIdOnDevice { get; set; }
         public string Title { get; set; }
         public bool IsActive { get; set; }
+        public int OpenDoorDelay { get; set; }
+        public string DeviceSpecificDoorSettingInJson { get; set; }
         public Guid? ReaderDeviceId { get; set; }
         public Guid? ReaderCameraId { get; set; }
+
+        private DtoDeviceSpecificDoorSettingInJson _deviceSpecificDoorSetting;
+
+        public DtoDeviceSpecificDoorSettingInJson DeviceSpecificDoorSetting
+        {
+            get
+            {
+                if (_deviceSpecificDoorSetting == null && DeviceSpecificDoorSettingInJson.IsNotNullOrEmpty())
+                {
+                    _deviceSpecificDoorSetting = ObjectHelper.DeserializeAsJson<DtoDeviceSpecificDoorSettingInJson>(DeviceSpecificDoorSettingInJson)
+                                      ?? new DtoDeviceSpecificDoorSettingInJson();
+                }
+
+                return _deviceSpecificDoorSetting;
+            }
+            set => _deviceSpecificDoorSetting = value;
+        }
 
         // Main device (the door's own device — drives security via LocationId)
         public ProducerEnumeration ProducerNumber { get; set; }

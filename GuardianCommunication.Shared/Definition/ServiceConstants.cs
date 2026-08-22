@@ -85,14 +85,14 @@ namespace GuardianCommunication.Shared.Definition
 
         public const int HardwareServiceMaxZkCommands = 20;
 
-        public const int HardwareServiceMinValueForAttendanceSendToKarnamaTimerInterval = 5;
-        public const int HardwareServiceMaxValueForAttendanceSendToKarnamaTimerInterval = int.MaxValue;
+        public const int HardwareServiceMinValueForAttendanceSendToGuardianTimerInterval = 5;
+        public const int HardwareServiceMaxValueForAttendanceSendToGuardianTimerInterval = int.MaxValue;
 
         public const int HardwareServiceMinValueForAttendanceHookTimerInterval = 5;
         public const int HardwareServiceMaxValueForAttendanceHookTimerInterval = int.MaxValue;
 
-        public const int HardwareServiceMinValueForAttendanceSendToKarnamaTimerRecordCount = 5;
-        public const int HardwareServiceMaxValueForAttendanceSendToKarnamaTimerRecordCount = 2000;
+        public const int HardwareServiceMinValueForAttendanceSendToGuardianTimerRecordCount = 5;
+        public const int HardwareServiceMaxValueForAttendanceSendToGuardianTimerRecordCount = 2000;
 
         public const int HardwareServiceMinValueForAttendanceHookTimerRecordCount = 5;
         public const int HardwareServiceMaxValueForAttendanceHookTimerRecordCount = 2000;

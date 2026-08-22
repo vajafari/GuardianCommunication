@@ -1084,9 +1084,9 @@ namespace GuardianCommunication.Hardware.Virdi
                 _serverUserData.IsBlacklist = Convert.ToInt32(!userInfoForDevice.IsEnable);
                 // ReSharper disable PossibleInvalidOperationException
                 _serverUserData.SetAccessDate(1,
-                    userInfoForDevice.StartDateTime.Value.Year
-                    , userInfoForDevice.StartDateTime.Value.Month
-                    , userInfoForDevice.StartDateTime.Value.Day
+                    userInfoForDevice.StartDateTime.Year
+                    , userInfoForDevice.StartDateTime.Month
+                    , userInfoForDevice.StartDateTime.Day
                     ,userInfoForDevice.EndDateTime.Value.Year
                     , userInfoForDevice.EndDateTime.Value.Month
                     , userInfoForDevice.EndDateTime.Value.Day
