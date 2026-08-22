@@ -34,41 +34,41 @@ namespace GuardianCommunication.Business.Tasks
             {
                 try
                 {
-                    var deviceNumbers = new List<int>();
+                    var deviceIds = new List<Guid>();
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Suprema))
                     {
-                        if (ApplicationEmbeddedInfo.SupremaProducerVersions.HasFlag(SdkVersionEnumeration.SdkVersion1))
+                        if (ApplicationEmbeddedInfo.SupremaProducerVersions.Contains(SdkVersionEnumeration.SdkVersion1))
                         {
-                            deviceNumbers.AddRange(SupremaSdk1Server.Instance.GetConnectedDeviceNumbers());
+                            deviceIds.AddRange(SupremaSdk1Server.Instance.GetConnectedDeviceNumbers());
                         }
 
-                        if (ApplicationEmbeddedInfo.SupremaProducerVersions.HasFlag(SdkVersionEnumeration.SdkVersion2))
+                        if (ApplicationEmbeddedInfo.SupremaProducerVersions.Contains(SdkVersionEnumeration.SdkVersion2))
                         {
-                            deviceNumbers.AddRange(SupremaSdk2Server.Instance.GetConnectedDeviceNumbers());
+                            deviceIds.AddRange(SupremaSdk2Server.Instance.GetConnectedDeviceNumbers());
                         }
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Zk))
                     {
-                        deviceNumbers.AddRange(ZkServer.Instance.GetConnectedDeviceNumbers());
+                        deviceIds.AddRange(ZkServer.Instance.GetConnectedDeviceNumbers());
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Timy))
                     {
-                        deviceNumbers.AddRange(TimyServer.Instance.GetConnectedDeviceNumbers());
+                        deviceIds.AddRange(TimyServer.Instance.GetConnectedDeviceNumbers());
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Virdi))
                     {
-                        deviceNumbers.AddRange(VirdiServer.Instance.GetConnectedDeviceIds());
+                        deviceIds.AddRange(VirdiServer.Instance.GetConnectedDeviceIds());
                     }
 
                     if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.SendOnlineStatusTimer))
                     {
-                        LoggingSystem.LogInfo("OnlineDeviceTask Online device result", deviceNumbers);
+                        LoggingSystem.LogInfo("OnlineDeviceTask Online device result", deviceIds);
                     }
-                    if (deviceNumbers.IsCollectionNotNullOrEmpty())
+                    if (deviceIds.IsCollectionNotNullOrEmpty())
                     {
-                        HardwareEventPublisher.Instance.PublishDeviceConnectionStatusChanged(deviceNumbers.Select(dn => new DtoDeviceConnectionStatus
+                        HardwareEventPublisher.Instance.PublishDeviceConnectionStatusChanged(deviceIds.Select(dn => new DtoDeviceConnectionStatus
                         {
-                            DeviceNumber = dn,
+                            DeviceId = dn,
                             IsConnected = true
                         }).ToList());
                     }

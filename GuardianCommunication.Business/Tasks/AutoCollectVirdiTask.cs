@@ -1,9 +1,14 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using GuardianCommunication.Business.Component;
+﻿using GuardianCommunication.Business.Component;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
+using System;
+using System.Linq;
+using System.Threading;
 
 namespace GuardianCommunication.Business.Tasks
 {
@@ -31,11 +36,9 @@ namespace GuardianCommunication.Business.Tasks
             {
                 try
                 {
-
-                    var allDeviceInCache = _deviceComponent.SearchDeviceCache(row => true)
-                        .Where(row => row.DeviceTypeSummary.ProducerNumber == ProducerEnumeration.Virdi)
-                        // به دلیل اینکه در سیستم های پارکینگ می بایست تردد های
-                        // ورود ابتدا جمع شوند این مرتب سازی را انجام دادیم
+                    var allDeviceInCache = _deviceComponent.SearchDevice(
+                            new PagingData<DeviceFilter, DeviceSortEnumeration>())
+                        .Where(row => row.ProducerNumber == ProducerEnumeration.Virdi)
                         .OrderBy(d => d.IoType)
                         .ToList();
 
@@ -43,7 +46,9 @@ namespace GuardianCommunication.Business.Tasks
                     {
                         try
                         {
-                            if (device.AutomaticDataCollect && !device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                            if (device.DeviceSettings != null
+                                && device.DeviceSettings.IsAutomaticDataCollectActive
+                                && !device.DeviceSettings.DontSaveAttendance)
                             {
                                 if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.AutoCollect))
                                 {
@@ -51,9 +56,8 @@ namespace GuardianCommunication.Business.Tasks
                                 }
                                 // به دلیل اینکه ویردی به هیچ عنوان دستورات سینک نداره 
                                 // به همین دیلی نتیجه جمع آوری برای ما مهم نیست
-                                var deviceInfo = _deviceComponent.ConvertDeviceToDeviceInfo(device);
                                 //var oldRecordCount = _communicationComponent.CommunicationRecordCount(deviceInfo);
-                                var result = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(deviceInfo);
+                                var result = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(device);
                                 if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectVirdiTask Result Download and save Virdi attendance", result);

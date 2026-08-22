@@ -179,7 +179,7 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        public List<int> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceNumbers()
         {
             var connectedDeviceSerialNumbers = _connectedDeviceAdapters.Keys;
             lock (_currentDeviceList)
@@ -189,7 +189,7 @@ namespace GuardianCommunication.Hardware.Suprema
                     return _currentDeviceList
                         .Where(d => connectedDeviceSerialNumbers.Contains(d.SerialNumber.ToUInt32())
                                     && !_disconnectedDeviceNumbers.Contains(d.DeviceNumber))
-                        .Select(d => d.DeviceNumber).ToList();
+                        .Select(d => d.Id).ToList();
                 }
             }
         }

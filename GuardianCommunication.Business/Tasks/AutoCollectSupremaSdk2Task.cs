@@ -6,6 +6,11 @@ using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Tasks
 {
@@ -33,24 +38,24 @@ namespace GuardianCommunication.Business.Tasks
             {
                 try
                 {
-
-                    var allDeviceInCache = _deviceComponent.SearchDeviceCache(row => true)
-                        .Where(row => row.DeviceTypeSummary.ProducerNumber == ProducerEnumeration.Suprema
-                        && row.DeviceTypeSummary.SdkVersion == SdkVersionEnumeration.SdkVersion2).ToList();
-
+                    var allDeviceInCache = _deviceComponent.SearchDevice(
+                            new PagingData<DeviceFilter, DeviceSortEnumeration>())
+                        .Where(row => row.ProducerNumber == ProducerEnumeration.Suprema
+                                      && row.SdkVersion == SdkVersionEnumeration.SdkVersion2).ToList();
                     foreach (var device in allDeviceInCache)
                     {
-                        var deviceInfo = _deviceComponent.ConvertDeviceToDeviceInfo(device);
                         try
                         {
-                            if (device.AutomaticDataCollect && !device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                            if (device.DeviceSettings != null
+                                && device.DeviceSettings.IsAutomaticDataCollectActive
+                                && !device.DeviceSettings.DontSaveAttendance)
                             {
                                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectSupremaSdk2Task is calling for Suprema SDK 2 device",
                                         device);
                                 }
-                                var result = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(deviceInfo);
+                                var result = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(device);
                                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectSupremaSdk2Task Result Download and save Suprema SDK 2 attendance", result);
@@ -65,10 +70,11 @@ namespace GuardianCommunication.Business.Tasks
 
                         try
                         {
-                            if (device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.SupremaAutoCollectEvents)
-                                && !device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveEvents))
+                            if (device.DeviceSettings != null
+                                && device.DeviceSettings.IsAutomaticDataCollectActive
+                                && !device.DeviceSettings.DontSaveEvents)
                             {
-                                var logs = _communicationComponent.CommunicationGetUnreadLogs(deviceInfo);
+                                var logs = _communicationComponent.CommunicationGetUnreadLogs(device.Id);
                                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectSupremaSdk2Task Result Auto collect logs for suprema 2", logs);
@@ -77,12 +83,12 @@ namespace GuardianCommunication.Business.Tasks
                                 {
                                     var eventType = SupremaV2Utility.GetEventType(currentLog.EventCode);
                                     if (eventType == SupremaSdk2EventTypeEnumeration.UserChanged
-                                        && device.IsMasterDevice
+                                        && device.DeviceSettings.IsMasterDevice
                                         && currentLog.IsFromDevice
-                                        && currentLog.EmployeeNumber.HasValue)
+                                        && currentLog.UserIdOnDevice.HasValue)
                                     {
                                         HardwareEventPublisher.Instance.PublishUserChangedReceived(
-                                            deviceInfo.DeviceNumber, currentLog.EmployeeNumber.Value);
+                                            device.Id, currentLog.UserIdOnDevice.Value);
                                     }
 
                                     if (eventType == SupremaSdk2EventTypeEnumeration.OtherEvents)

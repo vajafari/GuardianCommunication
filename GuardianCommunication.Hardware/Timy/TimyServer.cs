@@ -176,12 +176,12 @@ namespace GuardianCommunication.Hardware.Timy
 
         }
 
-        public List<int> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceNumbers()
         {
             var connectedSerials = _sessionIdBySerialNumber.Keys;
             return _pushDevices.Values
                 .Where(d => d.SerialNumber.IsNotNullOrEmpty() && connectedSerials.Contains(d.SerialNumber))
-                .Select(d => d.DeviceNumber)
+                .Select(d => d.Id)
                 .ToList();
         }
 

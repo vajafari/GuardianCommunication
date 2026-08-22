@@ -3,6 +3,8 @@ using System.Threading;
 using GuardianCommunication.Business.Component;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Tasks
 {

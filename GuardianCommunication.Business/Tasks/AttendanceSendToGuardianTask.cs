@@ -31,7 +31,7 @@ namespace GuardianCommunication.Business.Tasks
                 {
                     try
                     {
-                        _attendanceComponent.ResendUnsentAttendancesToKarnama();
+                        _attendanceComponent.ResendUnsentAttendancesToGuardian();
                     }
                     catch (Exception exp)
                     {

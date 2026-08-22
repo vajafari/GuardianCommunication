@@ -4,6 +4,12 @@ using System.Threading;
 using GuardianCommunication.Business.Component;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Tasks
 {
@@ -32,25 +38,29 @@ namespace GuardianCommunication.Business.Tasks
                 try
                 {
 
-                    var allDeviceInCache = _deviceComponent.SearchDeviceCache(row => true)
-                        .Where(row => row.DeviceTypeSummary.ProducerNumber == ProducerEnumeration.Zk).ToList();
+                    var allDeviceInCache = _deviceComponent.SearchDevice(
+                            new PagingData<DeviceFilter, DeviceSortEnumeration>())
+                        .Where(row => row.ProducerNumber == ProducerEnumeration.Zk)
+                        .ToList();
 
                     foreach (var device in allDeviceInCache)
                     {
                         try
                         {
-                            if (device.AutomaticDataCollect && !device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                            if (device.DeviceSettings != null
+                                && device.DeviceSettings.IsAutomaticDataCollectActive
+                                && !device.DeviceSettings.DontSaveAttendance)
                             {
                                 if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectZkTask is calling for ZK device", device);
                                 }
 
-                                if (device.IsOldVersion)
+                                if (device.DeviceSettings.ZkDeviceSettings!= null 
+                                    && device.DeviceSettings.ZkDeviceSettings.IsOldVersion)
                                 {
-                                    var deviceInfo = _deviceComponent.ConvertDeviceToDeviceInfo(device);
-                                    var oldRecordCount = _communicationComponent.CommunicationRecordCount(deviceInfo);
-                                    var saveResult = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(deviceInfo);
+                                    var oldRecordCount = _communicationComponent.CommunicationRecordCount(device.Id);
+                                    var saveResult = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(device);
                                     if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.AutoCollect))
                                     {
                                         LoggingSystem.LogInfo("AutoCollectZkTask save data result", new
@@ -65,10 +75,10 @@ namespace GuardianCommunication.Business.Tasks
                                         && saveResult.InvalidDeviceSerialNumberRecords.IsCollectionNullOrEmpty()
                                         )
                                     {
-                                        var currentRecordCount = _communicationComponent.CommunicationRecordCount(deviceInfo);
+                                        var currentRecordCount = _communicationComponent.CommunicationRecordCount(device.Id);
                                         if (oldRecordCount == currentRecordCount)
                                         {
-                                            _communicationComponent.CommunicationClearData(deviceInfo);
+                                            _communicationComponent.CommunicationClearData(device.Id);
                                             if (AppConfigs.LogLevelZk.HasFlag(LogLevelZkEnumeration.AutoCollect))
                                             {
                                                 LoggingSystem.LogInfo("AutoCollectZkTask clear data is called");
@@ -92,8 +102,7 @@ namespace GuardianCommunication.Business.Tasks
                                 }
                                 else
                                 {
-                                    var deviceInfo = _deviceComponent.ConvertDeviceToDeviceInfo(device);
-                                    _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(deviceInfo);
+                                    _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(device);
                                 }
                             }
 

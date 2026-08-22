@@ -95,18 +95,22 @@ VALUES
 			}
 		}
 
-		public List<DtoDeviceCommunicationData> GetByDeviceIds(List<int> deviceNumbers)
+		public List<DtoDeviceCommunicationData> GetByDeviceIds(List<Guid> deviceIds)
 		{
-			if (deviceNumbers.IsCollectionNullOrEmpty())
+			if (deviceIds.IsCollectionNullOrEmpty())
 			{
 				return new List<DtoDeviceCommunicationData>();
 			}
 
-			var condition = $" AND sd.[DeviceNumber] IN ({deviceNumbers.JoinWithComma()})";
+			var condition = $" AND sd.[DeviceId] IN @DeviceIds";
 			using (var connection = GetConnection())
 			{
 				return connection.Query<DtoDeviceCommunicationData>(
                     SelectCommand.FormatInvariantCulture(condition)
+					, new
+                    {
+                        DeviceIds = deviceIds
+                    }
 					, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
 			}
 		}

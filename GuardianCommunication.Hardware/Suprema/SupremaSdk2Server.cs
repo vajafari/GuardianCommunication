@@ -158,9 +158,9 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        public List<int> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceNumbers()
         {
-            return _connectedDeviceAdapters.Values.Select(r => r.DeviceInfo.DeviceNumber).ToList();
+            return _connectedDeviceAdapters.Values.Select(r => r.DeviceInfo.Id).ToList();
             //var connectedDeviceSerialNumbers = _connectedDeviceAdapters.Keys;
             //lock (_currentDeviceList)
             //{

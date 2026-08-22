@@ -4,7 +4,10 @@ using System.Globalization;
 using System.Linq;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.ExternalServices.Shared;
-using RestSharp;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.ExternalServices.Hooks
 {
@@ -65,12 +68,6 @@ namespace GuardianCommunication.ExternalServices.Hooks
                         KeyName = hookSystemModel.AuthorizationPassword
                     };
                     break;
-                case AuthorizationTypeEnumeration.BearerToken:
-                    requestData.AuthorizationData = new RestApiBearerAuthorizationData
-                    {
-                        Token = hookSystemModel.AuthorizationBearerToken
-                    };
-                    break;
                 case AuthorizationTypeEnumeration.BasicAuth:
                     requestData.AuthorizationData = new RestApiBasicAuthorizationData
                     {
@@ -92,24 +89,9 @@ namespace GuardianCommunication.ExternalServices.Hooks
                     Data = dtoData
                 });
             }
-            switch (hookSystemModel.HttpMethod)
-            {
-                case HttpMethodEnumeration.Get:
-                    requestData.Method = Method.Get;
-                    break;
-                case HttpMethodEnumeration.Delete:
-                    requestData.Method = Method.Delete;
-                    break;
-                case HttpMethodEnumeration.Put:
-                    requestData.Method = Method.Put;
-                    break;
-                case HttpMethodEnumeration.Post:
-                    requestData.Method = Method.Post;
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationHookSystemCallError);
-            }
 
+            requestData.Method = hookSystemModel.HttpMethod;
+            
             result = RestSharpClient.GetInstance().Execute<dynamic>(requestData);
             if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.LogHookRestRequestAndResult))
             {

@@ -1,9 +1,15 @@
-﻿using System;
-using System.Linq;
-using System.Threading;
-using GuardianCommunication.Business.Component;
+﻿using GuardianCommunication.Business.Component;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
+using System;
+using System.Linq;
+using System.Threading;
 
 namespace GuardianCommunication.Business.Tasks
 {
@@ -31,15 +37,17 @@ namespace GuardianCommunication.Business.Tasks
             {
                 try
                 {
-
-                    var allDeviceInCache = _deviceComponent.SearchDeviceCache(row => true)
-                        .Where(row => row.DeviceTypeSummary.ProducerNumber == ProducerEnumeration.Timy).ToList();
+                    var allDeviceInCache = _deviceComponent.SearchDevice(
+                            new PagingData<DeviceFilter, DeviceSortEnumeration>())
+                        .Where(row => row.ProducerNumber == ProducerEnumeration.Timy).ToList();
 
                     foreach (var device in allDeviceInCache)
                     {
                         try
                         {
-                            if (device.AutomaticDataCollect && !device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                            if (device.DeviceSettings != null
+                                && device.DeviceSettings.IsAutomaticDataCollectActive
+                                && !device.DeviceSettings.DontSaveAttendance)
                             {
                                 if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.AutoCollect))
                                 {
@@ -47,9 +55,8 @@ namespace GuardianCommunication.Business.Tasks
                                 }
 
 
-                                var deviceInfo = _deviceComponent.ConvertDeviceToDeviceInfo(device);
                                 //var oldRecordCount = _communicationComponent.CommunicationRecordCount(deviceInfo);
-                                var saveResult = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(deviceInfo);
+                                var saveResult = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(device);
                                 if (AppConfigs.LogLevelTimy.HasFlag(LogLevelTimyEnumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectSupremaSdk1Task Result Download and save Timy attendance", saveResult);

@@ -5,6 +5,11 @@ using GuardianCommunication.Business.Component;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
 using GuardianCommunication.Hardware.Shared;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SearchDataWrapper;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Tasks
 {
@@ -33,24 +38,25 @@ namespace GuardianCommunication.Business.Tasks
                 try
                 {
 
-                    var allDeviceInCache = _deviceComponent.SearchDeviceCache(row => true)
-                        .Where(row => row.DeviceTypeSummary.ProducerNumber == ProducerEnumeration.Suprema
-                        && row.DeviceTypeSummary.SdkVersion == SdkVersionEnumeration.SdkVersion1).ToList();
+                    var allDeviceInCache = _deviceComponent.SearchDevice(
+                            new PagingData<DeviceFilter, DeviceSortEnumeration>())
+                        .Where(row => row.ProducerNumber == ProducerEnumeration.Suprema
+                        && row.SdkVersion == SdkVersionEnumeration.SdkVersion1).ToList();
 
                     foreach (var device in allDeviceInCache)
                     {
-                        var deviceInfo = _deviceComponent.ConvertDeviceToDeviceInfo(device);
-
                         try
                         {
-                            if (device.AutomaticDataCollect && !device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveAttendance))
+                            if (device.DeviceSettings != null 
+                                && device.DeviceSettings.IsAutomaticDataCollectActive 
+                                && !device.DeviceSettings.DontSaveAttendance)
                             {
                                 if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectSupremaSdk1Task is calling for Suprema SDK 1 device", device);
-
                                 }
-                                var result = _communicationComponent.DownloadAndSaveUnreadAttendancesFromSdk(deviceInfo);
+                                var result = _communicationComponent
+                                    .DownloadAndSaveUnreadAttendancesFromSdk(device);
                                 if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo("AutoCollectSupremaSdk1Task Result Download and save Suprema SDK 1 attendance", result);
@@ -64,9 +70,11 @@ namespace GuardianCommunication.Business.Tasks
 
                         try
                         {
-                            if (!device.DeviceSettings.HasFlag(DeviceSettingsEnumeration.DontSaveEvents))
+                            if (device.DeviceSettings != null
+                                && device.DeviceSettings.IsAutomaticDataCollectActive
+                                && !device.DeviceSettings.DontSaveEvents)
                             {
-                                var logs = _communicationComponent.CommunicationGetUnreadLogs(deviceInfo);
+                                var logs = _communicationComponent.CommunicationGetUnreadLogs(device.Id);
                                 if (AppConfigs.LogLevelSuprema1.HasFlag(LogLevelSuprema1Enumeration.AutoCollect))
                                 {
                                     LoggingSystem.LogInfo(

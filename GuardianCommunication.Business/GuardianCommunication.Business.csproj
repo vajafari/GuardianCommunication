@@ -147,12 +147,8 @@
     <Compile Include="Component\CommunicationComponent.cs" />
     <Compile Include="Component\SystemConfigComponent.cs" />
     <Compile Include="Component\BaseComponent.cs" />
-    <Compile Include="LiveModule\ScheduledApiCallAgent.cs" />
-    <Compile Include="LiveModule\ScheduledApiCallTaskManager.cs" />
-    <Compile Include="LiveModule\TaskManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Tasks\AttendanceSendToKarnamaTask.cs" />
-    <Compile Include="Tasks\AutoCollectPadisControllerTask.cs" />
+    <Compile Include="Tasks\AttendanceSendToGuardianTask.cs" />
     <Compile Include="Tasks\AutoCollectTimyTask.cs" />
     <Compile Include="Tasks\AutoCollectSupremaSdk2Task.cs" />
     <Compile Include="Tasks\AutoCollectSupremaSdk1Task.cs" />
