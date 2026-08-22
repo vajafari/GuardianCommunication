@@ -5,6 +5,7 @@ using GuardianCommunication.Shared.Filter;
 using GuardianCommunication.Shared.SearchDataWrapper;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -46,6 +47,30 @@ namespace GuardianCommunication.Business.Component
 
         #endregion
 
+
+
+        #region Device Communication Data
+
+        internal void SaveDeviceCommunicationDataInfo(DtoDeviceCommunicationData entity)
+        {
+            var deviceInDatabase = GetDeviceCommunicationDataByDeviceIds
+                (new List<Guid> { entity.DeviceId }).FirstOrDefault();
+            if (deviceInDatabase != null)
+            {
+                RepositoryFactory.GetDeviceCommunicationDataRepository().Update(entity);
+            }
+            else
+            {
+                RepositoryFactory.GetDeviceCommunicationDataRepository().Insert(entity);
+            }
+        }
+
+        internal List<DtoDeviceCommunicationData> GetDeviceCommunicationDataByDeviceIds(List<Guid> deviceIds)
+        {
+            return RepositoryFactory.GetDeviceCommunicationDataRepository().GetByDeviceIds(deviceIds);
+        }
+
+        #endregion
 
     }
 }

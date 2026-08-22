@@ -1,11 +1,12 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using GuardianCommunication.Data.Repository;
+﻿using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.Dto;
 using GuardianCommunication.Shared.ExtensionsAndUtilities;
 using GuardianCommunication.Shared.Filter;
 using GuardianCommunication.Shared.SearchDataWrapper;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace GuardianCommunication.Business.Component
 {
@@ -34,7 +35,8 @@ namespace GuardianCommunication.Business.Component
             return RepositoryFactory.GetDeviceCommandRepository().GetUnsentCommandsCountByDeviceNumbers(filter);
         }
 
-        public List<DtoDeviceCommandWithoutContent> SearchWithoutContent(PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
+        public List<DtoDeviceCommandWithoutContent> SearchWithoutContent
+            (PagingData<DeviceCommandFilter, DeviceCommandSortEnumeration> searchInfo)
         {
             return RepositoryFactory.GetDeviceCommandRepository().SearchWithoutContent(searchInfo);
         }
@@ -66,6 +68,28 @@ namespace GuardianCommunication.Business.Component
             }
             RepositoryFactory.GetDeviceCommandRepository().DeleteByCommandIdentifiers(commandIdentifiers);
         }
+
+        public void DeleteNotSentByUserIdOnDeviceAndCommandTypes
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes)
+        {
+            RepositoryFactory.GetDeviceCommandRepository()
+                .DeleteNotSentByUserIdOnDeviceAndCommandTypes(userIdOnDevice, deviceId, commandTypes);
+        }
+
+        public void DeleteNotSentByUserIdOnDeviceDeviceCommandTypesAndCommandIdentifier
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes, List<Guid> commandIds)
+        {
+            RepositoryFactory.GetDeviceCommandRepository().DeleteNotSentByUserIdOnDeviceDeviceCommandTypesAndCommandIdentifier
+                (userIdOnDevice, deviceId, commandTypes, commandIds);
+        }
+
+        public void DeleteNotSentByUserIdOnDeviceCommandTypesAndCommandDateInterval
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes, DateTime startDate, DateTime endDate)
+        {
+            RepositoryFactory.GetDeviceCommandRepository().DeleteNotSentByUserIdOnDeviceCommandTypesAndCommandDateInterval
+                (userIdOnDevice, deviceId, commandTypes, startDate, endDate);
+        }
+
 
         public void UpdateSendDataByNumericIds(List<long> ids)
         {

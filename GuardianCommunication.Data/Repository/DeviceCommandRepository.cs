@@ -35,6 +35,15 @@ namespace GuardianCommunication.Data.Repository
 
         void DeleteByIds(List<Guid> ids, long? mode);
 
+        void DeleteNotSentByUserIdOnDeviceAndCommandTypes
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes);
+
+        void DeleteNotSentByUserIdOnDeviceDeviceCommandTypesAndCommandIdentifier
+        (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes, List<Guid> commandIds);
+
+        void DeleteNotSentByUserIdOnDeviceCommandTypesAndCommandDateInterval
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes, DateTime startDate, DateTime endDate);
+
         void UpdateSendDataByNumericIds(List<long> numericIds);
 
         void DeleteByNumericIds(List<long> numericIds, long? mode);
@@ -148,7 +157,7 @@ namespace GuardianCommunication.Data.Repository
 				        ) tmp
 				WHERE   tmp.RowNumber <= @Count
 			";
-        
+
         private const string NotSendConditionForDeviceCommand =
             @"
 						dc.[ResponseTime] IS NULL
@@ -382,6 +391,42 @@ namespace GuardianCommunication.Data.Repository
             @"	DELETE FROM        [com].[DeviceCommand]
 				WHERE  NumericId IN @NumericIds";
 
+
+        private const string DeleteNotSentByUserIdOnDeviceAndDeviceAndCommandTypesCommand =
+            @"	DELETE FROM [com].[DeviceCommand]
+				WHERE   [DeviceId] = @DeviceId
+                        AND [UserIdOnDevice] = @UserIdOnDevice
+                        AND [CommandType] IN @CommandTypes
+                        AND [ResponseTime] IS NULL
+            ";
+
+        private const string DeleteNotSentByUserIdOnDeviceAndDeviceCommandTypesAndCommandIdentifierCommand =
+            @"	DELETE FROM [com].[DeviceCommand]
+				WHERE   [DeviceId] = @DeviceId
+                        AND [UserIdOnDevice] = @UserIdOnDevice
+                        AND [CommandType] IN @CommandTypes
+                        AND [ResponseTime] IS NULL
+                        AND [CommandIdentifier] IN @CommandIdentifiers
+            ";
+
+
+        private const string DeleteNotSentByUserIdOnDeviceDeviceCommandTypesAndDateIntervalCommand =
+            @"	DELETE FROM        [DeviceCommand]
+				WHERE   [DeviceId] = @DeviceId
+                        AND [UserIdOnDevice] = @UserIdOnDevice
+                        AND [CommandType] IN @CommandTypes
+                        AND [ResponseTime] IS NULL
+                        AND (
+                            [VisiblilityTime] IS NULL
+                            OR
+                            (
+                                [VisiblilityTime] >= @StartDate
+                                AND
+                                [VisiblilityTime] <= @EndDate
+                            )
+                        )
+                        AND [ResponseTime] IS NULL
+            ";
 
         #endregion
 
@@ -618,7 +663,7 @@ namespace GuardianCommunication.Data.Repository
                 }
             }
         }
-        
+
         public void SetResponse(DtoDeviceCommandProcessingResult commandResult)
         {
             using (var connection = GetConnection())
@@ -663,7 +708,8 @@ namespace GuardianCommunication.Data.Repository
                 {
                     connection.Execute(SetDescriptionCommand, new
                     {
-                        commandResult.Description, Id = commandResult.NumericId,
+                        commandResult.Description,
+                        Id = commandResult.NumericId,
                     }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
                 }
 
@@ -704,7 +750,7 @@ namespace GuardianCommunication.Data.Repository
             {
                 if (mode.HasValue)
                 {
-                    connection.Execute(DeleteByIdsWithModeCommand,
+                    connection.Execute(DeleteByNumericIdsWithModeCommand,
                         new
                         {
                             Mode = mode.Value,
@@ -713,7 +759,7 @@ namespace GuardianCommunication.Data.Repository
                 }
                 else
                 {
-                    connection.Execute(DeleteByIdsCommand
+                    connection.Execute(DeleteByNumericIdsCommand
                         , new
                         {
                             NumericIds = numericIds
@@ -730,6 +776,55 @@ namespace GuardianCommunication.Data.Repository
             {
                 connection.Execute(DeleteByCommandIdentifierCommand, new { CommandIdentifiers = commandIdentifiers }
                     , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+            }
+        }
+
+        public void DeleteNotSentByUserIdOnDeviceAndCommandTypes
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes)
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Execute(DeleteNotSentByUserIdOnDeviceAndDeviceAndCommandTypesCommand,
+                    new
+                    {
+                        DeviceId = deviceId,
+                        UserIdOnDevice = userIdOnDevice,
+                        CommandTypes = commandTypes.Select(ct => (int)ct).ToList()
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+            }
+        }
+
+        public void DeleteNotSentByUserIdOnDeviceDeviceCommandTypesAndCommandIdentifier
+            (long userIdOnDevice, Guid deviceId, List<DeviceCommandTypeEnumeration> commandTypes, List<Guid> commandIds)
+
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Execute(DeleteNotSentByUserIdOnDeviceAndDeviceCommandTypesAndCommandIdentifierCommand,
+                    new
+                    {
+                        DeviceId = deviceId,
+                        UserIdOnDevice = userIdOnDevice,
+                        CommandTypes = commandTypes.Select(ct => (int)ct).ToList(),
+                        CommandIdentifiers = commandIds
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
+            }
+        }
+
+        public void DeleteNotSentByUserIdOnDeviceCommandTypesAndCommandDateInterval(long userIdOnDevice, Guid deviceId,
+            List<DeviceCommandTypeEnumeration> commandTypes, DateTime startDate, DateTime endDate)
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Execute(DeleteNotSentByUserIdOnDeviceDeviceCommandTypesAndDateIntervalCommand,
+                    new
+                    {
+                        DeviceId = deviceId,
+                        UserIdOnDevice = userIdOnDevice,
+                        CommandTypes = commandTypes.Select(ct => (int)ct).ToList(),
+                        StartDate = startDate,
+                        EndDate = endDate
+                    }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
             }
         }
 

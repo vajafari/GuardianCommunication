@@ -231,7 +231,7 @@ namespace GuardianCommunication.Hardware.Virdi
 
         #region Connection
 
-        public List<Guid> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceIds()
         {
             lock (_connectedDeviceIds)
             {

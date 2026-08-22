@@ -8,6 +8,11 @@ using GuardianCommunication.Hardware.Suprema;
 using GuardianCommunication.Hardware.Timy;
 using GuardianCommunication.Hardware.Virdi;
 using GuardianCommunication.Hardware.Zk;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.Dto;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.HardwareDefinition;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Business.Tasks
 {
@@ -52,7 +57,7 @@ namespace GuardianCommunication.Business.Tasks
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Virdi))
                     {
-                        deviceNumbers.AddRange(VirdiServer.Instance.GetConnectedDeviceNumbers());
+                        deviceNumbers.AddRange(VirdiServer.Instance.GetConnectedDeviceIds());
                     }
 
                     if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.SendOnlineStatusTimer))

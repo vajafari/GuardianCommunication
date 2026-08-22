@@ -13,7 +13,7 @@ namespace GuardianCommunication.Data.Repository
 	{
 		void Insert(DtoDeviceCommunicationData entity);
 		void Update(DtoDeviceCommunicationData entity);
-		List<DtoDeviceCommunicationData> GetByDeviceNumbers(List<int> deviceNumbers);
+		List<DtoDeviceCommunicationData> GetByDeviceIds(List<Guid> deviceIds);
 	}
 
 	public class DeviceCommunicationDataRepository : BaseRepository, IDeviceCommunicationDataRepository
@@ -26,39 +26,39 @@ namespace GuardianCommunication.Data.Repository
 		#region Command Strings NewSupremaDevice
 
 		private const string SelectCommand =
-			@"	SELECT sd.*
-				FROM [com].[DeviceCommunicationData] AS sd
+			@"	SELECT dcd.*
+				FROM [com].[DeviceCommunicationData] AS dcd
      			WHERE  1 = 1            
      				{0}    -- Search";
 
 
 		private const string UpdateCommand =
-			@"	UPDATE [com].[DeviceCommunicationData]
-   					SET 
-   						  [LastLogId] = @LastLogId
-   						, [LastAttendanceLogId] = @LastAttendanceLogId
-   						, [LastLogDateTime] = @LastLogDateTime
-   						, [LastAttendanceLogDateTime] = @LastAttendanceLogDateTime
- 				WHERE [DeviceNumber] =  @DeviceNumber";
+            @"	
+UPDATE [com].[DeviceCommunicationData]
+   	SET [DeviceCommunicationDataInJson] = @DeviceCommunicationDataInJson
+        , [UpdatedAt] = GETUTCDATE() 
+WHERE [Id] =  @Id;
+";
 
 
 		private const string InsertCommand =
-			@"	INSERT INTO         [com].[DeviceCommunicationData]
-				(
-					  [DeviceNumber]
-					, [LastLogId]
-					, [LastAttendanceLogId]
-					, [LastLogDateTime]
-					, [LastAttendanceLogDateTime]
-				)
-				VALUES
-				(
-					  @DeviceNumber
-					, @LastLogId
-					, @LastAttendanceLogId
-					, @LastLogDateTime
-					, @LastAttendanceLogDateTime
-				) ;
+            @"
+INSERT INTO [com].[DeviceCommunicationData]
+(
+      [Id]
+    , [DeviceId]
+    , [DeviceCommunicationDataInJson]
+    , [InsertedAt]
+    , [UpdatedAt]
+)
+VALUES
+(
+      @Id
+	, @DeviceId
+	, @DeviceCommunicationDataInJson
+	, GETUTCDATE()
+	, NULL
+);
 			";
 
 
@@ -68,7 +68,9 @@ namespace GuardianCommunication.Data.Repository
 		public void Insert(DtoDeviceCommunicationData entity)
 		{
 			try
-			{
+            {
+				entity.UpdateDeviceSettings();
+                entity.Id = Guid.NewGuid();
 				using (var connection = GetConnection())
 				{
 					connection.Execute(InsertCommand, entity
@@ -85,6 +87,7 @@ namespace GuardianCommunication.Data.Repository
 
 		public void Update(DtoDeviceCommunicationData entity)
 		{
+			entity.UpdateDeviceSettings();
 			using (var connection = GetConnection())
 			{
 				connection.Execute(UpdateCommand, entity
@@ -92,7 +95,7 @@ namespace GuardianCommunication.Data.Repository
 			}
 		}
 
-		public List<DtoDeviceCommunicationData> GetByDeviceNumbers(List<int> deviceNumbers)
+		public List<DtoDeviceCommunicationData> GetByDeviceIds(List<int> deviceNumbers)
 		{
 			if (deviceNumbers.IsCollectionNullOrEmpty())
 			{
