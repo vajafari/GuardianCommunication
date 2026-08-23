@@ -3467,9 +3467,11 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void OpenDoorWithDelay(Guid deviceId, int delayInSecond)
+        public void OpenDoorWithDelay(Guid deviceId, Guid doorId, int delayInSecond)
         {
             var deviceInfo = GetDeviceFromCache(deviceId);
+            var doorInfo = GetDoorFromCache(doorId);
+
             CheckActiveProducer(deviceInfo);
             switch (deviceInfo.ProducerNumber)
             {
@@ -3505,6 +3507,59 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Virdi:
                     VirdiServer.Instance.OpenDoor(1, deviceInfo.DeviceNumber);
+                    break;
+                case ProducerEnumeration.Suprema:
+                    {
+                        switch (deviceInfo.SdkVersion)
+                        {
+                            case SdkVersionEnumeration.SdkVersion1:
+                                {
+                                    switch (deviceInfo.ConnectionMode)
+                                    {
+                                        case DeviceConnectionModeEnumeration.Push:
+                                            {
+                                                var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.Id);
+                                                deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
+                                            }
+                                            break;
+                                        default:
+                                            {
+                                                using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
+                                                {
+                                                    deviceDriver.Connect();
+                                                    deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
+                                                }
+                                            }
+                                            break;
+                                    }
+                                }
+                                break;
+                            case SdkVersionEnumeration.SdkVersion2:
+                                {
+                                    switch (deviceInfo.ConnectionMode)
+                                    {
+                                        case DeviceConnectionModeEnumeration.Push:
+                                            {
+                                                var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.Id);
+                                                deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
+                                            }
+                                            break;
+                                        default:
+                                            {
+                                                using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
+                                                {
+                                                    deviceDriver.Connect();
+                                                    deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
+                                                }
+                                            }
+                                            break;
+                                    }
+                                }
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                    }
                     break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
@@ -3630,47 +3685,6 @@ namespace GuardianCommunication.Business.Component
             }
         }
 
-        public void OpenSupremaSdk1DoorWithDelay(Guid deviceId, Guid doorId, int delayInSecond)
-        {
-            var deviceInfo = GetDeviceFromCache(deviceId);
-            var doorInfo = GetDoorFromCache(doorId);
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerNumber)
-            {
-                case ProducerEnumeration.Suprema:
-                    {
-                        switch (deviceInfo.SdkVersion)
-                        {
-                            case SdkVersionEnumeration.SdkVersion1:
-                                switch (deviceInfo.ConnectionMode)
-                                {
-                                    case DeviceConnectionModeEnumeration.Push:
-                                        {
-                                            var deviceDriver = GetSupremaSdk1DeviceAdapter(deviceInfo.Id);
-                                            deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
-                                        }
-                                        break;
-                                    default:
-                                        {
-                                            using (var deviceDriver = new SupremaSdk1OnDemandAdapter(deviceInfo))
-                                            {
-                                                deviceDriver.Connect();
-                                                deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
-                                            }
-                                        }
-                                        break;
-                                }
-                                break;
-                            case SdkVersionEnumeration.SdkVersion2:
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
 
         #endregion
 
@@ -3745,48 +3759,6 @@ namespace GuardianCommunication.Business.Component
                                             {
                                                 deviceDriver.Connect();
                                                 deviceDriver.CloseDoorPermanent(doorInfo);
-                                            }
-                                        }
-                                        break;
-                                }
-                                break;
-                            case SdkVersionEnumeration.SdkVersion1:
-                            default:
-                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-                        }
-                    }
-                    break;
-                default:
-                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        public void OpenSupremaSdk2DoorWithDelay(Guid deviceId, Guid doorId, int delayInSecond)
-        {
-            var deviceInfo = GetDeviceFromCache(deviceId);
-            var doorInfo = GetDoorFromCache(doorId);
-            CheckActiveProducer(deviceInfo);
-            switch (deviceInfo.ProducerNumber)
-            {
-                case ProducerEnumeration.Suprema:
-                    {
-                        switch (deviceInfo.SdkVersion)
-                        {
-                            case SdkVersionEnumeration.SdkVersion2:
-                                switch (deviceInfo.ConnectionMode)
-                                {
-                                    case DeviceConnectionModeEnumeration.Push:
-                                        {
-                                            var deviceDriver = GetSupremaSdk2DeviceAdapter(deviceInfo.Id);
-                                            deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
-                                        }
-                                        break;
-                                    default:
-                                        {
-                                            using (var deviceDriver = new SupremaSdk2OnDemandAdapter(deviceInfo))
-                                            {
-                                                deviceDriver.Connect();
-                                                deviceDriver.OpenDoorWithDelay(doorInfo, delayInSecond);
                                             }
                                         }
                                         break;

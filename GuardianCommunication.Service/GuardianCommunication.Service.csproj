@@ -159,8 +159,6 @@
     <Compile Include="Interface\IHardwareService.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="WCF\CustomOperationContext.cs" />
-    <Compile Include="WCF\ValidateInputMessageAttribute.cs" />
-    <Compile Include="WCF\ValidateInputMessageInspector.cs" />
     <Compile Include="WCF\HandleServiceExceptionAttribute.cs" />
     <Compile Include="WCF\HandleServiceExceptionHandler.cs" />
   </ItemGroup>

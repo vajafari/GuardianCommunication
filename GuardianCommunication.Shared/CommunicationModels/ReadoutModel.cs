@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Runtime.Serialization;
 
 namespace GuardianCommunication.Shared.CommunicationModels
@@ -7,13 +8,13 @@ namespace GuardianCommunication.Shared.CommunicationModels
 	public class ReadoutModel
 	{
 		[DataMember]
-		public List<int> DeviceNumbers { get; set; }
+		public List<Guid> DeviceIds { get; set; }
 		[DataMember]
-		public List<long> EmployeeNumbers { get; set; }
+		public List<long> UsersIdOnDevice { get; set; }
 		[DataMember]
-		public double StartDate { get; set; }
+		public DateTime StartDate { get; set; }
 		[DataMember]
-		public double EndDate { get; set; }
+		public DateTime EndDate { get; set; }
 		[DataMember]
 		public bool? IsSent { get; set; }
 	}

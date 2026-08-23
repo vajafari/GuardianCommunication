@@ -1,12 +1,15 @@
 ﻿using System.Collections.Generic;
 using System.ServiceModel;
 using System.ServiceModel.Web;
+using GuardianCommunication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.OperationResult;
 
 namespace GuardianCommunication.Service
 {
 
-    [ServiceContract(Name = "IHardwareService", Namespace = "http://www.emdad.com/IHardwareService")]
-    public interface IHardwareService
+    [ServiceContract(Name = "IGuardianCommunication", Namespace = "http://www.emdad.com/IGuardianCommunicationService")]
+    public interface IGuardianCommunication
     {
 
         #region  Communication Service
@@ -24,7 +27,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "EnrollUserWithTemplateBulk")]
-        List<EmployeeAndDeviceResultModel> CommunicationEnrollUserWithTemplateBulk(EmployeeAndDeviceParamsModel param);
+        List<UserAndDeviceResultModel> CommunicationEnrollUserWithTemplateBulk(UserAndDeviceListModel param);
 
 
         [OperationContract]
@@ -34,7 +37,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "DeleteUserBulk")]
-        List<EmployeeAndDeviceResultModel> CommunicationDeleteUserBulk(EmployeeAndDeviceParamsModel param);
+        List<UserAndDeviceResultModel> CommunicationDeleteUserBulk(UserAndDeviceListModel param);
 
         #endregion
 
@@ -46,7 +49,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "RebootDevice")]
-        void CommunicationRebootDevice(DeviceCommunicationModel deviceInfo);
+        void CommunicationRebootDevice(IdSingleModel model);
 
 
         [OperationContract]
@@ -56,26 +59,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "EnrollUserWithTemplate")]
-        void CommunicationEnrollUserWithTemplate(EmployeeAndDeviceModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendWithoutFingers")]
-        void CommunicationSendWithoutFingers(DeviceAndEmployeeListModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SetValidInvalid")]
-        void CommunicationSetValidInvalid(DeviceAndEmployeeListModel param);
-
+        void CommunicationEnrollUserWithTemplate(UserAndDeviceModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -84,7 +68,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "SendUser")]
-        void CommunicationSendUser(EmployeeAndDeviceModel param);
+        void CommunicationSendUser(UserAndDeviceModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -93,7 +77,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetUserById")]
-        EmployeeModel CommunicationGetUserById(GetUserByIdModel param);
+        UserModel CommunicationGetUserById(GetUserByIdModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -102,7 +86,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetUsersInfoDefinedOnDevice")]
-        List<UserInfoDefinedOnDeviceModel> CommunicationGetUsersInfoDefinedOnDevice(DeviceCommunicationModel deviceInfo);
+        List<UserInfoDefinedOnDeviceModel> CommunicationGetUsersInfoDefinedOnDevice(IdSingleModel model);
 
 
         [OperationContract]
@@ -139,7 +123,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetFirmwareVersion")]
-        string CommunicationGetFirmwareVersion(DeviceCommunicationModel deviceInfo);
+        string CommunicationGetFirmwareVersion(IdSingleModel model);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -156,18 +140,8 @@ namespace GuardianCommunication.Service
             , RequestFormat = WebMessageFormat.Json
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CancelOperation")]
-        void CommunicationCancelOperation(DeviceCommunicationModel deviceInfo);
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "SetDateAndTime")]
-        void CommunicationSetDateAndTime(DeviceCommunicationModel deviceInfo);
+        void CommunicationSetDateAndTime(IdSingleModel model);
 
 
         [OperationContract]
@@ -177,7 +151,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetDateAndTime")]
-        double CommunicationGetDateAndTime(DeviceCommunicationModel deviceInfo);
+        double CommunicationGetDateAndTime(IdSingleModel model);
 
 
         [OperationContract]
@@ -187,7 +161,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ClearData")]
-        void CommunicationClearData(DeviceCommunicationModel deviceInfo);
+        void CommunicationClearData(IdSingleModel model);
 
 
         [OperationContract]
@@ -197,7 +171,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "RecordCount")]
-        int CommunicationRecordCount(DeviceCommunicationModel deviceInfo);
+        int CommunicationRecordCount(IdSingleModel model);
 
 
         [OperationContract]
@@ -207,7 +181,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "FaceCount")]
-        int CommunicationFaceCount(DeviceCommunicationModel deviceInfo);
+        int CommunicationFaceCount(IdSingleModel model);
 
 
         [OperationContract]
@@ -217,7 +191,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "FingerCount")]
-        int CommunicationFingerCount(DeviceCommunicationModel deviceInfo);
+        int CommunicationFingerCount(IdSingleModel model);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -226,7 +200,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetSerialNumber")]
-        string CommunicationGetSerialNumber(DeviceCommunicationModel deviceInfo);
+        string CommunicationGetSerialNumber(IdSingleModel model);
 
 
         [OperationContract]
@@ -236,7 +210,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "UserCount")]
-        int CommunicationUserCount(DeviceCommunicationModel deviceInfo);
+        int CommunicationUserCount(IdSingleModel model);
 
 
         [OperationContract]
@@ -246,7 +220,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "DeleteUserByUserInfo")]
-        void CommunicationDeleteUserByUserInfo(EmployeeAndDeviceModel param);
+        void CommunicationDeleteUserByUserInfo(UserAndDeviceModel param);
 
 
         [OperationContract]
@@ -256,7 +230,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "DeleteUserByUserId")]
-        void CommunicationDeleteUserByUserId(DeviceAndEmployeeNumberListModel param);
+        void CommunicationDeleteUserByUserId(DeviceAndUserIdOnDeviceListModel param);
 
 
         [OperationContract]
@@ -266,7 +240,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "DeleteAllUsers")]
-        void CommunicationDeleteAllUsers(DeviceCommunicationModel deviceInfo);
+        void CommunicationDeleteAllUsers(IdSingleModel model);
 
 
         [OperationContract]
@@ -276,7 +250,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "TestConnection")]
-        OperationResultEnumeration CommunicationTestConnection(DeviceCommunicationModel deviceInfo);
+        OperationResultEnumeration CommunicationTestConnection(IdSingleModel model);
 
 
         [OperationContract]
@@ -286,7 +260,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetDeviceStatistics")]
-        DeviceStatisticsModel CommunicationGetDeviceStatistics(DeviceCommunicationModel deviceInfo);
+        DeviceStatisticsModel CommunicationGetDeviceStatistics(IdSingleModel model);
 
 
         [OperationContract]
@@ -296,7 +270,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ScanCard")]
-        string CommunicationScanCard(EmployeeAndDeviceModel param);
+        string CommunicationScanCard(UserAndDeviceModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -305,7 +279,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ScanFinger")]
-        EmployeeFingerModel CommunicationScanFinger(ScanFingerModel param);
+        UserFingerModel CommunicationScanFinger(ScanFingerModel param);
 
 
         [OperationContract]
@@ -315,7 +289,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ScanFace")]
-        EmployeeFaceModel CommunicationScanFace(EmployeeAndDeviceModel param);
+        UserFaceModel CommunicationScanFace(UserAndDeviceModel param);
 
 
         [OperationContract]
@@ -325,7 +299,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ScanFaceStandalone")]
-        EmployeeFaceModel CommunicationScanFaceStandalone(EmployeeAndDeviceModel param);
+        UserFaceModel CommunicationScanFaceStandalone(UserAndDeviceModel param);
 
 
         [OperationContract]
@@ -335,17 +309,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ScanIris")]
-        EmployeeIrisModel CommunicationScanIris(EmployeeAndDeviceModel param);
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "Check")]
-        void CommunicationCheck(DeviceCommunicationModel deviceInfo);
+        UserIrisModel CommunicationScanIris(UserAndDeviceModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -370,206 +334,6 @@ namespace GuardianCommunication.Service
             , UriTemplate = "OpenCabinetDoor")]
         void CommunicationOpenCabinetDoor(OpenCabinetDoorModel param);
 
-
-        #region Suprema SDK 1
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk1Holidays")]
-        void CommunicationSendSupremaSdk1Holidays(SupremaSdk1SendHolidaysModel param);
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk1Timezones")]
-        void CommunicationSendSupremaSdk1Timezones(SupremaSdk1SendTimezomesModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk1AccessGroups")]
-        void CommunicationSendSupremaSdk1AccessGroups(SupremaSdk1SendAccessGroupModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk1DoorInfo")]
-        void CommunicationSendSupremaSdk1DoorInfo(SupremaSdk1DeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationOpenSupremaSdk1Door")]
-        void CommunicationOpenSupremaSdk1Door(SupremaSdk1DeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationOpenSupremaSdk1DoorWithDelay")]
-        void CommunicationOpenSupremaSdk1DoorWithDelay(SupremaSdk1DeviceAndDoorWithDelayModel param);
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationOpenSupremaSdk1DoorPermanent")]
-        void CommunicationOpenSupremaSdk1DoorPermanent(SupremaSdk1DeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationCloseSupremaSdk1DoorPermanent")]
-        void CommunicationCloseSupremaSdk1DoorPermanent(SupremaSdk1DeviceAndDoorModel param);
-
-
-        #endregion
-
-
-        #region Suprema SDK 2
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk2Holidays")]
-        void CommunicationSendSupremaSdk2Holidays(SupremaSdk2SendHolidaysModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk2AccessSchedules")]
-        void CommunicationSendSupremaSdk2AccessSchedules(SupremaSdk2SendAccessSchedulesModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk2AccessLevels")]
-        void CommunicationSendSupremaSdk2AccessLevels(SupremaSdk2SendAccessLevelModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk2AccessGroups")]
-        void CommunicationSendSupremaSdk2AccessGroups(SupremaSdk2SendAccessGroupModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendSupremaSdk2DoorInfo")]
-        void CommunicationSendSupremaSdk2DoorInfo(SupremaSdk2SendDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationOpenSupremaSdk2Door")]
-        void CommunicationOpenSupremaSdk2Door(SupremaSdk2DeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationOpenSupremaSdk2DoorWithDelay")]
-        void CommunicationOpenSupremaSdk2DoorWithDelay(SupremaSdk2DeviceAndDoorWithDelayModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationOpenSupremaSdk2DoorPermanent")]
-        void CommunicationOpenSupremaSdk2DoorPermanent(SupremaSdk2DeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "CommunicationCloseSupremaSdk2DoorPermanent")]
-        void CommunicationCloseSupremaSdk2DoorPermanent(SupremaSdk2DeviceAndDoorModel param);
-
-
-        #endregion
-
-
-        #region ZK
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendHolidays")]
-        void CommunicationSendHolidays(SendHolidaysModel param);
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendTimezone")]
-        void CommunicationSendTimezone(SendTimezoneModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendUserTimezones")]
-        void CommunicationSendUserTimezones(SendUserTimezonesModel param);
-
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
         [WebInvoke(Method = "POST"
@@ -586,21 +350,10 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "OpenDoorWithDelay")]
-        void CommunicationOpenDoorWithDelay(OpenDoorWithDelayModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendDoorInfo")]
-        void CommunicationSendDoorInfo(DeviceDoorModel param);
-
-        #endregion
+        void CommunicationOpenDoorWithDelay(OpenDoorModel param);
 
 
-        #region Virdi
+        #region Suprema SDK 1
 
 
         [OperationContract]
@@ -609,15 +362,8 @@ namespace GuardianCommunication.Service
             , RequestFormat = WebMessageFormat.Json
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendVirdiAccessControlData")]
-        void CommunicationSendVirdiAccessControlData(VirdiAccessControlDataModel param);
-
-
-        #endregion
-
-
-        #region Timy
-
+            , UriTemplate = "CommunicationOpenSupremaSdk1DoorPermanent")]
+        void CommunicationOpenSupremaSdk1DoorPermanent(OpenDoorModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -625,42 +371,14 @@ namespace GuardianCommunication.Service
             , RequestFormat = WebMessageFormat.Json
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "TimySetDayTimezone")]
-        void CommunicationTimySetDayTimezone(TimySetDayTimezoneModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "TimySetWeekTimezone")]
-        void CommunicationTimySetWeekTimezone(TimySetWeekTimezoneModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "TimySetHolidays")]
-        void CommunicationTimySetHolidays(TimySetHolidaysModel param);
+            , UriTemplate = "CommunicationCloseSupremaSdk1DoorPermanent")]
+        void CommunicationCloseSupremaSdk1DoorPermanent(OpenDoorModel param);
 
 
         #endregion
 
 
-        #region Padis Controller
-
-        
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "OpenPadisControllerDoor")]
-        void CommunicationOpenPadisControllerDoor(PadisControllerDeviceAndDoorModel param);
+        #region Suprema SDK 2
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -668,8 +386,8 @@ namespace GuardianCommunication.Service
             , RequestFormat = WebMessageFormat.Json
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "OpenPadisControllerDoorWithDelay")]
-        void CommunicationOpenPadisControllerDoorWithDelay(PadisControllerDeviceAndDoorWithDelayModel param);
+            , UriTemplate = "CommunicationOpenSupremaSdk2DoorPermanent")]
+        void CommunicationOpenSupremaSdk2DoorPermanent(OpenDoorModel param);
 
         [OperationContract]
         [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
@@ -677,82 +395,8 @@ namespace GuardianCommunication.Service
             , RequestFormat = WebMessageFormat.Json
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "OpenPadisControllerDoorPermanent")]
-        void CommunicationOpenPadisControllerDoorPermanent(PadisControllerDeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "ClosePadisControllerDoorPermanent")]
-        void CommunicationClosePadisControllerDoorPermanent(PadisControllerDeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PadisControllerSetDoor")]
-        void CommunicationPadisControllerSetDoor(PadisControllerDeviceAndDoorModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-             , RequestFormat = WebMessageFormat.Json
-             , ResponseFormat = WebMessageFormat.Json
-             , BodyStyle = WebMessageBodyStyle.Bare
-             , UriTemplate = "PadisControllerSetIoPort")]
-        void CommunicationPadisControllerSetIoPort(PadisControllerDeviceAndIoPortModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PadisControllerSetWiegand")]
-        void CommunicationPadisControllerSetWiegand(PadisControllerDeviceAndWiegandModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PadisControllerSetRelay")]
-        void CommunicationPadisControllerSetRelay(PadisControllerDeviceAndRelayModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PadisControllerSetCalendar")]
-        void CommunicationPadisControllerSetCalendar(PadisControllerDeviceAndCalendarModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PadisControllerSetAccessLevel")]
-        void CommunicationPadisControllerSetAccessLevel(PadisControllerDeviceAndAccessLevelModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PadisControllerSetAccessGroup")]
-        void CommunicationPadisControllerSetAccessGroup(PadisControllerDeviceAndAccessGroupModel param);
-        
-        #endregion
+            , UriTemplate = "CommunicationCloseSupremaSdk2DoorPermanent")]
+        void CommunicationCloseSupremaSdk2DoorPermanent(OpenDoorModel param);
 
 
         #endregion
@@ -760,96 +404,6 @@ namespace GuardianCommunication.Service
 
         #endregion
 
-
-        #region System Config 
-
-        [OperationContract]
-        [WebInvoke(Method = "GET"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SystemConfigGet")]
-        SystemConfigModel SystemConfigGet();
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SystemConfigUpdate")]
-        void SystemConfigUpdate(SystemConfigModel entity);
-
-
-        #endregion
-
-
-        #region Device Commands
-
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandsGetNotSendStatistics")]
-        List<NotSendCommandsStatisticsModel> DeviceCommandsGetNotSendStatistics(ListInt32Model param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandSearch")]
-        List<DeviceCommandModel> DeviceCommandSearch(DeviceCommandSearchModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandGetCount")]
-        int DeviceCommandGetCount(DeviceCommandSearchModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandsResendById")]
-        void DeviceCommandsResendById(ListInt32Model param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandsDeleteByIds")]
-        void DeviceCommandsDeleteByIds(ListInt32Model param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandsDeleteByIdentifiers")]
-        void DeviceCommandsDeleteByIdentifiers(ListGuidModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DeviceCommandsDeleteNotSendByDeviceNumbers")]
-        void DeviceCommandsDeleteNotSendByDeviceNumbers(ListInt32Model param);
 
         #endregion
 
@@ -864,56 +418,6 @@ namespace GuardianCommunication.Service
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "SaveOtherResourcesAttendanceForHook")]
         void SaveOtherResourcesAttendanceForHook(OtherResourcesAttendanceModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SendFunctionTitles")]
-        void CommunicationSendFunctionTitles(FunctionTitleModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "ReconnectOnlineMonitoringDevice")]
-        void CommunicationReconnectOnlineMonitoringDevice(DeviceCommunicationModel deviceInfo);
-
-        #endregion
-
-
-        #region PrintService
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "DirectPrintSelfBill")]
-        SelfPrintResultModel DirectPrintSelfBill(SelfBillInfoModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "PrintSelfBill")]
-        void PrintSelfBill(ListSelfBillInfoModel param);
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "GET"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "GetPrinterNames")]
-        ListStringModel GetPrinterNames();
 
         #endregion
 
@@ -935,30 +439,6 @@ namespace GuardianCommunication.Service
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "ResetControllerDeviceDoorCache")]
         bool ResetDeviceDoorCache();
-
-        [OperationContract]
-        [WebInvoke(Method = "GET"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "ResetMetalDetectorGateCache")]
-        bool ResetMetalDetectorGateCache();
-
-        [OperationContract]
-        [WebInvoke(Method = "GET"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "ResetApplicationEmbeddedInfoCache")]
-        bool ResetApplicationEmbeddedInfoCache();
-
-        [OperationContract]
-        [WebInvoke(Method = "GET"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "ResetCameraCache")]
-        bool ResetCameraCache();
 
         #endregion
 

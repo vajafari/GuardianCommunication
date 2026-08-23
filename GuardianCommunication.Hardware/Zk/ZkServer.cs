@@ -92,7 +92,7 @@ namespace GuardianCommunication.Hardware.Zk
             Dispose(true);
         }
 
-        public List<Guid> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceIds()
         {
             return _pushDevicesConnectionInfo.Values
                 .Where(d => Math.Abs(d.ConnectionDateTimeUtc.Subtract(DateTime.UtcNow).TotalSeconds) <=

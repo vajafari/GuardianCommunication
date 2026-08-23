@@ -5,9 +5,9 @@ using System.Runtime.Serialization;
 namespace GuardianCommunication.Shared.CommunicationModels
 {
 	[DataContract]
-	public class DeviceIdListModel
-	{
+	public class IdSingleModel
+    {
 		[DataMember]
-		public List<Guid> DeviceIds { get; set; }
+		public Guid Id { get; set; }
 	}
 }

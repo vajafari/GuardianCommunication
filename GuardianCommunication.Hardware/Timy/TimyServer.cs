@@ -176,7 +176,7 @@ namespace GuardianCommunication.Hardware.Timy
 
         }
 
-        public List<Guid> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceIds()
         {
             var connectedSerials = _sessionIdBySerialNumber.Keys;
             return _pushDevices.Values

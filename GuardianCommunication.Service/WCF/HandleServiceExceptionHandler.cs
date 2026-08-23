@@ -3,6 +3,10 @@ using System.Runtime.Serialization.Json;
 using System.ServiceModel.Channels;
 using System.ServiceModel.Dispatcher;
 using GuardianCommunication.Data.Logger;
+using GuardianCommunication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SharedSettings;
 
 namespace GuardianCommunication.Service.WCF
 {

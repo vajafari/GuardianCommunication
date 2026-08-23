@@ -49,11 +49,11 @@ namespace GuardianCommunication.Business.Tasks
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Zk))
                     {
-                        deviceIds.AddRange(ZkServer.Instance.GetConnectedDeviceNumbers());
+                        deviceIds.AddRange(ZkServer.Instance.GetConnectedDeviceIds());
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Timy))
                     {
-                        deviceIds.AddRange(TimyServer.Instance.GetConnectedDeviceNumbers());
+                        deviceIds.AddRange(TimyServer.Instance.GetConnectedDeviceIds());
                     }
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Virdi))
                     {

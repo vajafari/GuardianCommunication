@@ -2,21 +2,25 @@
 using System.Collections.Generic;
 using System.ServiceModel;
 using GuardianCommunication.Business.Component;
-using GuardianCommunication.Business.PrintService;
 using GuardianCommunication.Service.WCF;
+using GuardianCommunication.Shared.CommunicationModels;
+using GuardianCommunication.Shared.Definition;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.Filter;
+using GuardianCommunication.Shared.OperationResult;
+using GuardianCommunication.Shared.SearchDataWrapper;
 
 namespace GuardianCommunication.Service
 {
 
 
-    [ServiceBehavior(Name = "IHardwareService",
+    [ServiceBehavior(Name = "IGuardianCommunication",
         Namespace = "http://www.emdad.com/IHardwareService"
         , InstanceContextMode = InstanceContextMode.PerCall
         , ConcurrencyMode = ConcurrencyMode.Multiple
     )]
-    [ValidateInputMessage]
     [HandleServiceException]
-    public class HardwareService : BaseService, IHardwareService
+    public class HardwareService : BaseService, IGuardianCommunication
     {
 
         #region  Communication Service
@@ -24,91 +28,89 @@ namespace GuardianCommunication.Service
 
         #region Bulk Operation
 
-        public List<EmployeeAndDeviceResultModel> CommunicationEnrollUserWithTemplateBulk(EmployeeAndDeviceParamsModel param)
+        public List<UserAndDeviceResultModel> CommunicationEnrollUserWithTemplateBulk(UserAndDeviceListModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             var result = component.CommunicationBulkEnrollUser(
-                CommunicationModelMapper.MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(param.Records));
-            return CommunicationModelMapper.MapDtoEmployeeAndDeviceResultToEmployeeAndDeviceResultModel(result);
+                CommunicationModelMapper.MapUserAndDeviceModelToDtoUserAndDeviceParam(param.Records));
+            return CommunicationModelMapper.MapDtoUserAndDeviceResultToUserAndDeviceResultModel(result);
         }
 
-        public List<EmployeeAndDeviceResultModel> CommunicationDeleteUserBulk(EmployeeAndDeviceParamsModel param)
+        public List<UserAndDeviceResultModel> CommunicationDeleteUserBulk(UserAndDeviceListModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             var result = component.CommunicationBulkDeleteUser(
-                CommunicationModelMapper.MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(param.Records));
-            return CommunicationModelMapper.MapDtoEmployeeAndDeviceResultToEmployeeAndDeviceResultModel(result);
+                CommunicationModelMapper.MapUserAndDeviceModelToDtoUserAndDeviceParam(param.Records));
+            return CommunicationModelMapper.MapDtoUserAndDeviceResultToUserAndDeviceResultModel(result);
         }
 
         #endregion
 
 
-        public void CommunicationRebootDevice(DeviceCommunicationModel deviceInfo)
+        public void CommunicationRebootDevice(IdSingleModel deviceInfo)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.RebootDevice(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            component.RebootDevice(deviceInfo.Id);
 
         }
 
-        public void CommunicationEnrollUserWithTemplate(EmployeeAndDeviceModel param)
+        public void CommunicationEnrollUserWithTemplate(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.CommunicationEnrollUserWithTemplate(
-                CommunicationModelMapper.MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(param));
+                CommunicationModelMapper.MapUserAndDeviceModelToDtoUserAndDeviceParam(param));
         }
 
-        public void CommunicationSendUser(EmployeeAndDeviceModel param)
+        public void CommunicationSendUser(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.CommunicationSendUser(
-                CommunicationModelMapper.MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(param));
+                CommunicationModelMapper.MapUserAndDeviceModelToDtoUserAndDeviceParam(param));
         }
 
-        public EmployeeModel CommunicationGetUserById(GetUserByIdModel param)
+        public UserModel CommunicationGetUserById(GetUserByIdModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoEmployeeToEmployeeModel(component.CommunicationGetUserById(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo),
-                param.EmployeeNumber,
+            return CommunicationModelMapper.MapDtoUserToUserModel(component.CommunicationGetUserById(
+                param.DeviceId,
+                param.UserIdOnDevice,
                 param.TemplateType));
         }
 
-        public List<UserInfoDefinedOnDeviceModel> CommunicationGetUsersInfoDefinedOnDevice(DeviceCommunicationModel deviceInfo)
+        public List<UserInfoDefinedOnDeviceModel> CommunicationGetUsersInfoDefinedOnDevice
+            (IdSingleModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return CommunicationModelMapper.MapDtoUserInfoOnDeviceToUserInfoOnDeviceModel(
-                component.CommunicationGetUsersInfoDefinedOnDevice(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo)));
+                component.CommunicationGetUsersInfoDefinedOnDevice(param.Id));
         }
 
         public List<DeviceAttendanceModel> CommunicationGetAttendance(GetAttendanceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             var result = component.CommunicationGetUnreadAttendanceForClientFromSdk(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo),
-                param.DeleteAttedance);
+                param.DeviceId,
+                param.DeleteAttendance);
             return CommunicationModelMapper.MapDtoAttendanceToDeviceAttendanceModel(result);
         }
 
         public List<DeviceAttendanceModel> CommunicationReadout(ReadoutModel param)
         {
             var component = new AttendanceComponent(GetRepositoryFactory());
-            var startDate = param.StartDate.FromNumericDateTime();
-            var endDate = param.EndDate.FromNumericDateTime();
 
-            if (Math.Abs(endDate.Subtract(startDate).TotalDays) > ServiceConstants.MaxReadoutDays)
+            if (Math.Abs(param.EndDate.Subtract(param.StartDate).TotalDays) > ServiceConstants.MaxReadoutDays)
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationMaxReadoutDaysIsNotValid);
             }
 
-            var result = component.Search(new PagingData<AttendanceFilter, AttendanceSortEnumeration>()
+            var result = component.Search(new PagingData<AttendanceFilter, AttendanceSortEnumeration>
             {
                 Filter = new AttendanceFilter
                 {
                     AttendanceDateFrom = startDate,
                     AttendanceDateTo = endDate,
                     DeviceNumbers = param.DeviceNumbers,
-                    EmployeeNumbers = param.EmployeeNumbers,
+                    UserNumbers = param.UserNumbers,
                     IsSent = param.IsSent
                 }
             });
@@ -192,24 +194,24 @@ namespace GuardianCommunication.Service
             return component.CommunicationUserCount(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
         }
 
-        public void CommunicationDeleteUserByUserInfo(EmployeeAndDeviceModel param)
+        public void CommunicationDeleteUserByUserInfo(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.CommunicationDeleteUserByInfo(
-                CommunicationModelMapper.MapEmployeeAndDeviceModelToDtoEmployeeAndDeviceParam(param));
+                CommunicationModelMapper.MapUserAndDeviceModelToDtoUserAndDeviceParam(param));
         }
 
-        public void CommunicationDeleteUserByUserId(DeviceAndEmployeeNumberListModel param)
+        public void CommunicationDeleteUserByUserId(DeviceAndUserNumberListModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.CommunicationDeleteUserByUserId(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.EmployeeNumber.First());
+                , param.UserNumber.First());
         }
 
-        public void CommunicationSendWithoutFingers(DeviceAndEmployeeListModel param)
+        public void CommunicationSendWithoutFingers(DeviceAndUserListModel param)
         {
-            if (param.EmployeeInfos.IsCollectionNullOrEmpty())
+            if (param.UserInfos.IsCollectionNullOrEmpty())
             {
                 return;
             }
@@ -217,19 +219,19 @@ namespace GuardianCommunication.Service
                 new CommunicationComponent(GetRepositoryFactory());
             component.CommunicationSendWithoutFinger(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeInfos));
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserInfos));
         }
 
-        public void CommunicationSetValidInvalid(DeviceAndEmployeeListModel param)
+        public void CommunicationSetValidInvalid(DeviceAndUserListModel param)
         {
-            if (param.EmployeeInfos.IsCollectionNullOrEmpty())
+            if (param.UserInfos.IsCollectionNullOrEmpty())
             {
                 return;
             }
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.CommunicationSendValidInvalid(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeInfos));
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserInfos));
         }
 
         public void CommunicationDeleteAllUsers(DeviceCommunicationModel deviceInfo)
@@ -258,45 +260,45 @@ namespace GuardianCommunication.Service
             component.CommunicationGetDeviceStatistics(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo)));
         }
 
-        public string CommunicationScanCard(EmployeeAndDeviceModel param)
+        public string CommunicationScanCard(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return component.ScanCard(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeData));
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData));
         }
 
-        public EmployeeFingerModel CommunicationScanFinger(ScanFingerModel param)
+        public UserFingerModel CommunicationScanFinger(ScanFingerModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoEmployeeFingerToEmployeeFingerModel(component.ScanFinger(
+            return CommunicationModelMapper.MapDtoUserFingerToUserFingerModel(component.ScanFinger(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeData)
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)
                 , param.FingerIndex));
         }
 
-        public EmployeeFaceModel CommunicationScanFace(EmployeeAndDeviceModel param)
+        public UserFaceModel CommunicationScanFace(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoEmployeeFaceToEmployeeFaceModel(component.ScanFace(
+            return CommunicationModelMapper.MapDtoUserFaceToUserFaceModel(component.ScanFace(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeData)));
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)));
         }
 
-        public EmployeeFaceModel CommunicationScanFaceStandalone(EmployeeAndDeviceModel param)
+        public UserFaceModel CommunicationScanFaceStandalone(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoEmployeeFaceToEmployeeFaceModel(component.ScanFaceStandalone(
+            return CommunicationModelMapper.MapDtoUserFaceToUserFaceModel(component.ScanFaceStandalone(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeData)));
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)));
         }
 
-        public EmployeeIrisModel CommunicationScanIris(EmployeeAndDeviceModel param)
+        public UserIrisModel CommunicationScanIris(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoEmployeeIrisToEmployeeIrisModel(component.ScanIris(
+            return CommunicationModelMapper.MapDtoUserIrisToUserIrisModel(component.ScanIris(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapEmployeeModelToDtoEmployee(param.EmployeeData)));
+                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)));
         }
 
         public void CommunicationCheck(DeviceCommunicationModel deviceInfo)
@@ -310,7 +312,7 @@ namespace GuardianCommunication.Service
             var component = new CommunicationComponent(GetRepositoryFactory());
 
             var result = component.CommunicationGetAttendanceImage(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.EmployeeNumber
+                , param.UserNumber
                 , DateTime.FromOADate(param.AttendanceDateTime));
             if (result.IsCollectionNotNullOrEmpty())
             {
@@ -512,7 +514,7 @@ namespace GuardianCommunication.Service
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.SendUserTimeZones(
                 CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.EmployeeNumber
+                , param.UserNumber
                 , param.TimeZoneNumbers);
         }
 
