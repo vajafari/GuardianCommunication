@@ -13,6 +13,7 @@ namespace GuardianCommunication.Shared.Dto
         public SdkVersionEnumeration SdkVersion { get; set; }
         public int EventCode { get; set; }
 		public bool IsFromDevice { get; set; }
+		public Guid DoorId { get; set; }
         
 	}
 }

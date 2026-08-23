@@ -39,7 +39,7 @@ namespace GuardianCommunication.Business.Tasks
                     {
                         if (ApplicationEmbeddedInfo.SupremaProducerVersions.Contains(SdkVersionEnumeration.SdkVersion1))
                         {
-                            deviceIds.AddRange(SupremaSdk1Server.Instance.GetConnectedDeviceNumbers());
+                            deviceIds.AddRange(SupremaSdk1Server.Instance.GetConnectedDeviceIds());
                         }
 
                         if (ApplicationEmbeddedInfo.SupremaProducerVersions.Contains(SdkVersionEnumeration.SdkVersion2))

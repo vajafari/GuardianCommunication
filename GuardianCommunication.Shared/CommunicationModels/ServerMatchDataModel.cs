@@ -7,7 +7,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
     {
         public Guid DeviceId { get; set; }
 
-        public double EventDateTime { get; set; }
+        public DateTime EventDateTime { get; set; }
 
         public string TemplateData { get; set; }
 

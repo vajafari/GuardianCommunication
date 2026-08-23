@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -570,7 +569,9 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 LoggingSystem.LogInfo("Virdi Server device statistics result", new { ClientId = clientId, TerminalId = terminalId, LogCount = logCount });
             }
-            HardwareEventPublisher.Instance.PublishAccessLogCountReceived(terminalId, logCount);
+
+            var terminal = GetDeviceByTerminalId(terminalId);
+            HardwareEventPublisher.Instance.PublishAccessLogCountReceived(terminal?.Id ?? Guid.Empty, logCount);
             PublishResponseReceivedEvent(clientId);
         }
 
@@ -859,7 +860,9 @@ namespace GuardianCommunication.Hardware.Virdi
             {
                 LoggingSystem.LogInfo("Virdi Server get user count result", new { ClientId = clientId, TerminalId = terminalId, AdminCount = adminCount, UserCount = userCount });
             }
-            HardwareEventPublisher.Instance.PublishUserCountReceived(terminalId, userCount);
+
+            var terminal = GetDeviceByTerminalId(terminalId);
+            HardwareEventPublisher.Instance.PublishUserCountReceived(terminal?.Id ?? Guid.Empty, userCount);
             PublishResponseReceivedEvent(clientId);
         }
 
@@ -880,7 +883,8 @@ namespace GuardianCommunication.Hardware.Virdi
             }
             PublishResponseReceivedEvent(clientId);
             var user = GetUserInfo(_terminalUserData, true);
-            HardwareEventPublisher.Instance.PublishNewUserEnrolled(user, terminalId, DtoUserEnrolledSetting.GetAllSettingInstance());
+            var terminal = GetDeviceByTerminalId(terminalId);
+            HardwareEventPublisher.Instance.PublishNewUserEnrolled(user, terminal?.Id ?? Guid.Empty, DtoUserEnrolledSetting.GetAllSettingInstance());
         }
         private DtoUserDeviceRelatedData GetUserInfo(ITerminalUserData terminalUserData, bool addTemplateInfos)
         {
@@ -1301,6 +1305,8 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     LoggingSystem.LogInfo("Virdi Server scan visiblelight face result", new { ClientId = clientId, TerminalId = terminalId, UserId = userId, DataType = dataType, DataLength = dataLength });
                 }
+
+                var terminal = GetDeviceByTerminalId(terminalId);
                 PublishResponseReceivedEvent(clientId);
                 if (dataType == WalkThroughImageType)
                 {
@@ -1319,7 +1325,7 @@ namespace GuardianCommunication.Hardware.Virdi
                             FaceIndex = 1,
                             Length = walkThroughData.Length,
                             TemplateData = walkThroughData
-                        }, terminalId);
+                        }, terminal?.Id ?? Guid.Empty);
                         _scanFaceCommands.RemoveAll(row => row.ClientId == clientId);
                     }
                 }
@@ -1340,7 +1346,7 @@ namespace GuardianCommunication.Hardware.Virdi
                             FaceIndex = WalkThroughFaceIndex,
                             Length = walkThroughData.Length,
                             TemplateData = walkThroughData
-                        }, terminalId);
+                        }, terminal?.Id ?? Guid.Empty);
                         _scanFaceCommands.RemoveAll(row => row.ClientId == clientId);
                     }
                 }
@@ -1379,6 +1385,8 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     LoggingSystem.LogInfo("Virdi Server scan face result", new { ClientId = clientId, TerminalId = terminalId, CurrentIndex = currentIndex, TotalNumber = totalNumber });
                 }
+
+                var terminal = GetDeviceByTerminalId(terminalId);
                 PublishResponseReceivedEvent(clientId);
                 var regFaceData = (byte[])eventData;
                 if (currentIndex == 0 && totalNumber == 0)
@@ -1422,7 +1430,7 @@ namespace GuardianCommunication.Hardware.Virdi
                                 FaceIndex = totalNumber,
                                 Length = bytes.Length,
                                 TemplateData = bytes
-                            }, terminalId);
+                            }, terminal?.Id ?? Guid.Empty);
                         }
                         _scanFaceCommands.RemoveAll(row => row.ClientId == clientId);
                     }
@@ -1460,6 +1468,8 @@ namespace GuardianCommunication.Hardware.Virdi
                 {
                     LoggingSystem.LogInfo("Virdi Server scan Iris result", new { ClientId = clientId, TerminalId = terminalId, CurrentIndex = currentIndex, TotalNumber = totalNumber, EventData = eventData });
                 }
+
+                var terminal = GetDeviceByTerminalId(terminalId);
                 PublishResponseReceivedEvent(clientId);
                 var walkThroughData = (byte[])eventData;
                 if (walkThroughData.IsCollectionNullOrEmpty())
@@ -1475,7 +1485,7 @@ namespace GuardianCommunication.Hardware.Virdi
                         UserIdOnDevice = irisData.UserIdOnDevice,
                         Length = walkThroughData.Length,
                         TemplateData = walkThroughData
-                    }, terminalId);
+                    }, terminal?.Id ?? Guid.Empty);
                     _scanIrisCommands.RemoveAll(row => row.ClientId == clientId);
                 }
             }

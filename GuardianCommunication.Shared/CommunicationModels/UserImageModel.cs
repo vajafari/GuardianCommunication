@@ -6,7 +6,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
     public class UserImageModel
     {
 	    [DataMember]
-		public string EmployeeImage { get; set; }
+		public string UserImage { get; set; }
 		[DataMember]
 		public long UserIdOnDevice { get; set; }
 

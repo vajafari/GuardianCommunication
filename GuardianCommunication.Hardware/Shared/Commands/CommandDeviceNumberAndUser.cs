@@ -1,4 +1,6 @@
-﻿namespace GuardianCommunication.Hardware.Shared.Commands
+﻿using GuardianCommunication.Shared.HardwareDefinition;
+
+namespace GuardianCommunication.Hardware.Shared.Commands
 {
     public class CommandReadUser
     {

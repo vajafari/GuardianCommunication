@@ -11,7 +11,7 @@ namespace GuardianCommunication.Shared.OperationResult
 	{
 
 		[DataMember]
-		public readonly List<OperationResultEnumeration> Errors = new List<OperationResultEnumeration>();
+		public readonly List<OperationResultEnumeration> Errors = [];
 
 		[DataMember]
 		public readonly string ContextDescription;

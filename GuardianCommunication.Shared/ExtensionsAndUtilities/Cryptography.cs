@@ -69,7 +69,7 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
             using (var encryptor = Aes.Create())
             {
                 var pdb = new Rfc2898DeriveBytes(encryptionKey,
-                    new byte[] { 0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76 },
+                    [0x49, 0x76, 0x61, 0x6e, 0x20, 0x4d, 0x65, 0x64, 0x76, 0x65, 0x64, 0x65, 0x76],
                     40, HashAlgorithmName.SHA512);
                 encryptor.Key = pdb.GetBytes(32);
                 encryptor.IV = pdb.GetBytes(16);
@@ -93,11 +93,10 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
             using (var encryptor = Aes.Create())
             {
                 using (var pdb = new Rfc2898DeriveBytes(encryptionKey,
-                           new byte[]
-                           {
+                           [
                                0x50, 0x40, 0x64, 0x69, 0x73, 0x20, 0x47, 0x72, 0x6f, 0x75, 0x70, 0x20, 0x31, 0x33, 0x39,
                                0x39
-                           },
+                           ],
                            40, HashAlgorithmName.SHA512))
                 {
                     encryptor.Key = pdb.GetBytes(32);

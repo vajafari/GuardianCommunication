@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
 
 namespace GuardianCommunication.Hardware.Suprema.SupremaConcepts.V2
 {

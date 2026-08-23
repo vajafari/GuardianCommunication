@@ -19,15 +19,13 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public int VerificationStyle { get; set; }
         [DataMember]
-        public double AttendanceDateTime { get; set; }
+        public DateTime AttendanceDateTime { get; set; }
         [DataMember]
         public AttendanceSourceEnumeration AttendanceSource { get; set; }
         [DataMember]
         public Guid DeviceId { get; set; }
         [DataMember]
         public int StatusCode { get; set; }
-        [DataMember]
-        public bool IsSent { get; set; }
         [DataMember]
         public ModuleEnumeration ModuleId { get; set; }
         [DataMember]

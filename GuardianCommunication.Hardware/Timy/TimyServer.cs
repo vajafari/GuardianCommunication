@@ -370,9 +370,9 @@ namespace GuardianCommunication.Hardware.Timy
                         IsConnected = true
                     }
                 });
-            HardwareEventPublisher.Instance.PublishAccessLogCountReceived(deviceData.DeviceNumber, usednewlog);
-            HardwareEventPublisher.Instance.PublishFingerCountReceived(deviceData.DeviceNumber, usedfp);
-            HardwareEventPublisher.Instance.PublishUserCountReceived(deviceData.DeviceNumber, useduser);
+            HardwareEventPublisher.Instance.PublishAccessLogCountReceived(deviceData.Id, usednewlog);
+            HardwareEventPublisher.Instance.PublishFingerCountReceived(deviceData.Id, usedfp);
+            HardwareEventPublisher.Instance.PublishUserCountReceived(deviceData.Id, useduser);
         }
 
         private void RemoveDeviceAgentBySession(string sessionId)

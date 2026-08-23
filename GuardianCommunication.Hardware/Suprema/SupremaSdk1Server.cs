@@ -179,7 +179,7 @@ namespace GuardianCommunication.Hardware.Suprema
             }
         }
 
-        public List<Guid> GetConnectedDeviceNumbers()
+        public List<Guid> GetConnectedDeviceIds()
         {
             var connectedDeviceSerialNumbers = _connectedDeviceAdapters.Keys;
             lock (_currentDeviceList)
@@ -575,14 +575,14 @@ namespace GuardianCommunication.Hardware.Suprema
                 try
                 {
 
-                    var deviceNumbers = GetConnectedDeviceNumbers();
+                    var deviceIds = GetConnectedDeviceIds();
                     var allCommands = new List<DtoDeviceUnsentCommand>();
-                    if (deviceNumbers.IsCollectionNotNullOrEmpty())
+                    if (deviceIds.IsCollectionNotNullOrEmpty())
                     {
                         var commandParams = new DeviceNotSentCommandsFilter
                         {
                             Count = 1,
-                            DeviceNumbers = deviceNumbers,
+                            DeviceIds = deviceIds,
                             Producer = ProducerEnumeration.Suprema,
                             SdkVersion = SdkVersionEnumeration.SdkVersion1,
                         };
@@ -628,7 +628,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                         var user = deviceAdapter.GetUserInfoByUserId(commandRead.UserId, commandRead.TemplateType);
                                         if (user != null)
                                         {
-                                            HardwareEventPublisher.Instance.PublishNewUserEnrolled(user, deviceAdapter.DeviceInfo.DeviceNumber, DtoUserEnrolledSetting.GetAllSettingInstance());
+                                            HardwareEventPublisher.Instance.PublishNewUserEnrolled(user, deviceAdapter.DeviceInfo.Id, DtoUserEnrolledSetting.GetAllSettingInstance());
                                         }
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
@@ -699,7 +699,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                         {
                                             var startAndEnd = ObjectHelper.DeserializeAsJson<CommandStartAndEndDate>(command.CommandContent);
                                             var attendanceCount = deviceAdapter.GetRecordCount(startAndEnd.StartDate, startAndEnd.EndDate);
-                                            HardwareEventPublisher.Instance.PublishAccessLogCountReceived(deviceAdapter.DeviceInfo.DeviceNumber, attendanceCount);
+                                            HardwareEventPublisher.Instance.PublishAccessLogCountReceived(deviceAdapter.DeviceInfo.Id, attendanceCount);
                                             HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
                                             {
                                                 CommandResponseResult = "SUCCESS",
@@ -710,17 +710,17 @@ namespace GuardianCommunication.Hardware.Suprema
                                         break;
                                     case DeviceCommandTypeEnumeration.FaceCount:
                                         var faceCount = deviceAdapter.GetFaceCount();
-                                        HardwareEventPublisher.Instance.PublishFaceCountReceived(deviceAdapter.DeviceInfo.DeviceNumber, faceCount);
+                                        HardwareEventPublisher.Instance.PublishFaceCountReceived(deviceAdapter.DeviceInfo.Id, faceCount);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.FingerCount:
                                         var fingerCount = deviceAdapter.GetFingerCount();
-                                        HardwareEventPublisher.Instance.PublishFingerCountReceived(deviceAdapter.DeviceInfo.DeviceNumber, fingerCount);
+                                        HardwareEventPublisher.Instance.PublishFingerCountReceived(deviceAdapter.DeviceInfo.Id, fingerCount);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.UserCount:
                                         var userCount = deviceAdapter.GetUserCount();
-                                        HardwareEventPublisher.Instance.PublishUserCountReceived(deviceAdapter.DeviceInfo.DeviceNumber, userCount);
+                                        HardwareEventPublisher.Instance.PublishUserCountReceived(deviceAdapter.DeviceInfo.Id, userCount);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.SetDateAndTime:
@@ -730,21 +730,21 @@ namespace GuardianCommunication.Hardware.Suprema
                                     case DeviceCommandTypeEnumeration.ScanFace:
                                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
                                         var face = deviceAdapter.ScanFace(ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
-                                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceAdapter.DeviceInfo.DeviceNumber);
+                                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceAdapter.DeviceInfo.Id);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFinger:
                                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
                                         var scanFingerParams = ObjectHelper.DeserializeAsJson<CommandScanFinger>(command.CommandContent);
                                         var finger = deviceAdapter.ScanFinger(scanFingerParams.UserId, scanFingerParams.FingerIndex);
-                                        HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceAdapter.DeviceInfo.DeviceNumber);
+                                        HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceAdapter.DeviceInfo.Id);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanCard:
                                         HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
                                         var scanCardParams = ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
                                         var cardNumber = deviceAdapter.ScanCard();
-                                        HardwareEventPublisher.Instance.PublishNewCardEnrolled(cardNumber, deviceAdapter.DeviceInfo.DeviceNumber, scanCardParams.UserId);
+                                        HardwareEventPublisher.Instance.PublishNewCardEnrolled(cardNumber, deviceAdapter.DeviceInfo.Id, scanCardParams.UserId);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     default:

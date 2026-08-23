@@ -116,7 +116,7 @@ namespace GuardianCommunication.Hardware.Suprema
 
 
 
-            var timestamp = (uint)DateTimeHelper.ConvertUtcToUnixTimestamp(DateTime.UtcNow);
+            var timestamp = DateTimeHelper.ConvertUtcToUnixTimestamp(DateTime.UtcNow);
             var resultOfNativeMethodCall = ApiV2.BS2_SetDeviceTime(SdkContext, _deviceId, timestamp);
             if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.SetDateTime))
             {
@@ -224,7 +224,6 @@ namespace GuardianCommunication.Hardware.Suprema
         {
             var configs = SupremaV2Utility.AllocateStructure<BS2Configs>();
             configs.configMask = (uint)config;
-            Console.WriteLine("Trying to get AllConfig");
 
             //var structureType = typeof(BS2Configs);
             //var structSize = Marshal.SizeOf(structureType);
@@ -334,10 +333,9 @@ namespace GuardianCommunication.Hardware.Suprema
                 if (!DeviceInfo.TcpPort.HasValue || DeviceInfo.TcpPort.Value <= 0)
                     throw new OperationCannotBeDoneException(OperationResultEnumeration
                         .CommunicationStatusSupremaSdk1ErrorTcpPortIsNotValid);
-                var resultOfNativeMethodCall = -1;
 
                 ipAddressPointer = Marshal.StringToHGlobalAnsi(DeviceInfo.DeviceIp);
-                resultOfNativeMethodCall = ApiV2.BS2_ConnectDeviceViaIP(SdkContext, ipAddressPointer,
+                var resultOfNativeMethodCall = ApiV2.BS2_ConnectDeviceViaIP(SdkContext, ipAddressPointer,
                     (ushort)DeviceInfo.TcpPort.Value, out _deviceId);
                 //Action action = () =>
                 //{
@@ -656,7 +654,6 @@ namespace GuardianCommunication.Hardware.Suprema
 
             var usersInfo = new List<DtoUserInfoDefinedOnDevice>();
             var userIdsObject = IntPtr.Zero;
-            var currentUserIdObject = IntPtr.Zero;
             try
             {
                 ApiV2.IsAcceptableUserID cbIsAcceptableUserId = null; // we don't need to user id filtering
@@ -664,7 +661,7 @@ namespace GuardianCommunication.Hardware.Suprema
                 RaiseErrorIfRequired(resultOfNativeMethodCall);
                 if (numberOfUserIds > 0)
                 {
-                    currentUserIdObject = userIdsObject;
+                    var currentUserIdObject = userIdsObject;
                     var userBlobs = new BS2UserBlob[UserPageSizeForListUserId];
                     for (uint idx = 0; idx < numberOfUserIds;)
                     {
@@ -764,13 +761,13 @@ namespace GuardianCommunication.Hardware.Suprema
             {
                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
-            var card = AllocateStructure<BS2Card>();
-            var result = ApiV2.BS2_ScanCard(SdkContext, _deviceId, out card, null);
+
+            var result = ApiV2.BS2_ScanCard(SdkContext, _deviceId, out var card, null);
             if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.Scan))
             {
                 LoggingSystem.LogInfo("Suprema 2 ScanCard result", new { DeviceInfo, Result = result });
             }
-            RaiseErrorIfRequired((int)result);
+            RaiseErrorIfRequired(result);
             return Sdk2UserFaceExDecoder.CardToCardNumber(card);
         }
 
@@ -845,12 +842,15 @@ namespace GuardianCommunication.Hardware.Suprema
                     Length = faceEx[0].imageData.Length,
                     FaceIndex = 1,
                     TemplateData = faceEx[0].imageData,
-                    SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData()
+                    AdditionalDataProcessed = new DtoUserTemplateAdditionalData
                     {
-                        SupremaSdk2FaceFlag = faceEx[0].flag,
-                        SupremaSdk2FaceImageData = faceEx[0].imageData,
-                        SupremaSdk2FaceImageLen = faceEx[0].imageData.Length,
-                        SupremaSdk2FaceNumOfTemplate = faceEx[0].numOfTemplate,
+                        SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData
+                        {
+                            SupremaSdk2FaceFlag = faceEx[0].flag,
+                            SupremaSdk2FaceImageData = faceEx[0].imageData,
+                            SupremaSdk2FaceImageLen = faceEx[0].imageData.Length,
+                            SupremaSdk2FaceNumOfTemplate = faceEx[0].numOfTemplate,
+                        }
                     }
                 };
                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.Scan))
@@ -875,12 +875,15 @@ namespace GuardianCommunication.Hardware.Suprema
                     Length = faces[0].templateData.Length,
                     FaceIndex = 1,
                     TemplateData = faces[0].templateData,
-                    SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData()
+                    AdditionalDataProcessed = new DtoUserTemplateAdditionalData
                     {
-                        SupremaSdk2FaceFlag = faces[0].flag,
-                        SupremaSdk2FaceImageData = faces[0].imageData,
-                        SupremaSdk2FaceImageLen = faces[0].imageLen,
-                        SupremaSdk2FaceNumOfTemplate = faces[0].numOfTemplate,
+                        SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData
+                        {
+                            SupremaSdk2FaceFlag = faces[0].flag,
+                            SupremaSdk2FaceImageData = faces[0].imageData,
+                            SupremaSdk2FaceImageLen = faces[0].imageLen,
+                            SupremaSdk2FaceNumOfTemplate = faces[0].numOfTemplate,
+                        }
                     }
                 };
                 if (AppConfigs.LogLevelSuprema2.HasFlag(LogLevelSuprema2Enumeration.Scan))
@@ -1096,7 +1099,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         curPhotoObj += 4;
                         var curDest = curPhotoObj;
                         var curSrc = binaryData;
-                        for (var idx = 0; idx < Math.Min((int)userInfoForDevice.HardwareProfileImage.Length, BS2Environment.BS2_USER_PHOTO_SIZE); ++idx)
+                        for (var idx = 0; idx < Math.Min(userInfoForDevice.HardwareProfileImage.Length, BS2Environment.BS2_USER_PHOTO_SIZE); ++idx)
                         {
                             Marshal.WriteByte(curDest, Marshal.ReadByte(curSrc));
                             curDest += 1;
@@ -1201,7 +1204,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         Marshal.Copy(userInfoForDevice.VisibleLightImage, 0, imageData, userInfoForDevice.VisibleLightImage.Length);
 
                         var structHeaderSize = Marshal.SizeOf(typeof(BS2FaceExUnwarped));
-                        var totalSize = structHeaderSize + (int)userInfoForDevice.VisibleLightImage.Length;
+                        var totalSize = structHeaderSize + userInfoForDevice.VisibleLightImage.Length;
                         userBlob.faceExObjs = Marshal.AllocHGlobal(totalSize);
                         var curFaceExObjects = userBlob.faceExObjs;
 
@@ -1236,25 +1239,25 @@ namespace GuardianCommunication.Hardware.Suprema
 
 
                         var face = userInfoForDevice.FaceDataList[i];
-                        if (face.SupremaSdk2AdditionalData == null || (
-                                face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData.IsCollectionNotNullOrEmpty()
-                                && face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData.Length > BS2Environment.BS2_FACE_IMAGE_SIZE))
+                        if (face.AdditionalDataProcessed?.SupremaSdk2AdditionalData == null || (
+                                face.AdditionalDataProcessed.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData.IsCollectionNotNullOrEmpty()
+                                && face.AdditionalDataProcessed.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData.Length > BS2Environment.BS2_FACE_IMAGE_SIZE))
                         {
-                            LoggingSystem.LogInfo("Suprema SDK 2 face data is not valid. ImageData len is to long", new { Face = face, DeviceNumber = DeviceInfo.DeviceNumber });
+                            LoggingSystem.LogInfo("Suprema SDK 2 face data is not valid. ImageData len is to long", new { Face = face, DeviceInfo.DeviceNumber });
                             continue;
                         }
                         if (face.TemplateData.IsCollectionNotNullOrEmpty() && face.TemplateData.Length > BS2Environment.BS2_TEMPLATE_PER_FACE * BS2Environment.BS2_FACE_TEMPLATE_LENGTH)
                         {
-                            LoggingSystem.LogInfo("Suprema SDK 2 face data is not valid. Template data len is to long", new { Face = face, DeviceNumber = DeviceInfo.DeviceNumber });
+                            LoggingSystem.LogInfo("Suprema SDK 2 face data is not valid. Template data len is to long", new { Face = face, DeviceInfo.DeviceNumber });
                             continue;
                         }
                         var faceStructure = AllocateStructure<BS2Face>();
                         faceStructure.templateData = face.TemplateData;
                         faceStructure.faceIndex = (byte)i;
-                        faceStructure.flag = (byte)face.SupremaSdk2AdditionalData.SupremaSdk2FaceFlag;
-                        faceStructure.imageData = face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData;
-                        faceStructure.imageLen = (ushort)face.SupremaSdk2AdditionalData.SupremaSdk2FaceImageLen;
-                        faceStructure.numOfTemplate = (byte)face.SupremaSdk2AdditionalData.SupremaSdk2FaceNumOfTemplate;
+                        faceStructure.flag = (byte)face.AdditionalDataProcessed.SupremaSdk2AdditionalData.SupremaSdk2FaceFlag;
+                        faceStructure.imageData = face.AdditionalDataProcessed.SupremaSdk2AdditionalData.SupremaSdk2FaceImageData;
+                        faceStructure.imageLen = (ushort)face.AdditionalDataProcessed.SupremaSdk2AdditionalData.SupremaSdk2FaceImageLen;
+                        faceStructure.numOfTemplate = (byte)face.AdditionalDataProcessed.SupremaSdk2AdditionalData.SupremaSdk2FaceNumOfTemplate;
                         Marshal.StructureToPtr(faceStructure, curFacePtr, false);
                         curFacePtr += faceStructSize;
                     }
@@ -1396,12 +1399,15 @@ namespace GuardianCommunication.Hardware.Suprema
                                 FaceIndex = face.faceIndex,
                                 TemplateData = face.templateData,
                                 Length = face.templateData.Length,
-                                SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData
+                                AdditionalDataProcessed = new DtoUserTemplateAdditionalData
                                 {
-                                    SupremaSdk2FaceFlag = face.flag,
-                                    SupremaSdk2FaceImageData = face.imageData,
-                                    SupremaSdk2FaceImageLen = face.imageLen,
-                                    SupremaSdk2FaceNumOfTemplate = face.numOfTemplate,
+                                    SupremaSdk2AdditionalData = new DtoSupremaSdk2FaceTemplateAdditionalData
+                                    {
+                                        SupremaSdk2FaceFlag = face.flag,
+                                        SupremaSdk2FaceImageData = face.imageData,
+                                        SupremaSdk2FaceImageLen = face.imageLen,
+                                        SupremaSdk2FaceNumOfTemplate = face.numOfTemplate,
+                                    }
                                 }
                             };
                             result.FaceDataList.Add(dtoFace);

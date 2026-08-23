@@ -199,6 +199,7 @@ namespace GuardianCommunication.ExternalServices.KarnamaApi
                 Body = CommunicationModelMapper.MapDtoDeviceUnauthorizedAttendanceImageToDeviceUnauthorizedAttendanceImageModel(image)
             });
         }
+
         public void SubmitInvalidIoEvent(DtoInvalidAttendance entity)
         {
             if (AppConfigs.LogLevelKarnamaCall.HasFlag(GuardianCallLogLevelEnumeration.SubmitInvalidIoEvent))

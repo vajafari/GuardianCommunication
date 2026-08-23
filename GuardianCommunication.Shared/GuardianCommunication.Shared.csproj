@@ -187,7 +187,6 @@
     <Compile Include="CacheManagement\DictionaryBaseCacheManager.cs" />
     <Compile Include="CacheManagement\ICacheable.cs" />
     <Compile Include="CacheManagement\ICacheManagerT.cs" />
-    <Compile Include="CommunicationModels\SupremaSdk2FaceTemplateAdditionalDataModel.cs" />
     <Compile Include="CommunicationModels\UserFaceEnrolledModel.cs" />
     <Compile Include="CommunicationModels\UserImageEnrolledModel.cs" />
     <Compile Include="CommunicationModels\DeviceInvalidAttendanceModel.cs" />
@@ -210,6 +209,7 @@
     <Compile Include="Dto\DtoInvalidAttendance.cs" />
     <Compile Include="Dto\DtoSupremaSdk2FaceTemplateAdditionalData.cs" />
     <Compile Include="Dto\DtoUnsentCommandCountByDeviceId.cs" />
+    <Compile Include="Dto\DtoUserTemplateAdditionalData.cs" />
     <Compile Include="Dto\DtoUserIris.cs" />
     <Compile Include="Dto\DtoUnsentCommandCountByDeviceNumber.cs" />
     <Compile Include="Dto\DtoDeviceCommandProcessingDescription.cs" />
@@ -267,7 +267,6 @@
     <Compile Include="CommunicationModels\UserAndDeviceResultModel.cs" />
     <Compile Include="CommunicationModels\UserAndDeviceModel.cs" />
     <Compile Include="CommunicationModels\OpenDoorModel.cs" />
-    <Compile Include="CommunicationModels\SystemConfigModel.cs" />
     <Compile Include="CommunicationModels\EmployeeImageEnrolledModel.cs" />
     <Compile Include="CommunicationModels\ZkOperationLogModel.cs" />
     <Compile Include="CommunicationModels\ImageEnrolledModel.cs" />

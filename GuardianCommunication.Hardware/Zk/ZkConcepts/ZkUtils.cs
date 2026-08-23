@@ -1,4 +1,6 @@
-﻿namespace GuardianCommunication.Hardware.Zk.ZkConcepts
+﻿using GuardianCommunication.Shared.Definition;
+
+namespace GuardianCommunication.Hardware.Zk.ZkConcepts
 {
     public static class ZkUtils
     {

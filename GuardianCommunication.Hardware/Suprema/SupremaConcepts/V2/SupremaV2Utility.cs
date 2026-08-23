@@ -5,7 +5,6 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
-using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.Dto;
 using GuardianCommunication.Shared.ExtensionsAndUtilities;

@@ -10,7 +10,7 @@ namespace GuardianCommunication.Shared.Dto
 
         public long UserIdOnDevice { get; set; }
 
-        public List<string> RfCardNumbers { get; set; } = new List<string>();
+        public List<string> RfCardNumbers { get; set; } = [];
 
         public string UserName { get; set; }
 
@@ -22,9 +22,9 @@ namespace GuardianCommunication.Shared.Dto
 
         public bool IsEnable { get; set; }
 
-        public List<DtoUserFinger> FingerDataList { get; set; } = new List<DtoUserFinger>();
+        public List<DtoUserFinger> FingerDataList { get; set; } = [];
 
-        public List<DtoUserFace> FaceDataList { get; set; } = new List<DtoUserFace>();
+        public List<DtoUserFace> FaceDataList { get; set; } = [];
 
         public List<DtoUserPalm> PalmDataList { get; set; }
 
@@ -48,10 +48,10 @@ namespace GuardianCommunication.Shared.Dto
 
         public void ClearTemplateData()
         {
-            FingerDataList = new List<DtoUserFinger>();
-            FaceDataList = new List<DtoUserFace>();
-            PalmDataList = new List<DtoUserPalm>();
-            IrisDataList = new List<DtoUserIris>();
+            FingerDataList = [];
+            FaceDataList = [];
+            PalmDataList = [];
+            IrisDataList = [];
             VisibleLightImage = null;
         }
 

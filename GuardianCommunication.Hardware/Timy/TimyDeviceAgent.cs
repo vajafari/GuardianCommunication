@@ -373,7 +373,7 @@ namespace GuardianCommunication.Hardware.Timy
                         TemplateData = bytes,
                         Length = bytes.Length,
                     };
-                    HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, DeviceInfo.DeviceNumber);
+                    HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, DeviceInfo.Id);
                 }
                 else if (backupNumber >= 0 && backupNumber <= 9)
                 {
@@ -387,13 +387,13 @@ namespace GuardianCommunication.Hardware.Timy
                             FingerIndex = backupNumber,
                             TemplateData = bytes
                         };
-                        HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, DeviceInfo.DeviceNumber);
+                        HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, DeviceInfo.Id);
                     }
                 }
                 else if (backupNumber == 10)
                 {
                     userInfo.Password = jsonMessage.Value<int>("record").ToString();
-                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoUserEnrolledSetting
+                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.Id, new DtoUserEnrolledSetting
                     {
                         OverwriteDevicePassword = true,
                         OverwriteIsEnabled = false,
@@ -405,7 +405,7 @@ namespace GuardianCommunication.Hardware.Timy
                 else if (backupNumber == 11)
                 {
                     userInfo.RfCardNumbers = new List<string> { jsonMessage.Value<string>("record") };
-                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoUserEnrolledSetting
+                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.Id, new DtoUserEnrolledSetting
                     {
                         OverwriteDevicePassword = false,
                         OverwriteIsEnabled = false,
@@ -425,7 +425,7 @@ namespace GuardianCommunication.Hardware.Timy
                             TemplateData = Convert.FromBase64String(palmBase64),
                             Index = backupNumber,
                         };
-                        HardwareEventPublisher.Instance.PublishNewPalmEnrolled(palm, DeviceInfo.DeviceNumber);
+                        HardwareEventPublisher.Instance.PublishNewPalmEnrolled(palm, DeviceInfo.Id);
                     }
                 }
                 else if (backupNumber == 50)
@@ -439,12 +439,12 @@ namespace GuardianCommunication.Hardware.Timy
                             FaceIndex = backupNumber,
                             TemplateData = Convert.FromBase64String(visibleBase64)
                         };
-                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, DeviceInfo.DeviceNumber);
+                        HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, DeviceInfo.Id);
                     }
                 }
                 else
                 {
-                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.DeviceNumber, new DtoUserEnrolledSetting
+                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, DeviceInfo.Id, new DtoUserEnrolledSetting
                     {
                         OverwriteDevicePassword = false,
                         OverwriteIsEnabled = false,

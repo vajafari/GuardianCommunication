@@ -21,5 +21,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public int EventCode { get; set; }
         [DataMember]
         public long? UserIdOnDevice { get; set; }
+        [DataMember]
+        public Guid? DoorId { get; set; }
     }
 }

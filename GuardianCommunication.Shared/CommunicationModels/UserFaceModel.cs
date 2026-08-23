@@ -16,10 +16,8 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public uint CheckSum { get; set; }
         [DataMember]
         public int Length { get; set; }
-
-        public SupremaSdk2FaceTemplateAdditionalDataModel SupremaSdk2AdditionalData { get; set; }
-
-
+        [DataMember]
+        public string AdditionalDataInJson { get; set; }
     }
 
 }

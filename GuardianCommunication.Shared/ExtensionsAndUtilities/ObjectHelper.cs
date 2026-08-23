@@ -119,7 +119,7 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 		{
 			if (exceptionList == null)
 			{
-				exceptionList = new List<string>();
+				exceptionList = [];
 			}
 			
 			//List<string> newExceptionList = new List<string>();
@@ -144,7 +144,7 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
 		{
 			if (includedList == null)
 			{
-				includedList = new List<string>();
+				includedList = [];
 			}
 
 			return typeOfObject.GetProperties(BindingFlags.Public | BindingFlags.Instance | BindingFlags.SetProperty | BindingFlags.GetProperty)

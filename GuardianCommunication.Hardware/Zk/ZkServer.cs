@@ -530,7 +530,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 var count = commandIdResponseParts[1].ToInt32();
                                 if (deviceInList != null)
                                 {
-                                    HardwareEventPublisher.Instance.PublishUserCountReceived(deviceInList.DeviceNumber, count);
+                                    HardwareEventPublisher.Instance.PublishUserCountReceived(deviceInList.Id, count);
                                 }
                             }
                             continue;
@@ -543,7 +543,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 var count = commandIdResponseParts[1].ToInt32();
                                 if (deviceInList != null)
                                 {
-                                    HardwareEventPublisher.Instance.PublishFingerCountReceived(deviceInList.DeviceNumber, count);
+                                    HardwareEventPublisher.Instance.PublishFingerCountReceived(deviceInList.Id, count);
                                 }
                             }
                             continue;
@@ -556,7 +556,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 var count = commandIdResponseParts[1].ToInt32();
                                 if (deviceInList != null)
                                 {
-                                    HardwareEventPublisher.Instance.PublishFaceCountReceived(deviceInList.DeviceNumber, count);
+                                    HardwareEventPublisher.Instance.PublishFaceCountReceived(deviceInList.Id, count);
                                 }
                             }
                             continue;
@@ -569,7 +569,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 var count = commandIdResponseParts[1].ToInt32();
                                 if (deviceInList != null)
                                 {
-                                    HardwareEventPublisher.Instance.PublishAccessLogCountReceived(deviceInList.DeviceNumber, count);
+                                    HardwareEventPublisher.Instance.PublishAccessLogCountReceived(deviceInList.Id, count);
                                 }
                             }
                             continue;
@@ -694,7 +694,7 @@ namespace GuardianCommunication.Hardware.Zk
                 {
                     UserIdOnDevice = name1.ToInt64(),
                     PhotoData = imageData
-                }, deviceData.DeviceNumber);
+                }, deviceData.Id);
                 // ReSharper restore InconsistentNaming
                 // ReSharper restore IdentifierTypo
                 // ReSharper restore UnusedVariable
@@ -851,7 +851,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 finger.UserIdOnDevice = GetValueFromDic(dic, "PIN").ToInt64();
                                 finger.FingerIndex = GetValueFromDic(dic, "No").ToInt32();
                                 finger.TemplateData = Encoding.UTF8.GetBytes(GetValueFromDic(dic, "TMP"));
-                                HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceData.DeviceNumber);
+                                HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceData.Id);
                             }
                         }
                         break;
@@ -869,7 +869,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 TemplateData = Convert.FromBase64String(GetValueFromDic(dic, "TMP"))
                             };
                             face.Length = face.TemplateData.Length;
-                            HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceData.DeviceNumber);
+                            HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceData.Id);
                         }
                         break;
                     case BioType.Palm:
@@ -884,7 +884,7 @@ namespace GuardianCommunication.Hardware.Zk
                                 TemplateData = Convert.FromBase64String(GetValueFromDic(dic, "TMP"))
                             };
                             palm.Length = palm.TemplateData.Length;
-                            HardwareEventPublisher.Instance.PublishNewPalmEnrolled(palm, deviceData.DeviceNumber);
+                            HardwareEventPublisher.Instance.PublishNewPalmEnrolled(palm, deviceData.Id);
                         }
                         break;
 
@@ -928,7 +928,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     userInfo.RfCardNumbers = rfCardNumberString.IsNotNullOrEmpty()
                                         ? new List<string> { rfCardNumberString } : new List<string>();
                                     userInfo.IsEnable = true;
-                                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, deviceData.DeviceNumber, DtoUserEnrolledSetting.GetAllSettingInstance());
+                                    HardwareEventPublisher.Instance.PublishNewUserEnrolled(userInfo, deviceData.Id, DtoUserEnrolledSetting.GetAllSettingInstance());
                                 }
                                 else
                                 {
@@ -959,7 +959,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     finger.UserIdOnDevice = employeeNumber;
                                     finger.FingerIndex = fingerIndex;
                                     finger.TemplateData = Encoding.UTF8.GetBytes(GetValueFromDic(dic, "TMP"));
-                                    HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceData.DeviceNumber);
+                                    HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceData.Id);
                                 }
                                 else
                                 {
@@ -990,7 +990,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     face.FaceIndex = 50;
                                     face.TemplateData = Encoding.UTF8.GetBytes(GetValueFromDic(dic, "TMP"));
                                     face.Length = face.TemplateData.Length;
-                                    HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceData.DeviceNumber);
+                                    HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceData.Id);
                                 }
                                 else
                                 {
@@ -1035,8 +1035,7 @@ namespace GuardianCommunication.Hardware.Zk
                                     };
                                     // ReSharper disable once PossibleNullReferenceException
                                     faceVisibleLight.Length = faceVisibleLight.TemplateData.Length;
-                                    HardwareEventPublisher.Instance.PublishNewFaceEnrolled(faceVisibleLight,
-                                        deviceData.DeviceNumber);
+                                    HardwareEventPublisher.Instance.PublishNewFaceEnrolled(faceVisibleLight, deviceData.Id);
                                 }
                             }
                         }

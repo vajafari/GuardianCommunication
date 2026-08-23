@@ -8,8 +8,8 @@ namespace GuardianCommunication.Shared.SearchDataWrapper
 {
     public class SearchClausePart
     {
-        public List<string> PrevWithClause { get; set; } = new List<string>();
-        public List<string> PrevTempTableClause { get; set; } = new List<string>();
+        public List<string> PrevWithClause { get; set; } = [];
+        public List<string> PrevTempTableClause { get; set; } = [];
 
         public string PrevCommandClause
         {

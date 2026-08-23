@@ -38,5 +38,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public int? VerificationStyle { get; set; }
         [DataMember]
         public Guid? DoorId { get; set; }
+        [DataMember]
+        public Guid LocationId { get; set; }
     }
 }

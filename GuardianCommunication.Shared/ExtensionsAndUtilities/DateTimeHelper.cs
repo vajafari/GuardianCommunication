@@ -123,7 +123,7 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
         /// </summary>
         public static int[] ExtractHourAndMinute(this int timeDuration)
         {
-            return new[] { timeDuration / 100, timeDuration % 100 };
+            return [timeDuration / 100, timeDuration % 100];
         }
 
         /// <summary>

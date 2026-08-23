@@ -14,7 +14,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
         [DataMember]
         public int VerificationStyle { get; set; }
         [DataMember]
-        public double AttendanceDateTime { get; set; }
+        public DateTime AttendanceDateTime { get; set; }
         [DataMember]
         public AttendanceSourceEnumeration AttendanceSource { get; set; }
         [DataMember]

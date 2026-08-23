@@ -535,7 +535,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                                     NumericId = command.NumericId
                                                 });
                                             HardwareEventPublisher.Instance.PublishNewUserEnrolled(user,
-                                                deviceAdapter.DeviceInfo.DeviceNumber,
+                                                deviceAdapter.DeviceInfo.Id,
                                                 DtoUserEnrolledSetting.GetAllSettingInstance());
                                         }
                                         else
@@ -638,7 +638,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     case DeviceCommandTypeEnumeration.AttendanceLogCount:
                                         var attendanceCount = deviceAdapter.GetRecordCount();
                                         HardwareEventPublisher.Instance.PublishAccessLogCountReceived(
-                                            deviceAdapter.DeviceInfo.DeviceNumber, attendanceCount);
+                                            deviceAdapter.DeviceInfo.Id, attendanceCount);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
@@ -650,7 +650,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     case DeviceCommandTypeEnumeration.FaceCount:
                                         var faceCount = deviceAdapter.GetFaceCount();
                                         HardwareEventPublisher.Instance.PublishFaceCountReceived(
-                                            deviceAdapter.DeviceInfo.DeviceNumber, faceCount);
+                                            deviceAdapter.DeviceInfo.Id, faceCount);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
@@ -662,7 +662,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     case DeviceCommandTypeEnumeration.FingerCount:
                                         var fingerCount = deviceAdapter.GetFingerCount();
                                         HardwareEventPublisher.Instance.PublishFingerCountReceived(
-                                            deviceAdapter.DeviceInfo.DeviceNumber, fingerCount);
+                                            deviceAdapter.DeviceInfo.Id, fingerCount);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
@@ -674,7 +674,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     case DeviceCommandTypeEnumeration.UserCount:
                                         var userCount = deviceAdapter.GetUserCount();
                                         HardwareEventPublisher.Instance.PublishUserCountReceived(
-                                            deviceAdapter.DeviceInfo.DeviceNumber, userCount);
+                                            deviceAdapter.DeviceInfo.Id, userCount);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
@@ -699,7 +699,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                         var face = deviceAdapter.ScanFace(ObjectHelper
                                             .DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                         HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face,
-                                            deviceAdapter.DeviceInfo.DeviceNumber);
+                                            deviceAdapter.DeviceInfo.Id);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
@@ -717,7 +717,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                         var finger = deviceAdapter.ScanFinger(scanFingerParams.UserId,
                                             scanFingerParams.FingerIndex);
                                         HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger,
-                                            deviceAdapter.DeviceInfo.DeviceNumber);
+                                            deviceAdapter.DeviceInfo.Id);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
                                             {
@@ -733,7 +733,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
                                         var cardNumber = deviceAdapter.ScanCard();
                                         HardwareEventPublisher.Instance.PublishNewCardEnrolled
-                                        (cardNumber, deviceAdapter.DeviceInfo.DeviceNumber,
+                                        (cardNumber, deviceAdapter.DeviceInfo.Id,
                                             scanCardParams.UserId);
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(
                                             new DtoDeviceCommandProcessingResult
@@ -911,7 +911,7 @@ namespace GuardianCommunication.Hardware.Suprema
                         //Convert.ToBoolean(eventLog.param) ? "Device" : "Server"
                         if (Convert.ToBoolean(eventLog.param))
                         {
-                            HardwareEventPublisher.Instance.PublishUserChangedReceived(deviceInfo.DeviceNumber, Encoding.ASCII.GetString(eventLog.userID).ToInt64());
+                            HardwareEventPublisher.Instance.PublishUserChangedReceived(deviceInfo.Id, Encoding.ASCII.GetString(eventLog.userID).ToInt64());
                         }
                     }
 

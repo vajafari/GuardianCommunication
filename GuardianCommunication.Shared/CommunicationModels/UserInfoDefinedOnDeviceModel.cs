@@ -6,7 +6,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
     public class UserInfoDefinedOnDeviceModel
     {
         [DataMember]
-        public long EmployeeNumber { get; set; }
+        public long UserIdOnDevice { get; set; }
         [DataMember]
         public string Name { get; set; }
         [DataMember]

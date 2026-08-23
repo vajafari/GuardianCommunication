@@ -39,7 +39,6 @@ namespace GuardianCommunication.Shared.Dto
 
 
         private DtoDeviceSettings _deviceSettings;
-
         public DtoDeviceSettings DeviceSettings
         {
             get
@@ -49,11 +48,11 @@ namespace GuardianCommunication.Shared.Dto
                     _deviceSettings = ObjectHelper.DeserializeAsJson<DtoDeviceSettings>(DeviceSettingInJson)
                                       ?? new DtoDeviceSettings();
                 }
-
                 return _deviceSettings;
             }
             set => _deviceSettings = value;
         }
+
 
     }
 }

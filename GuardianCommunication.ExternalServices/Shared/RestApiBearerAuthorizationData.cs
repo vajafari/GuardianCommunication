@@ -1,4 +1,5 @@
-﻿using RestSharp;
+﻿using GuardianCommunication.Shared.Definition;
+using RestSharp;
 
 namespace GuardianCommunication.ExternalServices.Shared
 {
