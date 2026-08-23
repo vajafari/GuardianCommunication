@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ServiceModel;
-using GuardianCommunication.Business.Component;
+﻿using GuardianCommunication.Business.Component;
 using GuardianCommunication.Service.WCF;
 using GuardianCommunication.Shared.CommunicationModels;
 using GuardianCommunication.Shared.Definition;
@@ -9,6 +6,9 @@ using GuardianCommunication.Shared.ExtensionsAndUtilities;
 using GuardianCommunication.Shared.Filter;
 using GuardianCommunication.Shared.OperationResult;
 using GuardianCommunication.Shared.SearchDataWrapper;
+using System;
+using System.Collections.Generic;
+using System.ServiceModel;
 
 namespace GuardianCommunication.Service
 {
@@ -107,11 +107,11 @@ namespace GuardianCommunication.Service
             {
                 Filter = new AttendanceFilter
                 {
-                    AttendanceDateFrom = startDate,
-                    AttendanceDateTo = endDate,
-                    DeviceNumbers = param.DeviceNumbers,
-                    UserNumbers = param.UserNumbers,
-                    IsSent = param.IsSent
+                    AttendanceDateFrom = param.StartDate,
+                    AttendanceDateTo = param.EndDate,
+                    DeviceIds = param.DeviceIds,
+                    UsersIdOnDevice = param.UsersIdOnDevice,
+                    IsSentToGuardian = param.IsSentToGuardian
                 }
             });
             return CommunicationModelMapper.MapDtoAttendanceToDeviceAttendanceModel(result);
@@ -119,79 +119,66 @@ namespace GuardianCommunication.Service
 
         public List<DeviceAttendanceModel> CommunicationReadoutFromDevice(ReadoutFromDeviceModel param)
         {
-            var startDate = param.StartDate.FromNumericDateTime();
-            var endDate = param.EndDate.FromNumericDateTime();
             var component = new CommunicationComponent(GetRepositoryFactory());
             var result = component.CommunicationReadoutFromDevice(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo),
-                startDate, endDate);
+                param.DeviceId,
+                param.StartDate, param.EndDate);
             return CommunicationModelMapper.MapDtoAttendanceToDeviceAttendanceModel(result);
         }
 
-        public string CommunicationGetFirmwareVersion(DeviceCommunicationModel deviceInfo)
+        public string CommunicationGetFirmwareVersion(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationGetFirmwareVersion(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationGetFirmwareVersion(model.Id);
         }
 
         public void CommunicationUpgradeFirmware(UpdateFirmwareModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationUpgradeFirmware(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.FileName
+            component.CommunicationUpgradeFirmware(param.DeviceId, param.FileName
                 , Convert.FromBase64String(param.FirmwareData));
         }
 
-        public void CommunicationCancelOperation(DeviceCommunicationModel deviceInfo)
+        public void CommunicationSetDateAndTime(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationCancelOperation(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            component.CommunicationSetDateAndTime(model.Id);
         }
 
-        public void CommunicationSetDateAndTime(DeviceCommunicationModel deviceInfo)
+        public DateTime CommunicationGetDateAndTime(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationSetDateAndTime(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationGetDateAndTime(model.Id);
         }
 
-        public double CommunicationGetDateAndTime(DeviceCommunicationModel deviceInfo)
+        public void CommunicationClearData(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationGetDateAndTime(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo)).ToNumericDateTime();
+            component.CommunicationClearData(model.Id);
         }
 
-        public void CommunicationClearData(DeviceCommunicationModel deviceInfo)
+        public int CommunicationRecordCount(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationClearData(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationRecordCount(model.Id);
         }
 
-        public int CommunicationRecordCount(DeviceCommunicationModel deviceInfo)
+        public int CommunicationFaceCount(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationRecordCount(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationFaceCount(model.Id);
         }
 
-        public int CommunicationFaceCount(DeviceCommunicationModel deviceInfo)
+        public int CommunicationFingerCount(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationFaceCount(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationFingerCount(model.Id);
         }
 
-        public int CommunicationFingerCount(DeviceCommunicationModel deviceInfo)
+        public int CommunicationUserCount(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationFingerCount(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
-        }
-
-        public int CommunicationUserCount(DeviceCommunicationModel deviceInfo)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationUserCount(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationUserCount(model.Id);
         }
 
         public void CommunicationDeleteUserByUserInfo(UserAndDeviceModel param)
@@ -201,70 +188,42 @@ namespace GuardianCommunication.Service
                 CommunicationModelMapper.MapUserAndDeviceModelToDtoUserAndDeviceParam(param));
         }
 
-        public void CommunicationDeleteUserByUserId(DeviceAndUserNumberListModel param)
+        public void CommunicationDeleteUserByUserId(UserIdOnDeviceAndDeviceIdModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationDeleteUserByUserId(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.UserNumber.First());
+            component.CommunicationDeleteUserByUserId(model.DeviceId, model.UserIdOnDevice);
         }
 
-        public void CommunicationSendWithoutFingers(DeviceAndUserListModel param)
-        {
-            if (param.UserInfos.IsCollectionNullOrEmpty())
-            {
-                return;
-            }
-            var component =
-                new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationSendWithoutFinger(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserInfos));
-        }
-
-        public void CommunicationSetValidInvalid(DeviceAndUserListModel param)
-        {
-            if (param.UserInfos.IsCollectionNullOrEmpty())
-            {
-                return;
-            }
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationSendValidInvalid(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapUserModelToDtoUser(param.UserInfos));
-        }
-
-        public void CommunicationDeleteAllUsers(DeviceCommunicationModel deviceInfo)
+        public void CommunicationDeleteAllUsers(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationDeleteAllUsers(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            component.CommunicationDeleteAllUsers(model.Id);
         }
 
-        public string CommunicationGetSerialNumber(DeviceCommunicationModel deviceInfo)
+        public string CommunicationGetSerialNumber(IdSingleModel model)
         {
             var component =
                 new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationGetSerialNumber(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationGetSerialNumber(model.Id);
         }
 
-        public OperationResultEnumeration CommunicationTestConnection(DeviceCommunicationModel deviceInfo)
+        public OperationResultEnumeration CommunicationTestConnection(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.CommunicationTestConnection(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
+            return component.CommunicationTestConnection(model.Id);
         }
 
-        public DeviceStatisticsModel CommunicationGetDeviceStatistics(DeviceCommunicationModel deviceInfo)
+        public DeviceStatisticsModel CommunicationGetDeviceStatistics(IdSingleModel model)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return CommunicationModelMapper.MapDtoDeviceStatisticsToDeviceStatisticsModel(
-            component.CommunicationGetDeviceStatistics(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo)));
+                component.CommunicationGetDeviceStatistics(model.Id));
         }
 
         public string CommunicationScanCard(UserAndDeviceModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            return component.ScanCard(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
+            return component.ScanCard(param.DeviceId
                 , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData));
         }
 
@@ -272,7 +231,7 @@ namespace GuardianCommunication.Service
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return CommunicationModelMapper.MapDtoUserFingerToUserFingerModel(component.ScanFinger(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
+                param.DeviceId
                 , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)
                 , param.FingerIndex));
         }
@@ -281,7 +240,7 @@ namespace GuardianCommunication.Service
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return CommunicationModelMapper.MapDtoUserFaceToUserFaceModel(component.ScanFace(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
+                param.DeviceId
                 , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)));
         }
 
@@ -289,7 +248,7 @@ namespace GuardianCommunication.Service
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return CommunicationModelMapper.MapDtoUserFaceToUserFaceModel(component.ScanFaceStandalone(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
+                param.DeviceId
                 , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)));
         }
 
@@ -297,43 +256,23 @@ namespace GuardianCommunication.Service
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             return CommunicationModelMapper.MapDtoUserIrisToUserIrisModel(component.ScanIris(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
+                param.DeviceId
                 , CommunicationModelMapper.MapUserModelToDtoUser(param.UserData)));
-        }
-
-        public void CommunicationCheck(DeviceCommunicationModel deviceInfo)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationCheck(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
         }
 
         public string GetAttendanceImage(GetAttendanceImageModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
 
-            var result = component.CommunicationGetAttendanceImage(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.UserNumber
+            var result = component.CommunicationGetAttendanceImage(
+                param.DeviceId
+                , param.UserIdOnDevice
                 , DateTime.FromOADate(param.AttendanceDateTime));
             if (result.IsCollectionNotNullOrEmpty())
             {
                 return Convert.ToBase64String(result);
             }
             return null;
-        }
-
-        public void CommunicationSendFunctionTitles(FunctionTitleModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationSendFunctionTitles(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo),
-                param.Titles);
-        }
-
-        public void CommunicationReconnectOnlineMonitoringDevice(DeviceCommunicationModel deviceInfo)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CommunicationReconnectOnlineMonitoringDevice(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(deviceInfo));
         }
 
 
@@ -347,412 +286,61 @@ namespace GuardianCommunication.Service
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
             component.OpenCabinetDoor(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
+                param.DeviceId
                 , param.CabinetNumber);
         }
 
-
-
-        #region Suprema SDK 1 
-
-        public void CommunicationSendSupremaSdk1Holidays(SupremaSdk1SendHolidaysModel param)
+        public void CommunicationOpenDoor(OpenDoorModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk1Holidays(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapDeviceHolidayModelToDtoAcDeviceHoliday(param.Holidays));
+            component.OpenDoor(param.DeviceId, param.DoorId);
         }
 
-        public void CommunicationSendSupremaSdk1Timezones(SupremaSdk1SendTimezomesModel param)
+        public void CommunicationOpenDoorWithDelay(OpenDoorModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk1Timezones(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1TimezoneModelToDtoSupremaSdk1Timezone(param.Timezones));
+            component.OpenDoorWithDelay(param.DeviceId, param.DoorId, param.DelayInSecond ?? 5);
+
         }
 
-        public void CommunicationSendSupremaSdk1AccessGroups(SupremaSdk1SendAccessGroupModel param)
+
+        #region Suprema SDK 1
+
+
+        public void CommunicationOpenSupremaSdk1DoorPermanent(OpenDoorModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk1AccessGroups(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1AccessGroupModelToDtoSupremaSdk1AccessGroup(param.AccessGroups));
+            component.OpenSupremaSdk1DoorPermanent(param.DeviceId, param.DoorId);
         }
 
-        public void CommunicationSendSupremaSdk1DoorInfo(SupremaSdk1DeviceAndDoorModel param)
+        public void CommunicationCloseSupremaSdk1DoorPermanent(OpenDoorModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk1DoorInfo(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1DoorModelToDtoSupremaSdk1Door(param.Door));
+            component.CloseSupremaSdk1DoorPermanent(param.DeviceId, param.DoorId);
         }
 
-        public void CommunicationOpenSupremaSdk1Door(SupremaSdk1DeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenSupremaSdk1Door(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1DoorModelToDtoSupremaSdk1Door(param.Door));
-        }
-
-        public void CommunicationOpenSupremaSdk1DoorWithDelay(SupremaSdk1DeviceAndDoorWithDelayModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenSupremaSdk1DoorWithDelay(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1DoorModelToDtoSupremaSdk1Door(param.Door)
-                , param.DelayInSecond);
-        }
-
-        public void CommunicationOpenSupremaSdk1DoorPermanent(SupremaSdk1DeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenSupremaSdk1DoorPermanent(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1DoorModelToDtoSupremaSdk1Door(param.Door));
-        }
-
-        public void CommunicationCloseSupremaSdk1DoorPermanent(SupremaSdk1DeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CloseSupremaSdk1DoorPermanent(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk1DoorModelToDtoSupremaSdk1Door(param.Door));
-        }
 
         #endregion
 
 
         #region Suprema SDK 2
 
-        public void CommunicationSendSupremaSdk2Holidays(SupremaSdk2SendHolidaysModel param)
+        public void CommunicationOpenSupremaSdk2DoorPermanent(OpenDoorModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk2Holidays(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapDeviceHolidayModelToDtoAcDeviceHoliday(param.Holidays));
+            component.OpenSupremaSdk2DoorPermanent(param.DeviceId, param.DoorId);
         }
 
-        public void CommunicationSendSupremaSdk2AccessSchedules(SupremaSdk2SendAccessSchedulesModel param)
+        public void CommunicationCloseSupremaSdk2DoorPermanent(OpenDoorModel param)
         {
             var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk2AccessSchedules(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2AccessScheduleModelToDtoSupremaSdk2AccessSchedule(param.AccessSchedules));
+            component.CloseSupremaSdk2DoorPermanent(param.DeviceId, param.DoorId);
         }
 
-        public void CommunicationSendSupremaSdk2AccessGroups(SupremaSdk2SendAccessGroupModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk2AccessGroups(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2AccessGroupModelToDtoSupremaSdk2AccessGroup(param.AccessGroups));
-        }
-
-        public void CommunicationSendSupremaSdk2AccessLevels(SupremaSdk2SendAccessLevelModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk2AccessLevels(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2AccessLevelModelToDtoSupremaSdk2AccessLevel(param.AccessLevels));
-        }
-
-        public void CommunicationSendSupremaSdk2DoorInfo(SupremaSdk2SendDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendSupremaSdk2DoorInfo(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2DoorModelToDtoSupremaSdk2Door(param.Door));
-        }
-
-        public void CommunicationOpenSupremaSdk2Door(SupremaSdk2DeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenSupremaSdk2Door(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2DoorModelToDtoSupremaSdk2Door(param.Door));
-        }
-
-        public void CommunicationOpenSupremaSdk2DoorWithDelay(SupremaSdk2DeviceAndDoorWithDelayModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenSupremaSdk2DoorWithDelay(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2DoorModelToDtoSupremaSdk2Door(param.Door)
-                , param.DelayInSecond);
-        }
-
-        public void CommunicationOpenSupremaSdk2DoorPermanent(SupremaSdk2DeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenSupremaSdk2DoorPermanent(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2DoorModelToDtoSupremaSdk2Door(param.Door));
-        }
-
-        public void CommunicationCloseSupremaSdk2DoorPermanent(SupremaSdk2DeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.CloseSupremaSdk2DoorPermanent(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapSupremaSdk2DoorModelToDtoSupremaSdk2Door(param.Door));
-        }
 
         #endregion
 
 
-        #region Zk
-
-        public void CommunicationSendHolidays(SendHolidaysModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendHolidays(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapDeviceHolidayModelToDtoAcDeviceHoliday(param.Holidays));
-        }
-
-        public void CommunicationSendTimezone(SendTimezoneModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendTimezone(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo),
-                CommunicationModelMapper.MapTimezoneModelToDtoTimezone(param.TimeZone));
-        }
-
-        public void CommunicationSendUserTimezones(SendUserTimezonesModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.SendUserTimeZones(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.UserNumber
-                , param.TimeZoneNumbers);
-        }
-
-        public void CommunicationOpenDoor(OpenDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenDoor(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapDeviceDoorBaseModelToDtoAcDeviceDoorBase(param.DoorInfo));
-        }
-
-        public void CommunicationOpenDoorWithDelay(OpenDoorWithDelayModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenDoorWithDelay(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , param.DelayInSecond);
-        }
-
-        public void CommunicationSendDoorInfo(DeviceDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            if (param.ZkDeviceDoorInfo != null)
-            {
-                component.SetZkDeviceDoorInfo(
-                    CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo),
-                    CommunicationModelMapper.MapZkDeviceDoorModelToDtoZkDeviceDoor(param.ZkDeviceDoorInfo));
-            }
-            else
-            {
-                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
-            }
-        }
-
-        #endregion
-
-
-        #region Virdi
-
-        public void CommunicationSendVirdiAccessControlData(VirdiAccessControlDataModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.VirdiSendAccessControlData(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapVirdiAccessControlDataModelToDtoVirdiAccessControlData(param));
-        }
-
-        #endregion
-
-
-        #region Timy
-
-        public void CommunicationTimySetDayTimezone(TimySetDayTimezoneModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.TimySetDayTimezone(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapTimyDayTimezoneGroupModelToDtoTimyDayTimezoneGroup(param.DayTimezoneGroups));
-        }
-
-        public void CommunicationTimySetWeekTimezone(TimySetWeekTimezoneModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.TimySetWeekTimezone(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapTimyWeekTimezoneGroupModelToDtoTimyWeekTimezoneGroup(param.WeekTimezoneGroups));
-        }
-
-        public void CommunicationTimySetHolidays(TimySetHolidaysModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.TimySetHolidays(CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapTimyHolidayModelToDtoTimyHoliday(param.Holidays));
-        }
-
-        #endregion
-
-
-        #region Padis Controller
-
-
-        public void CommunicationOpenPadisControllerDoor(PadisControllerDeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenPadisControllerDoor(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerDoorModelToDtoPadisControllerDoor(param.Door));
-        }
-
-        public void CommunicationOpenPadisControllerDoorWithDelay(PadisControllerDeviceAndDoorWithDelayModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenPadisControllerDoorWithDelay(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerDoorModelToDtoPadisControllerDoor(param.Door)
-                , param.DelayInSecond);
-        }
-
-        public void CommunicationOpenPadisControllerDoorPermanent(PadisControllerDeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.OpenPadisControllerDoorPermanent(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerDoorModelToDtoPadisControllerDoor(param.Door));
-        }
-
-        public void CommunicationClosePadisControllerDoorPermanent(PadisControllerDeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.ClosePadisControllerDoorPermanent(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerDoorModelToDtoPadisControllerDoor(param.Door));
-        }
-
-        public void CommunicationPadisControllerSetDoor(PadisControllerDeviceAndDoorModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetDoor(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerDoorModelToDtoPadisControllerDoor(param.Door));
-        }
-
-        public void CommunicationPadisControllerSetIoPort(PadisControllerDeviceAndIoPortModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetIoPort(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerIoPortModelToDtoPadisControllerIoPort(param.IoPort));
-        }
-
-        public void CommunicationPadisControllerSetWiegand(PadisControllerDeviceAndWiegandModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetWiegand(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerWiegandModelToDtoPadisControllerWiegand(param.Wiegand));
-        }
-
-        public void CommunicationPadisControllerSetRelay(PadisControllerDeviceAndRelayModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetRelay(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerRelayModelToDtoPadisControllerRelay(param.Relay));
-        }
-
-        public void CommunicationPadisControllerSetCalendar(PadisControllerDeviceAndCalendarModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetCalendar(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerCalendarModelToDtoPadisControllerCalendar(param.Calendar));
-        }
-
-        public void CommunicationPadisControllerSetAccessLevel(PadisControllerDeviceAndAccessLevelModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetAccessLevel(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerAccessLevelModelToDtoPadisControllerAccessLevel(param.AccessLevel));
-        }
-
-        public void CommunicationPadisControllerSetAccessGroup(PadisControllerDeviceAndAccessGroupModel param)
-        {
-            var component = new CommunicationComponent(GetRepositoryFactory());
-            component.PadisControllerSetAccessGroup(
-                CommunicationModelMapper.MapDeviceCommunicationModelToDtoDeviceCommunication(param.DeviceInfo)
-                , CommunicationModelMapper.MapPadisControllerAccessGroupModelToDtoPadisControllerAccessGroup(param.AccessGroup));
-        }
-
-
-
-        #endregion
-
-        #endregion
-
-
-        #region System Config 
-
-        public SystemConfigModel SystemConfigGet()
-        {
-            var component = new SystemConfigComponent(GetRepositoryFactory());
-            var result = CommunicationModelMapper.MapDtoSystemConfigToSystemConfigModel(component.GetSystemConfig());
-            return result;
-        }
-
-        public void SystemConfigUpdate(SystemConfigModel entity)
-        {
-            var component = new SystemConfigComponent(GetRepositoryFactory());
-            component.Update(CommunicationModelMapper.MapSystemConfigModelToDtoSystemConfig(entity));
-        }
-
-        #endregion
-
-
-        #region Device Commands
-
-        public List<NotSendCommandsStatisticsModel> DeviceCommandsGetNotSendStatistics(ListInt32Model param)
-        {
-            var deviceCommandComponent = new DeviceCommandComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoNotSendStatisticsToNotSendStatisticsModel
-                (deviceCommandComponent.GetDeviceNotSendCommandsStatistics(param.Items));
-        }
-
-        public List<DeviceCommandModel> DeviceCommandSearch(DeviceCommandSearchModel param)
-        {
-            var component = new DeviceCommandComponent(GetRepositoryFactory());
-            return CommunicationModelMapper.MapDtoDeviceCommandToDeviceCommandModel(
-            component.SearchWithoutContent(CommunicationModelMapper.MapDeviceCommandSearchModelToSearchInfo(param)));
-        }
-
-        public int DeviceCommandGetCount(DeviceCommandSearchModel param)
-        {
-            var component = new DeviceCommandComponent(GetRepositoryFactory());
-            return
-                component.GetCount(CommunicationModelMapper.MapDeviceCommandSearchModelToSearchInfo(param));
-        }
-
-        public void DeviceCommandsResendById(ListInt32Model param)
-        {
-            var component = new DeviceCommandComponent(GetRepositoryFactory());
-            component.ResetSendData(param.Items);
-        }
-
-        public void DeviceCommandsDeleteByIds(ListInt32Model param)
-        {
-            var component = new DeviceCommandComponent(GetRepositoryFactory());
-            component.DeleteByIds(param.Items);
-        }
-
-        public void DeviceCommandsDeleteNotSendByDeviceNumbers(ListInt32Model param)
-        {
-            var component = new DeviceCommandComponent(GetRepositoryFactory());
-            component.DeleteNotSendByDeviceNumbers(param.Items);
-        }
-
-        public void DeviceCommandsDeleteByIdentifiers(ListGuidModel param)
-        {
-            var component = new DeviceCommandComponent(GetRepositoryFactory());
-            component.DeleteByCommandIdentifiers(param.Items);
-        }
 
         #endregion
 
@@ -772,72 +360,21 @@ namespace GuardianCommunication.Service
 
         #endregion
 
-        
-        #region PrintService
-
-        public SelfPrintResultModel DirectPrintSelfBill(SelfBillInfoModel param)
-        {
-            return CommunicationModelMapper.MapDtoSelfPrintResultToSelfPrintResultModel(
-                    PrintService.Instance.DirectPrintSelfBill(CommunicationModelMapper.MapSelfBillInfoModelToDtoSelfBillInfo(param)));
-        }
-
-        public void PrintSelfBill(ListSelfBillInfoModel param)
-        {
-            if (param != null && param.Items.IsCollectionNotNullOrEmpty())
-            {
-                foreach (var item in param.Items)
-                {
-                    PrintService.Instance.AddToSelfBillQueue(CommunicationModelMapper.MapSelfBillInfoModelToDtoSelfBillInfo(item));
-                }
-            }
-        }
-
-
-        public ListStringModel GetPrinterNames()
-        {
-            var component = new DeviceComponent(GetRepositoryFactory());
-            return new ListStringModel { Items = component.GetPrinterNames() };
-        }
-
-
-
-        #endregion
-
 
         #region Cache Reset
+        //TODO: Check this
 
         public bool ResetDeviceCache()
         {
             var component = new DeviceComponent(GetRepositoryFactory());
-            component.ResetDeviceCacheAndSetDeviceConnectionModes();
+            //component.();
             return true;
         }
 
         public bool ResetDeviceDoorCache()
         {
             var component = new DeviceComponent(GetRepositoryFactory());
-            component.ResetDeviceDoorCache();
-            return true;
-        }
-
-        public bool ResetMetalDetectorGateCache()
-        {
-            var component = new DeviceComponent(GetRepositoryFactory());
-            component.ResetMetalDetectorGateCacheAndSetConnectionModes();
-            return true;
-        }
-
-        public bool ResetCameraCache()
-        {
-            var component = new CameraComponent(GetRepositoryFactory());
-            component.ResetCameraCacheAndSetConnectionModes();
-            return true;
-        }
-
-        public bool ResetApplicationEmbeddedInfoCache()
-        {
-            var component = new SystemConfigComponent(GetRepositoryFactory());
-            component.ConfigureApplicationEmbeddedInfo();
+            //component.ResetDeviceDoorCache();
             return true;
         }
 

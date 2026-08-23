@@ -728,20 +728,20 @@ namespace GuardianCommunication.Hardware.Suprema
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFace:
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                         var face = deviceAdapter.ScanFace(ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                         HardwareEventPublisher.Instance.PublishNewFaceEnrolled(face, deviceAdapter.DeviceInfo.Id);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFinger:
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                         var scanFingerParams = ObjectHelper.DeserializeAsJson<CommandScanFinger>(command.CommandContent);
                                         var finger = deviceAdapter.ScanFinger(scanFingerParams.UserId, scanFingerParams.FingerIndex);
                                         HardwareEventPublisher.Instance.PublishNewFingerEnrolled(finger, deviceAdapter.DeviceInfo.Id);
                                         ReportCommandSuccess("SUCCESS", command.NumericId, deviceInfo.DeviceNumber);
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanCard:
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                         var scanCardParams = ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
                                         var cardNumber = deviceAdapter.ScanCard();
                                         HardwareEventPublisher.Instance.PublishNewCardEnrolled(cardNumber, deviceAdapter.DeviceInfo.Id, scanCardParams.UserId);
@@ -773,7 +773,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     var error = exp.OperationResult.Errors.First();
                                     if (error == OperationResultEnumeration.CommunicationStatusNotSupport)
                                     {
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
                                         {
                                             CommandResponseResult = ServiceConstants.NotSupportedCommandText,
@@ -784,7 +784,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     else if (command.CommandType == DeviceCommandTypeEnumeration.ReadUser
                                              && error == OperationResultEnumeration.CommunicationStatusSupremaSdk1ErrorCodeNegative306)
                                     {
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                         HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
                                         {
                                             CommandResponseResult = ServiceConstants.UserNotFoundCommandText,
@@ -811,14 +811,14 @@ namespace GuardianCommunication.Hardware.Suprema
                                     }
                                     else
                                     {
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                     }
                                 }
                                 else
                                 {
                                     // No error detail: consume the command (with a recorded result) so it isn't
                                     // re-fetched and re-executed on every loop iteration (stuck command).
-                                    HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                    HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                     HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
                                     {
                                         CommandResponseResult = "Command failed without error detail",
@@ -846,7 +846,7 @@ namespace GuardianCommunication.Hardware.Suprema
         #endregion
 
 
-        private void ReportCommandSuccess(string text, int commandId, int deviceNumber)
+        private void ReportCommandSuccess(string text, long commandId, int deviceNumber)
         {
             HardwareEventPublisher.Instance.PublishCommandResponseReceived(new DtoDeviceCommandProcessingResult
             {

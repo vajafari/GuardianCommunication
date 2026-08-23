@@ -380,10 +380,41 @@ namespace GuardianCommunication.Data.Repository
                         ? " AND EXISTS (SELECT 1 FROM [com].[AttendanceHookDefinition] ahd WHERE ahd.[AttendanceId] = att.[Id] AND ahd.[IsSent] = 1)"
                         : " AND NOT EXISTS (SELECT 1 FROM [com].[AttendanceHookDefinition] ahd WHERE ahd.[AttendanceId] = att.[Id] AND ahd.[IsSent] = 1)");
                 }
+                if (filter.AttendanceDateFrom.HasValue)
+                {
+                    sb.AppendLine($" AND att.[AttendanceDateTime] >= @{nameof(filter.AttendanceDateFrom)}");
+                }
+                if (filter.AttendanceDateTo.HasValue)
+                {
+                    sb.AppendLine($" AND att.[AttendanceDateTime] <= @{nameof(filter.AttendanceDateTo)}");
+                }
+                if (filter.DeviceIds.IsCollectionNotNullOrEmpty())
+                {
+                    sb.AppendLine($" AND att.[DeviceId] IN @{nameof(filter.DeviceIds)}");
+                }
+                if (filter.UsersIdOnDevice.IsCollectionNotNullOrEmpty())
+                {
+                    sb.AppendLine($" AND att.[UserIdOnDevice] IN @{nameof(filter.UsersIdOnDevice)}");
+                }
+                if (filter.IsSentToGuardian.HasValue)
+                {
+                    sb.AppendLine($" AND att.[IsSentToGuardian] = @{nameof(filter.IsSentToGuardian)}");
+                }
             }
 
             return sb.ToString();
 
+        }
+
+        private static DynamicParameters GetSearchParameters(AttendanceFilter filter)
+        {
+            var parameters = new DynamicParameters(filter);
+            if (filter != null)
+            {
+                parameters.Add(nameof(filter.AttendanceDateFrom), filter.AttendanceDateFrom?.ToUniversalTime());
+                parameters.Add(nameof(filter.AttendanceDateTo), filter.AttendanceDateTo?.ToUniversalTime());
+            }
+            return parameters;
         }
 
         private static DynamicParameters GetInsertParameters(DtoAttendance entity)
@@ -547,7 +578,7 @@ namespace GuardianCommunication.Data.Repository
                     commandText = searchType == SearchTypeEnumeration.SimpleSearch
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoAttendance>(commandText, searchInfo.Filter
+                    return connection.Query<DtoAttendance>(commandText, GetSearchParameters(searchInfo.Filter)
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
 

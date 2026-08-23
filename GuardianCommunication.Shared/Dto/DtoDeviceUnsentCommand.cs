@@ -7,7 +7,7 @@ namespace GuardianCommunication.Shared.Dto
 	{
         public Guid Id { get; set; }
 
-		public int NumericId { get; set; }
+		public long NumericId { get; set; }
 
         public Guid DeviceId { get; set; }
 

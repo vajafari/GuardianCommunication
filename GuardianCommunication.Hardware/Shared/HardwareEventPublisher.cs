@@ -21,7 +21,7 @@ namespace GuardianCommunication.Hardware.Shared
         public event Action<DtoUserPalm, Guid> NewPalmEnrolled;
         public event Action<DtoUserIris, Guid> NewIrisEnrolled;
         public event Action<DtoUserFinger, Guid> NewFingerEnrolled;
-        public event Action<List<int>> CommandSentToDevice;
+        public event Action<List<long>> CommandSentToDevice;
         public event Action<DtoDeviceCommandProcessingResult> CommandResponseReceived;
         public event Action<DtoDeviceCommandProcessingDescription> CommandDescriptionReceived;
         public event Action<DtoUserImage, Guid> UserProfileImageReceived;
@@ -118,7 +118,7 @@ namespace GuardianCommunication.Hardware.Shared
             NewCardEnrolled?.Invoke(card, deviceId, userId);
         }
 
-        public void PublishCommandSentToDevice(List<int> commandIds)
+        public void PublishCommandSentToDevice(List<long> commandIds)
         {
             CommandSentToDevice?.Invoke(commandIds);
         }

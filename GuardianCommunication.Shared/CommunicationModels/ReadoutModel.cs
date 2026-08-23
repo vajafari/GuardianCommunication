@@ -16,6 +16,6 @@ namespace GuardianCommunication.Shared.CommunicationModels
 		[DataMember]
 		public DateTime EndDate { get; set; }
 		[DataMember]
-		public bool? IsSent { get; set; }
+		public bool? IsSentToGuardian { get; set; }
 	}
 }

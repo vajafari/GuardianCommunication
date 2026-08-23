@@ -190,6 +190,7 @@
     <Compile Include="CommunicationModels\OpenDoorModel.cs" />
     <Compile Include="CommunicationModels\IdSingleModel.cs" />
     <Compile Include="CommunicationModels\UserAndDeviceListModel.cs" />
+    <Compile Include="CommunicationModels\UserIdOnDeviceAndDeviceIdModel.cs" />
     <Compile Include="CommunicationModels\UserFaceEnrolledModel.cs" />
     <Compile Include="CommunicationModels\UserImageEnrolledModel.cs" />
     <Compile Include="CommunicationModels\DeviceInvalidAttendanceModel.cs" />

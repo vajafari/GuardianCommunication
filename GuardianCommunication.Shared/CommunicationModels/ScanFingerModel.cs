@@ -9,7 +9,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
 		[DataMember]
 		public Guid DeviceId { get; set; }
 		[DataMember]
-        public UserModel EmployeeData { get; set; }
+        public UserModel UserData { get; set; }
         [DataMember]
 		public int FingerIndex { get; set; }
 	}

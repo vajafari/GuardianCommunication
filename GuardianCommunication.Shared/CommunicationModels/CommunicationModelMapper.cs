@@ -621,6 +621,16 @@ namespace GuardianCommunication.Shared.CommunicationModels
         }
 
 
-
+        public static DeviceStatisticsModel MapDtoDeviceStatisticsToDeviceStatisticsModel(DtoDeviceStatistics inputItem)
+        {
+            return new DeviceStatisticsModel()
+            {
+                CountOfFaces = inputItem.CountOfFaces,
+                CountOfFingers = inputItem.CountOfFingers,
+                CountOfUnreadAttendance = inputItem.CountOfUnreadAttendance,
+                CountOfUsers = inputItem.CountOfUsers,
+                IsConnected = inputItem.IsConnected,
+            };
+        }
     }
 }

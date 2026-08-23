@@ -34,7 +34,7 @@ namespace GuardianCommunication.Hardware.Zk
     {
         private const int MaxBufferSize = 1024 * 1024 * 2;
         private Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> _actionToGetCommands;
-        private Func<DeviceNotSentCommandsFilter, List<DtoUnsentCommandCountByDeviceSerialNumber>> _actionToGetCommandsCountByDeviceSerialNumber;
+        private Func<DeviceNotSentCommandsCountByDeviceSerialNumberFilter, List<DtoUnsentCommandCountByDeviceSerialNumber>> _actionToGetCommandsCountByDeviceSerialNumber;
         private int _maxCommandCount = ServiceConstants.HardwareServiceMaxZkCommands;
         private ZkPushConfig _pushConfig;
         private readonly Semaphore _threadControlSemaphore = new Semaphore
@@ -61,7 +61,7 @@ namespace GuardianCommunication.Hardware.Zk
         public void StartZkServer(
               ZkPushConfig pushConfig
             , Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> actionToGetCommands
-            , Func<DeviceNotSentCommandsFilter, List<DtoUnsentCommandCountByDeviceSerialNumber>> actionToGetCommandsCountByDeviceSerialNumber
+            , Func<DeviceNotSentCommandsCountByDeviceSerialNumberFilter, List<DtoUnsentCommandCountByDeviceSerialNumber>> actionToGetCommandsCountByDeviceSerialNumber
             , List<DtoDevice> deviceInfos)
         {
             _actionToGetCommands = actionToGetCommands;
@@ -233,7 +233,7 @@ namespace GuardianCommunication.Hardware.Zk
                         deviceSerialNumbers = _pushDevices.Where(d => d.SerialNumber.IsNotNullOrEmpty())
                             .Select(d => d.SerialNumber).ToList();
                     }
-                    var commandInfoPure = _actionToGetCommandsCountByDeviceSerialNumber(new DeviceNotSentCommandsFilter
+                    var commandInfoPure = _actionToGetCommandsCountByDeviceSerialNumber(new DeviceNotSentCommandsCountByDeviceSerialNumberFilter
                     {
                         Producer = ProducerEnumeration.Zk,
                         SdkVersion = SdkVersionEnumeration.SdkVersion1,
@@ -478,7 +478,7 @@ namespace GuardianCommunication.Hardware.Zk
                     if (currentDeviceCommands.IsCollectionNotNullOrEmpty())
                     {
                         var commandBuilder = new StringBuilder();
-                        var ids = new List<int>();
+                        var ids = new List<long>();
                         for (var i = 0; i < _maxCommandCount && i < currentDeviceCommands.Count; i++)
                         {
                             var cmd = currentDeviceCommands[i];

@@ -30,7 +30,7 @@ namespace GuardianCommunication.Business.Cache
         // Private cache managers
         private ICacheManager<DtoDevice> DeviceManager { get; } = new DictionaryBaseCacheManager<DtoDevice>();
         private ICacheManager<DtoDeviceDoorFullInfo> DeviceDoorManager { get; } = new DictionaryBaseCacheManager<DtoDeviceDoorFullInfo>();
-        private List<DtoHookDefinition> _hookDefinitios = null;
+        private List<DtoHookDefinition> _hookDefinitions = null;
         private DtoSystemConfig _systemConfig;
         
         
@@ -107,19 +107,19 @@ namespace GuardianCommunication.Business.Cache
 
         public List<DtoHookDefinition> GetHookDefinitions()
         {
-            if (_hookDefinitios != null)
+            if (_hookDefinitions != null)
             {
-                return _hookDefinitios;
+                return _hookDefinitions;
             }
             lock (_hookDefinitionFetchLock)
             {
                 var repositoryFactory = new RepositoryFactory();
-                _hookDefinitios = repositoryFactory.GetHookDefinitionRepository().Search
+                _hookDefinitions = repositoryFactory.GetHookDefinitionRepository().Search
                     (new PagingData<HookDefinitionFilter, HookDefinitionSortEnumeration>()) 
                            ?? new List<DtoHookDefinition>();
             }
 
-            return _hookDefinitios;
+            return _hookDefinitions;
         }
 
         #endregion

@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
-using System.ServiceModel;
-using System.ServiceModel.Web;
-using GuardianCommunication.Shared.CommunicationModels;
+﻿using GuardianCommunication.Shared.CommunicationModels;
 using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.OperationResult;
+using System;
+using System.Collections.Generic;
+using System.ServiceModel;
+using System.ServiceModel.Web;
 
 namespace GuardianCommunication.Service
 {
@@ -151,7 +152,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "GetDateAndTime")]
-        double CommunicationGetDateAndTime(IdSingleModel model);
+        DateTime CommunicationGetDateAndTime(IdSingleModel model);
 
 
         [OperationContract]
@@ -230,7 +231,7 @@ namespace GuardianCommunication.Service
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
             , UriTemplate = "DeleteUserByUserId")]
-        void CommunicationDeleteUserByUserId(DeviceAndUserIdOnDeviceListModel param);
+        void CommunicationDeleteUserByUserId(UserIdOnDeviceAndDeviceIdModel param);
 
 
         [OperationContract]

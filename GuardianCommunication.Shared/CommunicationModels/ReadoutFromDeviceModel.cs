@@ -9,8 +9,8 @@ namespace GuardianCommunication.Shared.CommunicationModels
 		[DataMember]
 		public Guid DeviceId { get; set; }
 		[DataMember]
-		public double StartDate { get; set; }
+		public DateTime StartDate { get; set; }
 		[DataMember]
-		public double EndDate { get; set; }
+		public DateTime EndDate { get; set; }
 	}
 }

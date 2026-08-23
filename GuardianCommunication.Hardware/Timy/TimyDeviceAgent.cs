@@ -514,7 +514,7 @@ namespace GuardianCommunication.Hardware.Timy
                 }
 
                 // اعلام به دیتابیس که دستور ارسال شد (قبل از اینکه بدانیم جوابش چیست)
-                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
             }
             catch (Exception exp)
             {

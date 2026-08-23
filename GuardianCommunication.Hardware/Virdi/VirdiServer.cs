@@ -416,27 +416,27 @@ namespace GuardianCommunication.Hardware.Virdi
                                 case DeviceCommandTypeEnumeration.SetUserInfo:
                                 case DeviceCommandTypeEnumeration.EnrollUserWithTemplate:
                                     {
-                                        virdiError = AddUserSync(command.NumericId, command.DeviceNumber, device,
+                                        virdiError = AddUserSync((int)command.NumericId, command.DeviceNumber, device,
                                             ObjectHelper.DeserializeAsJson<DtoUserDeviceRelatedData>(
                                                 command.CommandContent));
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.DeleteUser:
                                     {
-                                        virdiError = DeleteUserByIdAsync(command.NumericId, command.DeviceNumber,
+                                        virdiError = DeleteUserByIdAsync((int)command.NumericId, command.DeviceNumber,
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.ReadUser:
                                     {
                                         virdiError = GetUserDataAsync
-                                        (command.NumericId, command.DeviceNumber,
+                                        ((int)command.NumericId, command.DeviceNumber,
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.ClearUser:
                                     {
-                                        DeleteAllUserAsync(command.NumericId, command.DeviceNumber);
+                                        DeleteAllUserAsync((int)command.NumericId, command.DeviceNumber);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.ScanFace:
@@ -445,8 +445,8 @@ namespace GuardianCommunication.Hardware.Virdi
                                         var dbCommand =
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
                                         virdiError = device.HasVisiblelight
-                                            ? ScanVisiblelightFaceAsync(command.NumericId, command.DeviceNumber, dbCommand.UserId)
-                                            : ScanFaceAsync(command.NumericId, command.DeviceNumber, dbCommand.UserId);
+                                            ? ScanVisiblelightFaceAsync((int)command.NumericId, command.DeviceNumber, dbCommand.UserId)
+                                            : ScanFaceAsync((int)command.NumericId, command.DeviceNumber, dbCommand.UserId);
                                         Thread.Sleep(_config.CommandSetting.WaitBetweenCommandSendInMilliseconds * 3);
                                     }
                                     break;
@@ -454,7 +454,7 @@ namespace GuardianCommunication.Hardware.Virdi
                                     {
                                         var dbCommand =
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
-                                        virdiError = ScanIrisAsync(command.NumericId, command.DeviceNumber, dbCommand.UserId);
+                                        virdiError = ScanIrisAsync((int)command.NumericId, command.DeviceNumber, dbCommand.UserId);
                                         Thread.Sleep(_config.CommandSetting.WaitBetweenCommandSendInMilliseconds * 3);
                                     }
                                     break;
@@ -478,7 +478,7 @@ namespace GuardianCommunication.Hardware.Virdi
                                     {
                                         if (device.DeviceSettings == null || !device.DeviceSettings.DontSaveAttendance)
                                         {
-                                            virdiError = GetLogAsync(command.NumericId, command.DeviceNumber,
+                                            virdiError = GetLogAsync((int)command.NumericId, command.DeviceNumber,
                                                 ObjectHelper.DeserializeAsJson<VirdiGetDataCommand>(command.CommandContent)
                                                     .LogType);
                                         }
@@ -492,31 +492,31 @@ namespace GuardianCommunication.Hardware.Virdi
                                                 ObjectHelper.DeserializeAsJson<CommandStartAndEndDate>(
                                                     command.CommandContent);
                                             virdiError = GetDataByRangeDateAsync
-                                            (command.NumericId, command.DeviceNumber, dbCommand.StartDate, dbCommand.EndDate,
+                                            ((int)command.NumericId, command.DeviceNumber, dbCommand.StartDate, dbCommand.EndDate,
                                                 VirdiDeviceLogTypeEnum.Period);
                                         }
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.UserCount:
                                     {
-                                        virdiError = GetUserCountAsync(command.NumericId, command.DeviceNumber);
+                                        virdiError = GetUserCountAsync((int)command.NumericId, command.DeviceNumber);
                                     }
                                     break;
                                 case DeviceCommandTypeEnumeration.AttendanceLogCount:
                                     {
                                         virdiError = GetLogCountAsync
-                                            (command.NumericId, command.DeviceNumber, VirdiDeviceLogTypeEnum.New);
+                                            ((int)command.NumericId, command.DeviceNumber, VirdiDeviceLogTypeEnum.New);
                                     }
                                     break;
                                 default:
-                                    PublishResponseReceivedEvent(command.NumericId, "NOT SUPPORTED");
+                                    PublishResponseReceivedEvent((int)command.NumericId, "NOT SUPPORTED");
                                     break;
                             }
 
                             if (virdiError != VirdiErrorEnum.NotConnected &&
                                 virdiError != VirdiErrorEnum.InvalidTerminal)
                             {
-                                PublishMessageSentEvent(command.NumericId);
+                                PublishMessageSentEvent((int)command.NumericId);
                             }
 
                             if (virdiError != VirdiErrorEnum.Success)
@@ -532,7 +532,7 @@ namespace GuardianCommunication.Hardware.Virdi
                         }
                         catch (Exception exp)
                         {
-                            PublishMessageSentEvent(command.NumericId);
+                            PublishMessageSentEvent((int)command.NumericId);
                             // Record the failure instead of silently reporting the command as delivered.
                             HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription
                             {
@@ -1626,7 +1626,7 @@ namespace GuardianCommunication.Hardware.Virdi
 
         public void PublishMessageSentEvent(int commandId)
         {
-            HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { commandId });
+            HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { commandId });
         }
 
         public void PublishResponseReceivedEvent(int commandId, string commandResponse = "SUCCESS")

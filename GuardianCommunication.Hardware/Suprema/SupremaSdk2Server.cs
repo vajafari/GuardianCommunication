@@ -694,7 +694,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFace:
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long>
                                             { command.NumericId });
                                         var face = deviceAdapter.ScanFace(ObjectHelper
                                             .DeserializeAsJson<CommandUserId>(command.CommandContent).UserId);
@@ -709,7 +709,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanFinger:
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long>
                                             { command.NumericId });
                                         var scanFingerParams =
                                             ObjectHelper.DeserializeAsJson<CommandScanFinger>(
@@ -727,7 +727,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                             });
                                         break;
                                     case DeviceCommandTypeEnumeration.ScanCard:
-                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
+                                        HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long>
                                             { command.NumericId });
                                         var scanCardParams =
                                             ObjectHelper.DeserializeAsJson<CommandUserId>(command.CommandContent);
@@ -800,7 +800,7 @@ namespace GuardianCommunication.Hardware.Suprema
                                     && error != OperationResultEnumeration.CommunicationStatusSupremaSdk2Timeout
                                    )
                                 {
-                                    HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int>
+                                    HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long>
                                         { command.NumericId });
                                 }
                             }
@@ -808,7 +808,7 @@ namespace GuardianCommunication.Hardware.Suprema
                             {
                                 // No error detail: consume the command (with a recorded description) so it isn't
                                 // re-fetched and re-executed on every loop iteration (stuck command).
-                                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<int> { command.NumericId });
+                                HardwareEventPublisher.Instance.PublishCommandSentToDevice(new List<long> { command.NumericId });
                                 HardwareEventPublisher.Instance.PublishCommandDescriptionReceived(new DtoDeviceCommandProcessingDescription
                                 {
                                     NumericId = command.NumericId,
