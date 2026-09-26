@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Windows.Forms;
-using Communication.Shared.ExtensionsAndUtilities;
+using GuardianCommunication.Shared.ExtensionsAndUtilities;
 
 namespace TestHost
 {

@@ -132,10 +132,6 @@
     <Compile Include="FormHost.Designer.cs">
       <DependentUpon>FormHost.cs</DependentUpon>
     </Compile>
-    <Compile Include="FormHost.TimyAccess.cs">
-      <DependentUpon>FormHost.cs</DependentUpon>
-      <SubType>Form</SubType>
-    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="FormHost.resx">
@@ -157,7 +153,6 @@
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Include="packages.config" />
-    <None Include="Properties\DataSources\Communication.Shared.Dto.DtoCamera.datasource" />
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
@@ -171,28 +166,50 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\GuardianCommunication.Business\GuardianCommunication.Business.csproj">
+      <Project>{2dcc39b0-7c46-4ae0-b5cb-798184a90c3e}</Project>
+      <Name>GuardianCommunication.Business</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GuardianCommunication.Data\GuardianCommunication.Data.csproj">
+      <Project>{FB9A8867-6563-4A3D-9042-28DB48F5191C}</Project>
+      <Name>GuardianCommunication.Data</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GuardianCommunication.Hardware\GuardianCommunication.Hardware.csproj">
+      <Project>{C366B1F4-D48B-49E1-984E-F7966F51259F}</Project>
+      <Name>GuardianCommunication.Hardware</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GuardianCommunication.Service\GuardianCommunication.Service.csproj">
+      <Project>{b451babe-fc0d-4231-af75-8950e7667a85}</Project>
+      <Name>GuardianCommunication.Service</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\GuardianCommunication.Shared\GuardianCommunication.Shared.csproj">
+      <Project>{d94d085a-d8ab-41be-91f9-a394dc773b20}</Project>
+      <Name>Communication.Shared</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>@echo Copy ZK files to target directory
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\zk\$(PlatformName)" "$(TargetDir)"
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\Virdi\$(PlatformName)" "$(TargetDir)"
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\Suprema\sdkv2\$(PlatformName)" "$(TargetDir)"
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\Suprema\sdkv1.8" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\$(PlatformName)" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\$(PlatformName)" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Suprema\sdkv2\$(PlatformName)" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Suprema\sdkv1.8" "$(TargetDir)"
 echo $(PlatformName) version of Padis Communication software is installed &gt; "$(TargetDir)Release Info.txt"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>@echo ZK Uninstall X64
-call "$(SolutionDir)Communication.Hardware\DLL\zk\x64\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\x64\SDK_Delete.bat"
 @echo ZK Uninstall X32
-call "$(SolutionDir)Communication.Hardware\DLL\zk\x86\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\x86\SDK_Delete.bat"
 @echo ZK install $(PlatformName)
-call "$(SolutionDir)Communication.Hardware\DLL\zk\$(PlatformName)\SDK_Register.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\$(PlatformName)\SDK_Register.bat"
 @echo Virdi Uninstall X64
-call "$(SolutionDir)Communication.Hardware\DLL\Virdi\x64\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\x64\SDK_Delete.bat"
 @echo Virdi Uninstall X32
-call "$(SolutionDir)Communication.Hardware\DLL\Virdi\x86\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\x86\SDK_Delete.bat"
 @echo Virdi install $(PlatformName)
-call "$(SolutionDir)Communication.Hardware\DLL\Virdi\$(PlatformName)\SDK_Register.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\$(PlatformName)\SDK_Register.bat"
 </PreBuildEvent>
   </PropertyGroup>
 </Project>

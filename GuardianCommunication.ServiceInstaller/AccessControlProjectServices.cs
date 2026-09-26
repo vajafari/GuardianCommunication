@@ -16,6 +16,7 @@ using GuardianCommunication.Hardware.Virdi;
 using GuardianCommunication.Hardware.Zk;
 using GuardianCommunication.Hardware.Zk.ZkConcepts;
 using GuardianCommunication.Service;
+using GuardianCommunication.Service.WCF;
 using GuardianCommunication.Shared.Definition;
 using GuardianCommunication.Shared.Dto;
 using GuardianCommunication.Shared.ExtensionsAndUtilities;
@@ -51,6 +52,10 @@ namespace GuardianCommunication.ServiceInstaller
             System.Net.ServicePointManager.ServerCertificateValidationCallback += (se, cert, chain, sslerror) => true;
 
             _hardwareServiceHost = new ServiceHost(typeof(HardwareService));
+            foreach (var endpoint in _hardwareServiceHost.Description.Endpoints)
+            {
+                endpoint.Behaviors.Add(new CamelCaseTolerantJsonEndpointBehavior());
+            }
             _hardwareServiceHost.Open();
             LoggingSystem.LogInfo("HardwareService Started Successfully", "SharedService Start");
 

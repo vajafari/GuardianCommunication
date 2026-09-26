@@ -214,25 +214,25 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PreBuildEvent>@echo ZK Uninstall X64
-call "$(SolutionDir)Communication.Hardware\DLL\zk\x64\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\x64\SDK_Delete.bat"
 @echo ZK Uninstall X32
-call "$(SolutionDir)Communication.Hardware\DLL\zk\x86\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\x86\SDK_Delete.bat"
 @echo ZK install $(PlatformName)
-call "$(SolutionDir)Communication.Hardware\DLL\zk\$(PlatformName)\SDK_Register.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\$(PlatformName)\SDK_Register.bat"
 @echo Virdi Uninstall X64
-call "$(SolutionDir)Communication.Hardware\DLL\Virdi\x64\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\x64\SDK_Delete.bat"
 @echo Virdi Uninstall X32
-call "$(SolutionDir)Communication.Hardware\DLL\Virdi\x86\SDK_Delete.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\x86\SDK_Delete.bat"
 @echo Virdi install $(PlatformName)
-call "$(SolutionDir)Communication.Hardware\DLL\Virdi\$(PlatformName)\SDK_Register.bat"
+call "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\$(PlatformName)\SDK_Register.bat"
 </PreBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PostBuildEvent>@echo Copy ZK files to target directory
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\zk\$(PlatformName)" "$(TargetDir)"
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\Virdi\$(PlatformName)" "$(TargetDir)"
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\Suprema\sdkv2\$(PlatformName)" "$(TargetDir)"
-copy /Y "$(SolutionDir)Communication.Hardware\DLL\Suprema\sdkv1.8" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\$(PlatformName)" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\$(PlatformName)" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Suprema\sdkv2\$(PlatformName)" "$(TargetDir)"
+copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Suprema\sdkv1.8" "$(TargetDir)"
 del "$(TargetDir)Karanama.HardwareCommunication-x64.exe"
 del "$(TargetDir)Karanama.HardwareCommunication-x64.exe.config"
 del "$(TargetDir)Karanama.HardwareCommunication-x86.exe"
