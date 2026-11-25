@@ -613,8 +613,8 @@ namespace GuardianCommunication.Data.Repository
 
                 var startDateParameterName = $"StartDate{i}";
                 var endDateParameterName = $"EndDate{i}";
-                parameters.Add(startDateParameterName, attendanceDate.AddMinutes(setting.Interval * -1));
-                parameters.Add(endDateParameterName, attendanceDate.AddMinutes(setting.Interval));
+                parameters.Add(startDateParameterName, attendanceDate.AddSeconds(setting.Interval * -1));
+                parameters.Add(endDateParameterName, attendanceDate.AddSeconds(setting.Interval));
 
                 conditions.Add($@" (
                                         att.[AttendanceDateTime] >=  @{startDateParameterName}
@@ -677,8 +677,8 @@ namespace GuardianCommunication.Data.Repository
 
                 var startDateParameterName = $"CheckExistenceStartDate{i}";
                 var endDateParameterName = $"CheckExistenceEndDate{i}";
-                parameters.Add(startDateParameterName, entity.AttendanceDateTime.ToUniversalTime().AddMinutes(setting.Interval * -1));
-                parameters.Add(endDateParameterName, entity.AttendanceDateTime.ToUniversalTime().AddMinutes(setting.Interval));
+                parameters.Add(startDateParameterName, entity.AttendanceDateTime.ToUniversalTime().AddSeconds(setting.Interval * -1));
+                parameters.Add(endDateParameterName, entity.AttendanceDateTime.ToUniversalTime().AddSeconds(setting.Interval));
 
                 conditions.Add($@" (
                                         att.[AttendanceDateTime] >= @{startDateParameterName}

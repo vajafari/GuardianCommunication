@@ -22,7 +22,6 @@ namespace GuardianCommunication.Shared.Definition
         ServerSetUser = 1 << 15,
         ServerScan = 1 << 16,
         DoorControl = 1 << 17,
-        MatchOnServer = 1 << 18,
         SendAccessControlData = 1 << 19,
         All = long.MaxValue,
 

@@ -151,12 +151,14 @@
     <Compile Include="LiveModule\TaskManager.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Tasks\AttendanceSendToGuardianTask.cs" />
+    <Compile Include="Tasks\AutoCollectGuardianControllerTask.cs" />
     <Compile Include="Tasks\AutoCollectTimyTask.cs" />
     <Compile Include="Tasks\AutoCollectSupremaSdk2Task.cs" />
     <Compile Include="Tasks\AutoCollectSupremaSdk1Task.cs" />
     <Compile Include="Tasks\AutoCollectVirdiTask.cs" />
     <Compile Include="Tasks\AutoCollectZkTask.cs" />
     <Compile Include="Tasks\ContinuousTask.cs" />
+    <Compile Include="Tasks\CronHookTask.cs" />
     <Compile Include="Tasks\OnlineDeviceTask.cs" />
     <Compile Include="Tasks\AttendanceHookTask.cs" />
     <Compile Include="Tasks\TimedBaseTask.cs" />

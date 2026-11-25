@@ -195,7 +195,7 @@ copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\zk\$(PlatformName)" "$
 copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Virdi\$(PlatformName)" "$(TargetDir)"
 copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Suprema\sdkv2\$(PlatformName)" "$(TargetDir)"
 copy /Y "$(SolutionDir)GuardianCommunication.Hardware\DLL\Suprema\sdkv1.8" "$(TargetDir)"
-echo $(PlatformName) version of Padis Communication software is installed &gt; "$(TargetDir)Release Info.txt"</PostBuildEvent>
+echo $(PlatformName) version of Guardian Communication software is installed &gt; "$(TargetDir)Release Info.txt"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>@echo ZK Uninstall X64

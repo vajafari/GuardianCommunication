@@ -1643,7 +1643,7 @@ namespace GuardianCommunication.Shared.OperationResult
         [EnumMember]
         SystemConfigStatusHardwareConfigAttendanceSendToGuardianTimerRecordCountIsNotValid = 10006040,
         [EnumMember]
-        SystemConfigStatusHardwareConfigPadisMetalDetectorGateServerPushPortIsNotValid = 10006041,
+        SystemConfigStatusHardwareConfigGuardianMetalDetectorGateServerPushPortIsNotValid = 10006041,
         [EnumMember]
         SystemConfigStatusHardwareConfigAttendanceRegisterIntervalForParkingIsNotValid = 10006042,
         [EnumMember]
@@ -1679,140 +1679,23 @@ namespace GuardianCommunication.Shared.OperationResult
 
 
         [EnumMember]
-        CommunicationStatusPadisControllerErrorCommunicationSecurityDataIsNotValid = 10010001,
+        CommunicationStatusGuardianControllerErrorCommunicationSecurityDataIsNotValid = 10010001,
         [EnumMember]
-        CommunicationStatusPadisControllerErrorCommunicationAccessDenied = 10010002,
+        CommunicationStatusGuardianControllerErrorCommunicationAccessDenied = 10010002,
         [EnumMember]
-        CommunicationStatusPadisControllerErrorCommunicationResourceNotFound = 10010003,
+        CommunicationStatusGuardianControllerErrorCommunicationResourceNotFound = 10010003,
         [EnumMember]
-        CommunicationStatusPadisControllerResponseIsNotValid = 10010004,
+        CommunicationStatusGuardianControllerResponseIsNotValid = 10010004,
         [EnumMember]
-        CommunicationStatusPadisControllerErrorIpIsNotValid = 10010005,
+        CommunicationStatusGuardianControllerErrorIpIsNotValid = 10010005,
         [EnumMember]
-        CommunicationStatusPadisControllerErrorTcpPortIsNotValid = 10010006,
+        CommunicationStatusGuardianControllerErrorTcpPortIsNotValid = 10010006,
 
+        /// <summary>
+        /// برد کنترلر گاردین فرمان را نپذیرفت؛ کد خطای برد و قلم‌های ردشده در شرح خطا می‌آید
+        /// </summary>
         [EnumMember]
-        CommunicationStatusPadisControllerErrorValidationError = 10011007,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorMissingRequiredField = 10011008,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidEpochValue = 1001109,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorDateTimeFieldConflict = 10011010,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidDateTimeFormat = 10011011,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidInput = 10011012,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidInputFormat = 10011013,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidInputRange = 10011014,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidInputType = 10011015,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorMissingStartTime = 10011016,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorMissingEndTime = 10011017,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidTimeRange = 10011018,
-
-        // DateTime Setting Errors (2000-2099)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorPlatformNotSupported = 10012000,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRtcSetFailed = 10012001,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRtcSyncFailed = 10012002,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorSubprocessTimeout = 10012003,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorSudoPermissionDenied = 10012004,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInternalServerError = 10012005,
-
-        // System Reboot Errors (2100-2199)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRebootFailed = 10013000,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRebootCommandError = 10013001,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRebootTimeout = 10013002,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRebootPermissionDenied = 10013003,
-
-        // Device Info Errors (2200-2299)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorDeviceInfoFailed = 10014000,
-
-        // System Health Errors (2300-2399)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorSystemHealthFailed = 10015000,
-
-        // User Management Errors (3000-3099)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserNotFound = 10016000,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserAlreadyExists = 10016001,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserCreateFailed = 10016002,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserUpdateFailed = 10016003,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserDeleteFailed = 10016004,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserIdRequired = 10016005,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserInvalidType = 10016006,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserAccessDenied = 10016007,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserClearAllFailed = 10016008,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserAccountExpired = 10016009,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorUserAccountNotActiveYet = 10016010,
-
-        // Card Management Errors (3100-3199)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardNotFound = 10017000,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardAlreadyExists = 10017001,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardAddFailed = 10017002,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardDeleteFailed = 10017003,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardInvalidNumber = 10017004,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardUserIdRequired = 10017005,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCardNumberRequired = 10017006,
-        
-        // Authentication & Authorization Errors (4000-4099)
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorAuthenticationRequired = 10018000,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidCredentials = 10018001,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorAccessDenied = 10018002,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInsufficientPermissions = 10018003,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorInvalidUserType = 10018004,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorAccountExpired = 10018005,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorAccountNotActive = 10018006,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorRestApiAccessOnly = 10018007,
-
-        // Access
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorDoorIdNotFound = 10019000,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorCalendarNotFound = 10019001,
-        [EnumMember]
-        CommunicationStatusPadisControllerErrorAccessLevelNotFound = 10019002,
+        CommunicationStatusGuardianControllerCommandRejected = 10010007,
 
     }
 }

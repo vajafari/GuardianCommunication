@@ -354,6 +354,191 @@ namespace GuardianCommunication.Service
         void CommunicationOpenDoorWithDelay(OpenDoorModel param);
 
 
+        #region Guardian Controller
+
+        /// <summary>
+        /// ارسال تقویم به برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerSetCalendar")]
+        void GuardianControllerSetCalendar(GuardianControllerDeviceAndCalendarModel param);
+
+        /// <summary>
+        /// ارسال قالب تقویم (چرخه چندروزه) به برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerSetCalendarTemplate")]
+        void GuardianControllerSetCalendarTemplate(GuardianControllerDeviceAndCalendarTemplateModel param);
+
+        /// <summary>
+        /// ثبت یا به روزرسانی جداگانه دسترسی های آسان روی برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerSetEasyAccess")]
+        void GuardianControllerSetEasyAccess(GuardianControllerDeviceAndEasyAccessesModel param);
+
+        /// <summary>
+        /// حذف جداگانه دسترسی های آسان از برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerDeleteEasyAccess")]
+        void GuardianControllerDeleteEasyAccess(GuardianControllerDeviceAndEasyAccessesModel param);
+
+        /// <summary>
+        /// ارسال سطح دسترسی به برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerSetAccessLevel")]
+        void GuardianControllerSetAccessLevel(GuardianControllerDeviceAndAccessLevelModel param);
+
+        /// <summary>
+        /// ارسال گروه دسترسی به برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerSetAccessGroup")]
+        void GuardianControllerSetAccessGroup(GuardianControllerDeviceAndAccessGroupModel param);
+
+        /// <summary>
+        /// ارسال پیکربندی سخت‌افزار به برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerSetHardwareConfig")]
+        void GuardianControllerSetHardwareConfig(GuardianControllerDeviceAndHardwareConfigModel param);
+
+        /// <summary>
+        /// حذف قالب‌های تقویم از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerDeleteCalendarTemplate")]
+        void GuardianControllerDeleteCalendarTemplate(GuardianControllerDeviceAndIdsModel param);
+
+        /// <summary>
+        /// حذف تقویم‌ها از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerDeleteCalendar")]
+        void GuardianControllerDeleteCalendar(GuardianControllerDeviceAndIdsModel param);
+
+        /// <summary>
+        /// حذف سطح‌های دسترسی از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerDeleteAccessLevel")]
+        void GuardianControllerDeleteAccessLevel(GuardianControllerDeviceAndIdsModel param);
+
+        /// <summary>
+        /// حذف گروه‌های دسترسی از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerDeleteAccessGroup")]
+        void GuardianControllerDeleteAccessGroup(GuardianControllerDeviceAndIdsModel param);
+
+        /// <summary>
+        /// پایان همگام‌سازی کامل برد کنترلر گاردین: برد هر چیزی را که در فهرست‌ها نیست حذف می‌کند
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "GuardianControllerKeepOnly")]
+        void GuardianControllerKeepOnly(GuardianControllerDeviceAndKeepOnlyModel param);
+
+        /// <summary>
+        /// باز کردن دائم درب برد کنترلر گاردین
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "CommunicationOpenGuardianControllerDoorPermanent")]
+        void CommunicationOpenGuardianControllerDoorPermanent(OpenDoorModel param);
+
+        /// <summary>
+        /// برگرداندن درب برد کنترلر گاردین از حالت باز یا بسته دائم به حالت عادی
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "CommunicationCloseGuardianControllerDoorPermanent")]
+        void CommunicationCloseGuardianControllerDoorPermanent(OpenDoorModel param);
+
+        /// <summary>
+        /// بسته نگه داشتن دائم درب برد کنترلر گاردین (حتی با تردد مجاز باز نمی‌شود)
+        /// </summary>
+        [OperationContract]
+        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
+        [WebInvoke(Method = "POST"
+            , RequestFormat = WebMessageFormat.Json
+            , ResponseFormat = WebMessageFormat.Json
+            , BodyStyle = WebMessageBodyStyle.Bare
+            , UriTemplate = "CommunicationLockGuardianControllerDoorPermanent")]
+        void CommunicationLockGuardianControllerDoorPermanent(OpenDoorModel param);
+
+        #endregion
+
+
         #region Suprema SDK 1
 
 
@@ -409,20 +594,6 @@ namespace GuardianCommunication.Service
         #endregion
 
 
-        #region Attendance
-
-        [OperationContract]
-        [FaultContract(typeof(ErrorModel), Namespace = ServiceConstants.WcfNamsepace)]
-        [WebInvoke(Method = "POST"
-            , RequestFormat = WebMessageFormat.Json
-            , ResponseFormat = WebMessageFormat.Json
-            , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "SaveOtherResourcesAttendanceForHook")]
-        void SaveOtherResourcesAttendanceForHook(OtherResourcesAttendanceModel param);
-
-        #endregion
-
-
         #region Cache Reset
 
         [OperationContract]
@@ -453,7 +624,7 @@ namespace GuardianCommunication.Service
             , RequestFormat = WebMessageFormat.Json
             , ResponseFormat = WebMessageFormat.Json
             , BodyStyle = WebMessageBodyStyle.Bare
-            , UriTemplate = "/padis-hw-service-health-check")]
+            , UriTemplate = "/guardian-hw-service-health-check")]
         void HealthCheck();
 
 

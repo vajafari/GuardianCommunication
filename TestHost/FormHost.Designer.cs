@@ -128,7 +128,8 @@
             "Timy Auto Collect",
             "AttendanceHook",
             "AttendanceSendToGuardian",
-            "OnlineDevice"});
+            "OnlineDevice",
+            "Guardian Controller Auto Collect"});
             this.cmbEvent.Location = new System.Drawing.Point(194, 87);
             this.cmbEvent.Margin = new System.Windows.Forms.Padding(2);
             this.cmbEvent.Name = "cmbEvent";

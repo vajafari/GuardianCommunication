@@ -144,6 +144,9 @@
     <Content Include="DatabaseFile\Communication-Database-Script.sql">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
+    <Content Include="DatabaseFile\Communication-Database-Upgrade-1405-09-04.sql">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

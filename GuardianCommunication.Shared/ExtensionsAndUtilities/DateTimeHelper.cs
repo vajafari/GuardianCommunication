@@ -435,6 +435,22 @@ namespace GuardianCommunication.Shared.ExtensionsAndUtilities
             return (uint)Math.Floor((asUtc - _unixBaseDate).TotalSeconds);
         }
 
+        /// <summary>
+        /// زمان به میلی‌ثانیه epoch؛ زمان بدون Kind زمان محلی سرور حساب می‌شود
+        /// </summary>
+        public static long ToEpochMillisecondsTime(this DateTime date)
+        {
+            return new DateTimeOffset(date).ToUnixTimeMilliseconds();
+        }
+
+        /// <summary>
+        /// میلی‌ثانیه epoch به زمان UTC (زمان‌های این سرویس UTC ذخیره می‌شوند)
+        /// </summary>
+        public static DateTime ToUtcDateTimeFromEpochMillisecondTime(this long epochMilliseconds)
+        {
+            return DateTimeOffset.FromUnixTimeMilliseconds(epochMilliseconds).UtcDateTime;
+        }
+
         #endregion
 
 

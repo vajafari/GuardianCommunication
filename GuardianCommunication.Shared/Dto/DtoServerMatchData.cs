@@ -1,27 +1,24 @@
 ﻿using System;
-using GuardianCommunication.Shared.HardwareDefinition;
 
 namespace GuardianCommunication.Shared.Dto
 {
+    /// <summary>
+    /// تطبیق روی سرور: برد کنترلر گاردین در لحظه تردد از گاردین می پرسد که تردد مجاز است یا نه؛ دستگاه دیگری تطبیق روی سرور ندارد
+    /// </summary>
     public class DtoServerMatchData
     {
         public Guid DeviceId { get; set; }
 
         public DateTime EventDateTime { get; set; }
 
-        public byte[] TemplateData { get; set; }
-
-        public TemplateTypeEnumeration? TemplateType { get; set; }
-
-        public ServerMatchingTypeEnumeration MatchType { get; set; }
-
         public string RfCardNumber { get; set; }
 
         public long? UserIdOnDevice { get; set; }
 
-        public string Password { get; set; }
-
-        public int? DoorId { get; set; }
+        /// <summary>
+        /// شناسه درب گاردین که برد فرستاده است، فقط اگر درب همین دستگاه باشد
+        /// </summary>
+        public Guid? DoorId { get; set; }
 
     }
 }

@@ -20,6 +20,12 @@ namespace GuardianCommunication.Shared.Dto
         public int SleepBetweenSendsIfCommandNotExistsInMilliSeconds { get; set; }
         public int ResetRetryCountDayBefore { get; set; }
         public int OnlineDeviceTimerInterval { get; set; }
+
+        /// <summary>
+        /// فاصله تیک زمان بند (CronHookTask) به ثانیه؛ عبارت Cron دقیقه ای است
+        /// </summary>
+        public int CronHookTimerIntervalInSeconds { get; set; }
+
         public int DeleteUnsentCommandsIntervalInDays { get; set; }
         public int DeleteUnsentCommandsTimerIntervalInHours { get; set; }
         public bool DeleteUnsentCommandsJustDeleteFailed { get; set; }
@@ -34,7 +40,14 @@ namespace GuardianCommunication.Shared.Dto
         public int AttendanceSendToGuardianTimerRecordCount { get; set; }
         public int AttendanceSendToGuardianRetryCount { get; set; }
         public int AttendanceHookTimerRecordCount { get; set; }
+        /// <summary>
+        /// بازه عدم ثبت تردد تکراری به ثانیه
+        /// </summary>
         public int AttendanceRegisterInterval { get; set; }
+
+        /// <summary>
+        /// بازه عدم ثبت تردد تکراری پارکینگ به ثانیه
+        /// </summary>
         public int AttendanceRegisterIntervalForParking { get; set; }
         public int AttendanceRegisterIntervalForTimeAttendance { get; set; }
         public int AttendanceRegisterIntervalForAccessControl { get; set; }
@@ -134,10 +147,10 @@ namespace GuardianCommunication.Shared.Dto
 
         #endregion
 
-        #region Padis Metal Detector Cache
+        #region Guardian Metal Detector Cache
 
-        public int PadisMetalDetectorGateServerPushPort { get; set; }
-        public string PadisMetalDetectorGateServerPushIp { get; set; }
+        public int GuardianMetalDetectorGateServerPushPort { get; set; }
+        public string GuardianMetalDetectorGateServerPushIp { get; set; }
 
 
         #endregion
@@ -179,41 +192,31 @@ namespace GuardianCommunication.Shared.Dto
 
         #endregion
         
-        #region Padis face detection camera
+        #region Guardian face detection camera
 
-        public string FaceDetectionPadisServerBaseAddress { get; set; }
-        public string FaceDetectionPadisUsername { get; set; }
-        public string FaceDetectionPadisPassword { get; set; }
-        public int FaceDetectionPadisSleepBetweenSendsIfCommandNotExistsInMilliSeconds { get; set; }
-        public int FaceDetectionPadisSleepAfterACommandLoopInMilliSeconds { get; set; }
-        public int FaceDetectionPadisWaitBetweenCommandSendInMilliseconds { get; set; }
-        public int FaceDetectionPadisCommandCountInEachFetch { get; set; }
-
-        #endregion
-
-        #region Padis controller
-
-        public string PadisControllerPushServerPushAddress { get; set; }
-        public int PadisControllerGetCommandTimerIntervalInMillisecond { get; set; }
-
-        #region Push
-
-        public int PadisControllerPushServerMaxCommandCount { get; set; }
-        public int PadisControllerPushServerMaxCommandLength { get; set; }
-        public int PadisControllerPushServerIntervalForConsiderDeviceOnlineInSecond { get; set; }
+        public string FaceDetectionGuardianServerBaseAddress { get; set; }
+        public string FaceDetectionGuardianUsername { get; set; }
+        public string FaceDetectionGuardianPassword { get; set; }
+        public int FaceDetectionGuardianSleepBetweenSendsIfCommandNotExistsInMilliSeconds { get; set; }
+        public int FaceDetectionGuardianSleepAfterACommandLoopInMilliSeconds { get; set; }
+        public int FaceDetectionGuardianWaitBetweenCommandSendInMilliseconds { get; set; }
+        public int FaceDetectionGuardianCommandCountInEachFetch { get; set; }
 
         #endregion
 
+        #region Guardian controller
+
+        public int GuardianControllerMaxRetryForUserCommands { get; set; }
+        public int GuardianControllerMaxRetryForOtherCommands { get; set; }
 
         #region Grpc
 
-
-        public int PadisControllerGrpcServerCommandCount { get; set; }
-        public int PadisControllerGrpcServerPort { get; set; }
-        public int PadisControllerGrpcCommandTimerIntervalInMillisecond { get; set; }
-        public int PadisControllerGrpcServerTimeoutShortInMillisecond { get; set; }
-        public int PadisControllerGrpcServerTimeoutLongInMillisecond { get; set; }
-        public int PadisControllerGrpcServerTimeoutVeryLongInMillisecond { get; set; }
+        public int GuardianControllerGrpcServerCommandCount { get; set; }
+        public int GuardianControllerGrpcServerPort { get; set; }
+        public int GuardianControllerGrpcCommandTimerIntervalInMillisecond { get; set; }
+        public int GuardianControllerGrpcServerTimeoutShortInMillisecond { get; set; }
+        public int GuardianControllerGrpcServerTimeoutLongInMillisecond { get; set; }
+        public int GuardianControllerGrpcServerTimeoutVeryLongInMillisecond { get; set; }
 
         #endregion
 

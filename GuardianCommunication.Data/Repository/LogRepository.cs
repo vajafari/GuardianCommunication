@@ -49,7 +49,8 @@ namespace GuardianCommunication.Data.Repository
                     loggerData.Source,
                     loggerData.EventId,
                     loggerData.Message,
-                    loggerData.RegisterDateTime,
+                    // زمان در دیتابیس UTC ذخیره می شود
+                    RegisterDateTime = loggerData.RegisterDateTime.ToUniversalTime(),
                     Checksum = loggerData.GetChecksum(),
                 });
             }
@@ -68,7 +69,8 @@ namespace GuardianCommunication.Data.Repository
                     loggerData.Source,
                     loggerData.EventId,
                     loggerData.Message,
-                    loggerData.RegisterDateTime,
+                    // زمان در دیتابیس UTC ذخیره می شود
+                    RegisterDateTime = loggerData.RegisterDateTime.ToUniversalTime(),
                     Checksum = loggerData.GetChecksum(),
                 });
             }

@@ -1,5 +1,7 @@
 ﻿using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Hardware.GuardianController;
+using GuardianCommunication.Hardware.GuardianController.Definition;
 using GuardianCommunication.Hardware.Shared.Helpers;
 using GuardianCommunication.Hardware.Suprema;
 using GuardianCommunication.Hardware.Timy;
@@ -52,7 +54,8 @@ namespace GuardianCommunication.Business.Component
                         });
                         continue;
                     }
-                    if (deviceInfo.ConnectionMode != DeviceConnectionModeEnumeration.Push)
+                    // برد کنترلر گاردین در Standalone هم کاربر می گیرد: API برد همان لحظه صدا زده می شود (مثل کارنما)
+                    if (deviceInfo.ConnectionMode != DeviceConnectionModeEnumeration.Push && deviceInfo.ProducerNumber != ProducerEnumeration.Guardian)
                     {
                         result.Add(new DtoUserAndDeviceResult
                         {
@@ -301,6 +304,30 @@ namespace GuardianCommunication.Business.Component
                                 }
                             }
                             break;
+                        case ProducerEnumeration.Guardian:
+                            {
+                                // کاربری که روی این برد نه گروه دسترسی دارد و نه دسترسی آسان از برد حذف می شود؛ برد خودش بازه اعتبار کاربر را اعمال می کند
+                                var operationResult = OperationResultEnumeration.CommunicationStatusSuccessful;
+                                try
+                                {
+                                    GuardianControllerSetUserInfo(deviceInfo, userAndDeviceInfo, commandConfig, commandComponent);
+                                }
+                                catch (OperationCannotBeDoneException exp)
+                                {
+                                    // در Standalone خطای برد نتیجه همین کاربر و دستگاه است و بقیه ادامه می یابند
+                                    LoggingSystem.LogError(exp, "Error on guardian controller set user info", new { deviceInfo.Id, userAndDeviceInfo.UserInfo.UserIdOnDevice });
+                                    operationResult = exp.OperationResult.Errors.IsCollectionNotNullOrEmpty()
+                                        ? exp.OperationResult.Errors.First()
+                                        : OperationResultEnumeration.CommunicationStatusUnknownError;
+                                }
+                                result.Add(new DtoUserAndDeviceResult
+                                {
+                                    DeviceId = deviceInfo.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                                    Result = operationResult
+                                });
+                            }
+                            break;
                         default:
                             result.Add(new DtoUserAndDeviceResult
                             {
@@ -358,7 +385,8 @@ namespace GuardianCommunication.Business.Component
                         });
                         continue;
                     }
-                    if (deviceInCache.ConnectionMode != DeviceConnectionModeEnumeration.Push)
+                    // برد کنترلر گاردین در Standalone هم کاربر حذف می کند: API برد همان لحظه صدا زده می شود (مثل کارنما)
+                    if (deviceInCache.ConnectionMode != DeviceConnectionModeEnumeration.Push && deviceInCache.ProducerNumber != ProducerEnumeration.Guardian)
                     {
                         result.Add(new DtoUserAndDeviceResult
                         {
@@ -592,6 +620,58 @@ namespace GuardianCommunication.Business.Component
                                 }
                             }
                             break;
+                        case ProducerEnumeration.Guardian:
+                            {
+                                // کاربر موقتی که اعتبارش هنوز شروع نشده روی برد نیست و حذفی لازم ندارد
+                                var mustDelete = userAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.PermanentUser
+                                                 || (userAndDeviceInfo.UserInfo.UserType == DeviceUserTypeEnumeration.TempUser
+                                                     && userAndDeviceInfo.UserInfo.StartDateTime < DateTime.Now);
+                                RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
+                                var operationResult = OperationResultEnumeration.CommunicationStatusSuccessful;
+                                if (mustDelete)
+                                {
+                                    try
+                                    {
+                                        switch (deviceInCache.ConnectionMode)
+                                        {
+                                            case DeviceConnectionModeEnumeration.Push:
+                                                var command = GuardianControllerPushCommands.GetDeleteUserCommand(
+                                                    deviceInCache,
+                                                    userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                                                    commandConfig.MaxRetryForUserCommand,
+                                                    null,
+                                                    null,
+                                                    userAndDeviceInfo.CommandPriority,
+                                                    userAndDeviceInfo.CommandIdentifier);
+                                                commandComponent.Insert(command);
+                                                break;
+                                            case DeviceConnectionModeEnumeration.Standalone:
+                                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInCache))
+                                                {
+                                                    deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.UserIdOnDevice);
+                                                }
+                                                break;
+                                            default:
+                                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                                        }
+                                    }
+                                    catch (OperationCannotBeDoneException exp)
+                                    {
+                                        // در Standalone خطای برد نتیجه همین کاربر و دستگاه است و بقیه ادامه می یابند
+                                        LoggingSystem.LogError(exp, "Error on guardian controller delete user", new { deviceInCache.Id, userAndDeviceInfo.UserInfo.UserIdOnDevice });
+                                        operationResult = exp.OperationResult.Errors.IsCollectionNotNullOrEmpty()
+                                            ? exp.OperationResult.Errors.First()
+                                            : OperationResultEnumeration.CommunicationStatusUnknownError;
+                                    }
+                                }
+                                result.Add(new DtoUserAndDeviceResult
+                                {
+                                    DeviceId = deviceInCache.Id,
+                                    UserIdOnDevice = userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                                    Result = operationResult
+                                });
+                            }
+                            break;
                         default:
                             result.Add(new DtoUserAndDeviceResult
                             {
@@ -709,6 +789,26 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 break;
                         }
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Push:
+                            {
+                                var command = GuardianControllerPushCommands.GetRebootCommand(deviceInfo, 1, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                            }
+                            break;
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                deviceDriver.RebootDevice();
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                     }
                     break;
                 default:
@@ -1004,6 +1104,10 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    // برد گاردین قالب بیومتریک ندارد؛ کاربری که روی این برد نه گروه دسترسی دارد و نه دسترسی آسان از آن حذف می شود
+                    GuardianControllerSetUserInfo(deviceInfo, userAndDeviceInfo, commandConfig, commandComponent);
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -1119,6 +1223,19 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                result = deviceDriver.GetUserInfoByUserIdOnDevice(userIdOnDevice);
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -1182,6 +1299,12 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 break;
                         }
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                    {
+                        result = deviceDriver.GetAllUsers();
                     }
                     break;
                 default:
@@ -1287,6 +1410,20 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                deviceDriver.SetDateTime(DateTime.UtcNow);
+                            }
+                            break;
+                        default:
+                            // در Push برد خودش ساعت را از سرور می گیرد (پاسخ hello و time_request)
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -1352,6 +1489,17 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                return deviceDriver.GetDateTime();
+                            }
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
             }
             throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
         }
@@ -1390,6 +1538,11 @@ namespace GuardianCommunication.Business.Component
                             default:
                                 throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                         }
+                    }
+                case ProducerEnumeration.Guardian:
+                    using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                    {
+                        return deviceDriver.GetFirmwareVersion();
                     }
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
@@ -1539,6 +1692,27 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Push:
+                            {
+                                var command = GuardianControllerPushCommands.GetClearDataCommand
+                                    (deviceInfo, DeviceLogTypeEnumeration.Attendance, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                            }
+                            break;
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                deviceDriver.ClearData();
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -1620,6 +1794,19 @@ namespace GuardianCommunication.Business.Component
                                 }
                                 break;
                         }
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                result = deviceDriver.GetRecordCount();
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                     }
                     break;
                 default:
@@ -1904,6 +2091,19 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                result = deviceDriver.GetUserCount();
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -2075,6 +2275,38 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                {
+                                    var commands = new List<DtoDeviceCommand>
+                                    {
+                                        GuardianControllerPushCommands.GetDeleteUserCommand(
+                                            deviceInfo,
+                                            userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                                            commandConfig.MaxRetryForUserCommand,
+                                            null,
+                                            null,
+                                            userAndDeviceInfo.CommandPriority,
+                                            userAndDeviceInfo.CommandIdentifier)
+                                    };
+                                    RemoveNecessaryCommandsOnRemoveUser(userAndDeviceInfo, commandComponent);
+                                    commandComponent.Insert(commands);
+                                }
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.UserIdOnDevice);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -2222,6 +2454,36 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var commands = new List<DtoDeviceCommand>
+                                {
+                                    GuardianControllerPushCommands.GetDeleteUserCommand(
+                                        deviceInfo,
+                                        userIdOnDevice,
+                                        commandConfig.MaxRetryForUserCommand,
+                                        null,
+                                        null,
+                                        null)
+                                };
+                                commandComponent.DeleteNotSentByUserIdOnDeviceAndCommandTypes
+                                    (userIdOnDevice, deviceInfo.Id, GuardianControllerPushCommands.GetDefineAndDeleteUserCommandTypes());
+                                commandComponent.Insert(commands);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteUserById(userIdOnDevice);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -2336,6 +2598,27 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Push:
+                            {
+                                var command = GuardianControllerPushCommands.GetClearDataCommand
+                                    (deviceInfo, DeviceLogTypeEnumeration.Users, commandConfig.MaxRetryForUserCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                            }
+                            break;
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                deviceDriver.DeleteAllUsers();
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -2403,6 +2686,14 @@ namespace GuardianCommunication.Business.Component
                             default:
                                 result = string.Empty;
                                 return result;
+                        }
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    {
+                        using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                        {
+                            result = deviceDriver.GetSerialNumber();
                         }
                     }
                     break;
@@ -2509,6 +2800,34 @@ namespace GuardianCommunication.Business.Component
                                 }
 
                                 break;
+                        }
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Push)
+                    {
+                        // در Push اتصال زنده gRPC برد بررسی می شود
+                        return GuardianControllerServer.Instance.GetConnectedDeviceIds().Contains(deviceInfo.Id)
+                            ? OperationResultEnumeration.CommunicationStatusSuccessful
+                            : OperationResultEnumeration.CommunicationStatusCannotConnect;
+                    }
+                    using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                    {
+                        try
+                        {
+                            result = !deviceDriver.TestConnection()
+                                ? OperationResultEnumeration.CommunicationStatusCannotConnect
+                                : OperationResultEnumeration.CommunicationStatusSuccessful;
+                        }
+                        catch (OperationCannotBeDoneException exp)
+                        {
+                            return exp.OperationResult.Errors.IsCollectionNotNullOrEmpty()
+                                ? exp.OperationResult.Errors.First()
+                                : OperationResultEnumeration.CommunicationStatusCannotConnect;
+                        }
+                        catch (Exception)
+                        {
+                            return OperationResultEnumeration.CommunicationStatusCannotConnect;
                         }
                     }
                     break;
@@ -2706,6 +3025,35 @@ namespace GuardianCommunication.Business.Component
                                 }
                             }
                             break;
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                try
+                                {
+                                    result.CountOfUsers = deviceDriver.GetUserCount();
+                                }
+                                catch (Exception exp)
+                                {
+                                    LoggingSystem.LogError(exp);
+                                }
+
+                                try
+                                {
+                                    result.CountOfUnreadAttendance = deviceDriver.GetRecordCount();
+                                }
+                                catch (Exception exp)
+                                {
+                                    LoggingSystem.LogError(exp);
+                                }
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                     }
                     break;
                 default:
@@ -3462,6 +3810,28 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    // درب برد با شناسه درب شناخته می شود و به اندازه مدت باز ماندن قفل در پیکربندی درب باز می ماند
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Push:
+                            {
+                                var command = GuardianControllerPushCommands.GetChangeDoorStatusCommand
+                                    (deviceInfo, doorInfo.Id, GuardianControllerDoorActionEnumeration.OpenMomentary, null, 1, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                            }
+                            break;
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                deviceDriver.ChangeDoorStatus(doorInfo.Id, GuardianControllerDoorActionEnumeration.OpenMomentary, null);
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -3559,6 +3929,27 @@ namespace GuardianCommunication.Business.Component
                             default:
                                 throw new ArgumentOutOfRangeException();
                         }
+                    }
+                    break;
+                case ProducerEnumeration.Guardian:
+                    switch (deviceInfo.ConnectionMode)
+                    {
+                        case DeviceConnectionModeEnumeration.Push:
+                            {
+                                var command = GuardianControllerPushCommands.GetChangeDoorStatusCommand
+                                    (deviceInfo, doorInfo.Id, GuardianControllerDoorActionEnumeration.OpenMomentary, delayInSecond, 1, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                            }
+                            break;
+                        case DeviceConnectionModeEnumeration.Standalone:
+                            using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                            {
+                                deviceDriver.ChangeDoorStatus(doorInfo.Id, GuardianControllerDoorActionEnumeration.OpenMomentary, delayInSecond);
+                            }
+                            break;
+                        default:
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
                     }
                     break;
                 default:
@@ -3781,6 +4172,567 @@ namespace GuardianCommunication.Business.Component
         #endregion
 
 
+        #region Guardian Controller
+
+        // در Standalone همان لحظه API برد با GuardianControllerOnDemandAdapter صدا زده می شود و خطای برد به گاردین برمی گردد (مثل کارنما)؛
+        // در Push دستور در صف دستورها می ماند تا GuardianControllerServer آن را روی استریم gRPC بفرستد
+
+        /// <summary>
+        /// ارسال قالب تقویم (چرخه چندروزه) به برد کنترلر گاردین؛ تقویم های بر اساس الگو روی برد با شماره قالب به آن می رسند
+        /// </summary>
+        public void GuardianControllerSetCalendarTemplate(Guid deviceId, DtoGuardianControllerCalendarTemplate calendarTemplate)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetCalendarTemplateCommand
+                                    (deviceInfo, calendarTemplate, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.SetCalendarTemplate(calendarTemplate);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// حذف قالب های تقویم از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        public void GuardianControllerDeleteCalendarTemplate(Guid deviceId, List<Guid> calendarTemplateIds)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetDeleteCalendarTemplateCommand
+                                    (deviceInfo, calendarTemplateIds, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteCalendarTemplates(calendarTemplateIds);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// ارسال تقویم به برد کنترلر گاردین
+        /// </summary>
+        public void GuardianControllerSetCalendar(Guid deviceId, DtoGuardianControllerCalendar calendar)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetCalendarCommand
+                                    (deviceInfo, calendar, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.SetCalendar(calendar);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// حذف تقویم ها از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        public void GuardianControllerDeleteCalendar(Guid deviceId, List<Guid> calendarIds)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetDeleteCalendarCommand
+                                    (deviceInfo, calendarIds, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteCalendars(calendarIds);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// ارسال سطح دسترسی (درب های همین برد) به برد کنترلر گاردین
+        /// </summary>
+        public void GuardianControllerSetAccessLevel(Guid deviceId, DtoGuardianControllerAccessLevel accessLevel)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetAccessLevelCommand
+                                    (deviceInfo, accessLevel, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.SetAccessLevel(accessLevel);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// حذف سطح های دسترسی از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        public void GuardianControllerDeleteAccessLevel(Guid deviceId, List<Guid> accessLevelIds)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetDeleteAccessLevelCommand
+                                    (deviceInfo, accessLevelIds, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteAccessLevels(accessLevelIds);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// ارسال گروه دسترسی به برد کنترلر گاردین
+        /// </summary>
+        public void GuardianControllerSetAccessGroup(Guid deviceId, DtoGuardianControllerAccessGroup accessGroup)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetAccessGroupCommand
+                                    (deviceInfo, accessGroup, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.SetAccessGroup(accessGroup);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// حذف گروه های دسترسی از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        public void GuardianControllerDeleteAccessGroup(Guid deviceId, List<Guid> accessGroupIds)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetDeleteAccessGroupCommand
+                                    (deviceInfo, accessGroupIds, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteAccessGroups(accessGroupIds);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// ثبت یا به روزرسانی جداگانه دسترسی های آسان روی برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        public void GuardianControllerSetEasyAccess(Guid deviceId, List<DtoGuardianControllerEasyAccess> easyAccesses)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetSetEasyAccessCommand
+                                    (deviceInfo, easyAccesses, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.SetEasyAccesses(easyAccesses);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// حذف جداگانه دسترسی های آسان از برد کنترلر گاردین (با شناسه)
+        /// </summary>
+        public void GuardianControllerDeleteEasyAccess(Guid deviceId, List<DtoGuardianControllerEasyAccess> easyAccesses)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            var easyAccessIds = easyAccesses.Select(easyAccess => easyAccess.EasyAccessId).ToList();
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetDeleteEasyAccessCommand
+                                    (deviceInfo, easyAccessIds, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.DeleteEasyAccesses(easyAccessIds);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// ارسال پیکربندی سخت افزار (درب های فعال با رله ها و ویگند، و ورودی/خروجی های فعال برد) به برد کنترلر گاردین
+        /// </summary>
+        public void GuardianControllerSetHardwareConfig(Guid deviceId, List<DtoGuardianControllerHardwareConfigDoor> doors,
+            List<DtoGuardianControllerHardwareConfigIoPort> ioPorts)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetHardwareConfigCommand
+                                    (deviceInfo, doors, ioPorts, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.SetHardwareConfig(doors, ioPorts);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// پایان همگام سازی کامل برد کنترلر گاردین: برد هر چیزی را که در این فهرست ها نیست حذف می کند
+        /// </summary>
+        public void GuardianControllerKeepOnly(Guid deviceId, DtoGuardianControllerKeepOnly keepOnly)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            CheckActiveProducer(deviceInfo);
+            var commandConfigComponent = new SystemConfigComponent(RepositoryFactory);
+            var commandConfig = commandConfigComponent.GetCommandSettingFromCache(deviceInfo.ProducerNumber, deviceInfo.SdkVersion);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetKeepOnlyCommand
+                                    (deviceInfo, keepOnly, commandConfig.MaxRetryForOtherCommand, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.KeepOnly(keepOnly);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// باز نگه داشتن دائم درب برد کنترلر گاردین
+        /// </summary>
+        public void OpenGuardianControllerDoorPermanent(Guid deviceId, Guid doorId)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            var doorInfo = GetDoorFromCache(doorId);
+            CheckActiveProducer(deviceInfo);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetChangeDoorStatusCommand
+                                    (deviceInfo, doorInfo.Id, GuardianControllerDoorActionEnumeration.Unlock, null, 1, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.ChangeDoorStatus(doorInfo.Id, GuardianControllerDoorActionEnumeration.Unlock, null);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// برگرداندن درب برد کنترلر گاردین از حالت باز یا بسته دائم به حالت عادی
+        /// </summary>
+        public void CloseGuardianControllerDoorPermanent(Guid deviceId, Guid doorId)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            var doorInfo = GetDoorFromCache(doorId);
+            CheckActiveProducer(deviceInfo);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetChangeDoorStatusCommand
+                                    (deviceInfo, doorInfo.Id, GuardianControllerDoorActionEnumeration.Normal, null, 1, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.ChangeDoorStatus(doorInfo.Id, GuardianControllerDoorActionEnumeration.Normal, null);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        /// <summary>
+        /// بسته نگه داشتن دائم درب برد کنترلر گاردین؛ با تردد مجاز هم باز نمی شود تا به حالت عادی برگردد
+        /// </summary>
+        public void LockGuardianControllerDoorPermanent(Guid deviceId, Guid doorId)
+        {
+            var deviceInfo = GetDeviceFromCache(deviceId);
+            var doorInfo = GetDoorFromCache(doorId);
+            CheckActiveProducer(deviceInfo);
+            switch (deviceInfo.ProducerNumber)
+            {
+                case ProducerEnumeration.Guardian:
+                    {
+                        switch (deviceInfo.ConnectionMode)
+                        {
+                            case DeviceConnectionModeEnumeration.Push:
+                                var command = GuardianControllerPushCommands.GetChangeDoorStatusCommand
+                                    (deviceInfo, doorInfo.Id, GuardianControllerDoorActionEnumeration.Lock, null, 1, null, null, null);
+                                var commandComponent = new DeviceCommandComponent(RepositoryFactory);
+                                commandComponent.Insert(command);
+                                break;
+                            case DeviceConnectionModeEnumeration.Standalone:
+                                using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                                {
+                                    deviceDriver.ChangeDoorStatus(doorInfo.Id, GuardianControllerDoorActionEnumeration.Lock, null);
+                                }
+                                break;
+                            default:
+                                throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+            }
+        }
+
+        #endregion
+
         #region Internal Method
 
         internal DtoAttendanceSaveResult DownloadAndSaveUnreadAttendancesFromSdk(DtoDevice deviceInfo)
@@ -3814,6 +4766,62 @@ namespace GuardianCommunication.Business.Component
                 {
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusProducerNotSupport);
                 }
+            }
+        }
+
+        /// <summary>
+        /// ثبت کاربر روی برد کنترلر گاردین، یا حذف او وقتی روی این برد نه گروه دسترسی دارد و نه دسترسی آسان؛
+        /// در Push دستور در صف قرار می گیرد و در Standalone همان لحظه API برد صدا زده می شود
+        /// </summary>
+        private void GuardianControllerSetUserInfo(DtoDevice deviceInfo, DtoUserAndDeviceParam userAndDeviceInfo
+            , DtoSystemConfigDeviceCommandSetting commandConfig, DeviceCommandComponent commandComponent)
+        {
+            var userGroupIds = userAndDeviceInfo.UserInfo.GuardianControllerUserAccessData?.UserGroupIds;
+            var easyAccesses = userAndDeviceInfo.UserInfo.GuardianControllerUserAccessData?.EasyAccesses;
+            var mustDefine = userGroupIds.IsCollectionNotNullOrEmpty() || easyAccesses.IsCollectionNotNullOrEmpty();
+            switch (deviceInfo.ConnectionMode)
+            {
+                case DeviceConnectionModeEnumeration.Push:
+                    {
+                        var commands = new List<DtoDeviceCommand>
+                        {
+                            mustDefine
+                                ? GuardianControllerPushCommands.GetDefineUserCommand(
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo,
+                                    commandConfig.MaxRetryForUserCommand,
+                                    null,
+                                    null,
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier)
+                                : GuardianControllerPushCommands.GetDeleteUserCommand(
+                                    deviceInfo,
+                                    userAndDeviceInfo.UserInfo.UserIdOnDevice,
+                                    commandConfig.MaxRetryForUserCommand,
+                                    null,
+                                    null,
+                                    userAndDeviceInfo.CommandPriority,
+                                    userAndDeviceInfo.CommandIdentifier)
+                        };
+                        RemoveNecessaryCommandsOnEnrollUser(userAndDeviceInfo, commandComponent);
+                        commandComponent.Insert(commands);
+                    }
+                    break;
+                case DeviceConnectionModeEnumeration.Standalone:
+                    using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                    {
+                        if (mustDefine)
+                        {
+                            deviceDriver.SetUserInfo(userAndDeviceInfo.UserInfo);
+                        }
+                        else
+                        {
+                            deviceDriver.DeleteUserById(userAndDeviceInfo.UserInfo.UserIdOnDevice);
+                        }
+                    }
+                    break;
+                default:
+                    throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
         }
 
@@ -4100,6 +5108,62 @@ namespace GuardianCommunication.Business.Component
                         }
                     }
                     break;
+                case ProducerEnumeration.Guardian:
+                    {
+                        // در Push برد خودش ترددها را روی استریم gRPC می فرستد
+                        if (deviceInfo.ConnectionMode == DeviceConnectionModeEnumeration.Push)
+                        {
+                            throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
+                        }
+
+                        var deviceComponent = new DeviceComponent(RepositoryFactory);
+                        var deviceCommunicationData = deviceComponent
+                            .GetDeviceCommunicationDataByDeviceIds(new List<Guid> { deviceInfo.Id })
+                            .FirstOrDefault();
+                        var lastLogDateTime = deviceCommunicationData?.DeviceCommunicationData?.GuardianController?.LastAttendanceLogDateTime;
+                        using (var deviceDriver = new GuardianControllerOnDemandAdapter(deviceInfo))
+                        {
+                            result.AddRange(lastLogDateTime.HasValue
+                                ? deviceDriver.GetAttendances(lastLogDateTime.Value, DateTime.UtcNow)
+                                : deviceDriver.GetAttendances(DateTime.UtcNow.AddDays(-30), DateTime.UtcNow));
+                        }
+
+                        if (result.IsCollectionNotNullOrEmpty())
+                        {
+                            var lastReadTime = result.Max(row => row.AttendanceDateTime);
+                            if (deviceCommunicationData != null)
+                            {
+                                if (deviceCommunicationData.DeviceCommunicationData == null)
+                                {
+                                    deviceCommunicationData.DeviceCommunicationData =
+                                        new DtoDeviceCommunicationDataJsonEntity();
+                                }
+
+                                if (deviceCommunicationData.DeviceCommunicationData.GuardianController == null)
+                                {
+                                    deviceCommunicationData.DeviceCommunicationData.GuardianController =
+                                        new DtoDeviceCommunicationDataGuardianController();
+                                }
+                                deviceCommunicationData.DeviceCommunicationData.GuardianController.LastAttendanceLogDateTime = lastReadTime;
+                            }
+                            else
+                            {
+                                deviceCommunicationData = new DtoDeviceCommunicationData
+                                {
+                                    DeviceId = deviceInfo.Id,
+                                    DeviceCommunicationData = new DtoDeviceCommunicationDataJsonEntity
+                                    {
+                                        GuardianController = new DtoDeviceCommunicationDataGuardianController
+                                        {
+                                            LastAttendanceLogDateTime = lastReadTime
+                                        }
+                                    }
+                                };
+                            }
+                            deviceComponent.SaveDeviceCommunicationDataInfo(deviceCommunicationData);
+                        }
+                    }
+                    break;
                 default:
                     throw new OperationCannotBeDoneException(OperationResultEnumeration.CommunicationStatusNotSupport);
             }
@@ -4262,6 +5326,9 @@ namespace GuardianCommunication.Business.Component
                 case ProducerEnumeration.Virdi:
                     commandTypes = VirdiCommands.GetDefineAndDeleteUserCommandTypes();
                     break;
+                case ProducerEnumeration.Guardian:
+                    commandTypes = GuardianControllerPushCommands.GetDefineAndDeleteUserCommandTypes();
+                    break;
             }
 
             if (commandTypes.IsCollectionNotNullOrEmpty())
@@ -4349,6 +5416,9 @@ namespace GuardianCommunication.Business.Component
                     break;
                 case ProducerEnumeration.Virdi:
                     commandTypes = VirdiCommands.GetDefineAndDeleteUserCommandTypes();
+                    break;
+                case ProducerEnumeration.Guardian:
+                    commandTypes = GuardianControllerPushCommands.GetDefineAndDeleteUserCommandTypes();
                     break;
             }
 

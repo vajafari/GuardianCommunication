@@ -14,6 +14,11 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public List<string> RfCardNumbers { get; set; } = [];
         [DataMember]
         public string UserName { get; set; }
+        /// <summary>
+        /// جنسیت کاربر: 1 آقا، 2 خانم؛ خالی برای کاربری که شخص نیست. فقط برد کنترلر گاردین آن را به کار می برد
+        /// </summary>
+        [DataMember]
+        public short? Gender { get; set; }
         [DataMember]
         public string Password { get; set; }
         [DataMember]
@@ -46,6 +51,11 @@ namespace GuardianCommunication.Shared.CommunicationModels
         public DeviceUserTypeEnumeration UserType { get; set; }
         [DataMember]
         public bool StartAndEndHasTime { get; set; }
+        /// <summary>
+        /// داده‌های دسترسی کاربر روی بورد کنترلر گاردین
+        /// </summary>
+        [DataMember]
+        public GuardianControllerUserAccessDataModel GuardianControllerUserAccessData { get; set; }
 
 
 

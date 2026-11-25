@@ -54,6 +54,7 @@ namespace GuardianCommunication.Shared.Dto
         public DtoSuprema2DeviceSettings Suprema2DeviceSettings { get; set; } = new DtoSuprema2DeviceSettings();
         public DtoTimyDeviceSettings TimyDeviceSettings { get; set; } = new DtoTimyDeviceSettings();
         public DtoZkDeviceSettings ZkDeviceSettings { get; set; } = new DtoZkDeviceSettings();
+        public DtoGuardianControllerDeviceSettings GuardianControllerDeviceSettings { get; set; } = new DtoGuardianControllerDeviceSettings();
     }
 
 
@@ -76,5 +77,16 @@ namespace GuardianCommunication.Shared.Dto
     public class DtoTimyDeviceSettings
     {
         public bool IsUserId32Bit { get; set; } = false;
+    }
+
+    /// <summary>
+    /// تنظیمات برد کنترلر گاردین
+    /// </summary>
+    public class DtoGuardianControllerDeviceSettings
+    {
+        /// <summary>
+        /// API برد در حالت Standalone با https صدا زده شود (پیش‌فرض http)
+        /// </summary>
+        public bool UseHttps { get; set; } = false;
     }
 }

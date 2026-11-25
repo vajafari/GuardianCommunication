@@ -14,6 +14,11 @@ namespace GuardianCommunication.Shared.Dto
 
         public string UserName { get; set; }
 
+        /// <summary>
+        /// جنسیت کاربر: 1 آقا، 2 خانم؛ خالی برای کاربری که شخص نیست. فقط برد کنترلر گاردین آن را به کار می برد
+        /// </summary>
+        public short? Gender { get; set; }
+
         public string Password { get; set; }
 
         public int Privilege { get; set; }
@@ -45,6 +50,11 @@ namespace GuardianCommunication.Shared.Dto
         public byte[] HardwareProfileImage { get; set; }
 
         public DeviceUserTypeEnumeration UserType { get; set; }
+
+        /// <summary>
+        /// داده‌های دسترسی کاربر روی بورد کنترلر گاردین
+        /// </summary>
+        public DtoGuardianControllerUserAccessData GuardianControllerUserAccessData { get; set; }
 
         public void ClearTemplateData()
         {

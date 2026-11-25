@@ -11,43 +11,6 @@ namespace GuardianCommunication.Shared.CommunicationModels
     public static class CommunicationModelMapper
     {
 
-        public static DtoAttendance MapOtherResourcesAttendanceModelToDtoAttendance(OtherResourcesAttendanceModel attendance)
-        {
-            return new DtoAttendance
-            {
-                DeviceId = attendance.DeviceId,
-                ReaderDeviceId = attendance.ReaderDeviceId,
-                UserIdOnDevice = attendance.UserIdOnDevice,
-                VerificationStyle = attendance.VerificationStyle,
-                AttendanceDateTime = attendance.AttendanceDateTime.FromNumericDateTime(),
-                AttendanceSource = attendance.AttendanceSource,
-                IsSentToGuardian = attendance.IsSentToGuardian,
-                Id = attendance.Id,
-                StatusCode = attendance.StatusCode,
-                ModuleId = attendance.ModuleId,
-                IoType = attendance.IoType,
-                RfCardNumber = attendance.RfCardNumber,
-                CameraId = attendance.CameraId,
-                DeviceAttendanceIoRetrieveType = null,
-                DoorId = attendance.DoorId,
-                LocationId = attendance.LocationId,
-            };
-        }
-
-        public static List<DtoAttendance> MapOtherResourcesAttendanceModelToDtoAttendance(List<OtherResourcesAttendanceModel> inputItems)
-        {
-            var result = new List<DtoAttendance>();
-            if (inputItems.IsCollectionNullOrEmpty())
-            {
-                return result;
-            }
-            foreach (var attendance in inputItems)
-            {
-                result.Add(MapOtherResourcesAttendanceModelToDtoAttendance(attendance));
-            }
-            return result;
-        }
-
         //public static List<DtoAttendance> MapDeviceAttendanceModelToDtoAttendance(List<DeviceAttendanceModel> inputItems)
         //{
         //    var result = new List<DtoAttendance>();
@@ -149,14 +112,10 @@ namespace GuardianCommunication.Shared.CommunicationModels
         {
             return new ServerMatchDataModel
             {
-                Password = inputItem.Password,
                 RfCardNumber = inputItem.RfCardNumber,
                 DeviceId = inputItem.DeviceId,
-                MatchType = inputItem.MatchType,
                 EventDateTime = inputItem.EventDateTime,
-                TemplateData = inputItem.TemplateData != null ? Convert.ToBase64String(inputItem.TemplateData) : null,
                 UserIdOnDevice = inputItem.UserIdOnDevice,
-                TemplateType = inputItem.TemplateType,
                 DoorId = inputItem.DoorId,
             };
         }
@@ -468,6 +427,7 @@ namespace GuardianCommunication.Shared.CommunicationModels
                     : null,
                 StartDateTime = inputItem.StartDateTime,
                 UserName = inputItem.UserName,
+                Gender = inputItem.Gender,
                 UserType = inputItem.UserType,
             };
             return result;
@@ -529,8 +489,10 @@ namespace GuardianCommunication.Shared.CommunicationModels
                     : null,
                 StartDateTime = model.StartDateTime,
                 UserName = model.UserName,
+                Gender = model.Gender,
                 UserType = model.UserType,
                 StartAndEndHasTime = model.StartAndEndHasTime,
+                GuardianControllerUserAccessData = MapGuardianControllerUserAccessDataModelToDto(model.GuardianControllerUserAccessData),
             };
         }
 
@@ -632,5 +594,216 @@ namespace GuardianCommunication.Shared.CommunicationModels
                 IsConnected = inputItem.IsConnected,
             };
         }
+
+
+        #region Guardian Controller
+
+        /// <summary>
+        /// داده‌های دسترسی کاربر روی برد کنترلر گاردین؛ کاربری که از گاردین بدون این داده می‌آید داده‌ای ندارد
+        /// </summary>
+        public static DtoGuardianControllerUserAccessData MapGuardianControllerUserAccessDataModelToDto(GuardianControllerUserAccessDataModel inputItem)
+        {
+            if (inputItem == null)
+            {
+                return null;
+            }
+            return new DtoGuardianControllerUserAccessData
+            {
+                UserGroupIds = inputItem.UserGroupIds ?? [],
+                EasyAccesses = (inputItem.EasyAccesses ?? [])
+                    .Select(ii => new DtoGuardianControllerUserEasyAccess
+                    {
+                        EasyAccessId = ii.EasyAccessId,
+                        AccessLevelId = ii.AccessLevelId,
+                        CalendarId = ii.CalendarId,
+                        StartDateTime = ii.StartDateTime,
+                        EndDateTime = ii.EndDateTime,
+                        AttendanceCount = ii.AttendanceCount,
+                    })
+                    .ToList(),
+            };
+        }
+
+        public static DtoGuardianControllerCalendar MapGuardianControllerCalendarModelToDto(GuardianControllerCalendarModel inputItem)
+        {
+            if (inputItem == null)
+            {
+                return null;
+            }
+            return new DtoGuardianControllerCalendar
+            {
+                Id = inputItem.Id,
+                CalendarNumber = inputItem.CalendarNumber,
+                Title = inputItem.Title,
+                IsActive = inputItem.IsActive,
+                CalendarType = inputItem.CalendarType,
+                CalendarTemplateId = inputItem.CalendarTemplateId,
+                CycleStartDate = inputItem.CycleStartDate,
+                Details = (inputItem.Details ?? [])
+                    .Select(ii => new DtoGuardianControllerCalendarDetails
+                    {
+                        Id = ii.Id,
+                        Date = ii.Date,
+                        StartTime = ii.StartTime,
+                        EndTime = ii.EndTime,
+                        Audience = ii.Audience,
+                        Purpose = ii.Purpose,
+                    })
+                    .ToList(),
+            };
+        }
+
+        public static DtoGuardianControllerAccessLevel MapGuardianControllerAccessLevelModelToDto(GuardianControllerAccessLevelModel inputItem)
+        {
+            if (inputItem == null)
+            {
+                return null;
+            }
+            return new DtoGuardianControllerAccessLevel
+            {
+                Id = inputItem.Id,
+                AccessLevelNumber = inputItem.AccessLevelNumber,
+                Title = inputItem.Title,
+                IsActive = inputItem.IsActive,
+                DoorIds = inputItem.DoorIds ?? [],
+            };
+        }
+
+        public static DtoGuardianControllerAccessGroup MapGuardianControllerAccessGroupModelToDto(GuardianControllerAccessGroupModel inputItem)
+        {
+            if (inputItem == null)
+            {
+                return null;
+            }
+            return new DtoGuardianControllerAccessGroup
+            {
+                Id = inputItem.Id,
+                AccessGroupNumber = inputItem.AccessGroupNumber,
+                Title = inputItem.Title,
+                IsActive = inputItem.IsActive,
+                AccessData = (inputItem.AccessData ?? [])
+                    .Select(ii => new DtoGuardianControllerAccessGroupAccessData
+                    {
+                        Id = ii.Id,
+                        AccessLevelId = ii.AccessLevelId,
+                        CalendarId = ii.CalendarId,
+                    })
+                    .ToList(),
+            };
+        }
+
+        public static DtoGuardianControllerCalendarTemplate MapGuardianControllerCalendarTemplateModelToDto(GuardianControllerCalendarTemplateModel inputItem)
+        {
+            if (inputItem == null)
+            {
+                return null;
+            }
+            return new DtoGuardianControllerCalendarTemplate
+            {
+                Id = inputItem.Id,
+                CalendarTemplateNumber = inputItem.CalendarTemplateNumber,
+                Title = inputItem.Title,
+                DayCount = inputItem.DayCount,
+                Details = (inputItem.Details ?? [])
+                    .Select(ii => new DtoGuardianControllerCalendarTemplateDetails
+                    {
+                        Id = ii.Id,
+                        DayIndex = ii.DayIndex,
+                        StartTime = ii.StartTime,
+                        EndTime = ii.EndTime,
+                        Audience = ii.Audience,
+                        Purpose = ii.Purpose,
+                    })
+                    .ToList(),
+            };
+        }
+
+        public static List<DtoGuardianControllerEasyAccess> MapGuardianControllerEasyAccessModelToDto(List<GuardianControllerEasyAccessModel> inputItems)
+        {
+            return (inputItems ?? [])
+                .Select(ii => new DtoGuardianControllerEasyAccess
+                {
+                    EasyAccessId = ii.EasyAccessId,
+                    UserIdOnDevice = ii.PersonNumberOnDevice,
+                    AccessLevelId = ii.AccessLevelId,
+                    CalendarId = ii.CalendarId,
+                    StartDateTime = ii.StartDateTime,
+                    EndDateTime = ii.EndDateTime,
+                    AttendanceCount = ii.AttendanceCount,
+                })
+                .ToList();
+        }
+
+        public static DtoGuardianControllerKeepOnly MapGuardianControllerKeepOnlyModelToDto(GuardianControllerDeviceAndKeepOnlyModel inputItem)
+        {
+            return new DtoGuardianControllerKeepOnly
+            {
+                CalendarTemplateIds = inputItem.CalendarTemplateIds ?? [],
+                CalendarIds = inputItem.CalendarIds ?? [],
+                AccessLevelIds = inputItem.AccessLevelIds ?? [],
+                AccessGroupIds = inputItem.AccessGroupIds ?? [],
+                UserIdsOnDevice = inputItem.PersonNumbersOnDevice ?? [],
+            };
+        }
+
+        public static List<DtoGuardianControllerHardwareConfigDoor> MapGuardianControllerHardwareConfigDoorModelToDto(List<GuardianControllerHardwareConfigDoorModel> inputItems)
+        {
+            return (inputItems ?? [])
+                .Select(ii => new DtoGuardianControllerHardwareConfigDoor
+                {
+                    DoorId = ii.DoorId,
+                    DoorNumber = ii.DoorNumber,
+                    Title = ii.Title,
+                    DoorType = ii.DoorType,
+                    Relays = (ii.Relays ?? []).Select(relay => new DtoGuardianControllerHardwareConfigRelay
+                    {
+                        Id = relay.Id,
+                        RelayNumber = relay.RelayNumber,
+                        RelayType = relay.RelayType,
+                        ContactType = relay.ContactType,
+                        Title = relay.Title,
+                    }).ToList(),
+                    UnlockDurationInSecond = ii.UnlockDurationInSecond,
+                    DoorHeldTimeoutInSecond = ii.DoorHeldTimeoutInSecond,
+                    WiegandId = ii.WiegandId,
+                    WiegandNumber = ii.WiegandNumber,
+                    WiegandDirection = ii.WiegandDirection,
+                    WiegandDataType = ii.WiegandDataType,
+                    WiegandTitle = ii.WiegandTitle,
+                    MatchOnServerEnabled = ii.MatchOnServerEnabled,
+                    MatchOnServerLocalCheckEnabled = ii.MatchOnServerLocalCheckEnabled,
+                    OpenCalendarIds = ii.OpenCalendarIds ?? [],
+                    CloseCalendars = (ii.CloseCalendars ?? [])
+                        .Select(closeCalendar => new DtoGuardianControllerHardwareConfigCloseCalendar
+                        {
+                            Id = closeCalendar.Id,
+                            CalendarId = closeCalendar.CalendarId,
+                            AccessGroupId = closeCalendar.AccessGroupId,
+                        }).ToList(),
+                    MasterAccessPrimerGroupIds = ii.MasterAccessPrimerGroupIds ?? [],
+                    MasterAccessPrimerResetPeriod = ii.MasterAccessPrimerResetPeriod,
+                    MasterAccessPrimerResetTime = ii.MasterAccessPrimerResetTime,
+                    MasterAccessPrimerApplyToEnterOnly = ii.MasterAccessPrimerApplyToEnterOnly,
+                    MasterAccessPrimerToggleMode = ii.MasterAccessPrimerToggleMode,
+                })
+                .ToList();
+        }
+
+        public static List<DtoGuardianControllerHardwareConfigIoPort> MapGuardianControllerHardwareConfigIoPortModelToDto(List<GuardianControllerHardwareConfigIoPortModel> inputItems)
+        {
+            return (inputItems ?? [])
+                .Select(ii => new DtoGuardianControllerHardwareConfigIoPort
+                {
+                    Id = ii.Id,
+                    DoorId = ii.DoorId,
+                    IoNumber = ii.IoNumber,
+                    GpioType = ii.GpioType,
+                    ContactType = ii.ContactType,
+                    Title = ii.Title,
+                })
+                .ToList();
+        }
+
+        #endregion
     }
 }

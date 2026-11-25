@@ -137,6 +137,11 @@ namespace GuardianCommunication.Business.Cache
             return null;
         }
 
+        public void SetSystemConfigCache(DtoSystemConfig systemConfig)
+        {
+            _systemConfig = systemConfig;
+        }
+
         public void ResetSystemConfigCache()
         {
             _systemConfig = null;

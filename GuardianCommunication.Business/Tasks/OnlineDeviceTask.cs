@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using GuardianCommunication.Data.Logger;
+using GuardianCommunication.Hardware.GuardianController;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Suprema;
 using GuardianCommunication.Hardware.Timy;
@@ -58,6 +59,10 @@ namespace GuardianCommunication.Business.Tasks
                     if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Virdi))
                     {
                         deviceIds.AddRange(VirdiServer.Instance.GetConnectedDeviceIds());
+                    }
+                    if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Guardian))
+                    {
+                        deviceIds.AddRange(GuardianControllerServer.Instance.GetConnectedDeviceIds());
                     }
 
                     if (AppConfigs.LogLevelGeneral1.HasFlag(GeneralLogLevel1Enumeration.SendOnlineStatusTimer))

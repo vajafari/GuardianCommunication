@@ -1,5 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Data;
+using System.Linq;
 using System.Text;
 using Dapper;
 using GuardianCommunication.Shared.Definition;
@@ -15,6 +17,8 @@ namespace GuardianCommunication.Data.Repository
     public interface IHookDefinitionRepository
     {
         List<DtoHookDefinition> Search(PagingData<HookDefinitionFilter, HookDefinitionSortEnumeration> searchInfo);
+
+        void UpdateLastRunAt(Guid id, DateTime lastRunAt);
     }
 
 
@@ -53,6 +57,11 @@ namespace GuardianCommunication.Data.Repository
 									{0}    -- Search            
 				         ) tmp                        
 				 {2}    -- Paging";
+
+        private const string UpdateLastRunAtCommand =
+            @"	UPDATE [com].[HookDefinition]
+					SET [LastRunAt] = @LastRunAt
+				WHERE [Id] = @Id";
 
 
 
@@ -93,6 +102,7 @@ namespace GuardianCommunication.Data.Repository
             using (var connection = GetConnection())
             {
                 string commandText;
+                List<DtoHookDefinition> result;
                 if (searchInfo != null)
                 {
                     var whereClause = GetSearchClause(searchInfo.Filter);
@@ -102,13 +112,37 @@ namespace GuardianCommunication.Data.Repository
                     commandText = searchType == SearchTypeEnumeration.SimpleSearch
                         ? SelectCommand.FormatInvariantCulture(whereClause, orderByClause)
                         : SelectWithPagingCommand.FormatInvariantCulture(whereClause, orderByClause, pagingClause);
-                    return connection.Query<DtoHookDefinition>(commandText, searchInfo.Filter
+                    result = connection.Query<DtoHookDefinition>(commandText, searchInfo.Filter
                         , commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout).AsList();
                 }
+                else
+                {
+                    commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
+                    result = (connection.Query<DtoHookDefinition>(commandText,
+                        commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
+                }
 
-                commandText = SelectCommand.FormatInvariantCulture(string.Empty, string.Empty);
-                return (connection.Query<DtoHookDefinition>(commandText,
-                    commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout)).AsList();
+                // LastRunAt در دیتابیس UTC است و بیرون از این لایه به وقت محلی
+                foreach (var item in result.Where(item => item.LastRunAt.HasValue))
+                {
+                    item.LastRunAt = DateTime.SpecifyKind(item.LastRunAt.Value, DateTimeKind.Utc).ToLocalTime();
+                }
+                return result;
+            }
+        }
+
+        /// <summary>
+        /// ثبت زمان شروع آخرین اجرای یک ردیف زمان بند (به وقت محلی؛ UTC ذخیره می شود)
+        /// </summary>
+        public void UpdateLastRunAt(Guid id, DateTime lastRunAt)
+        {
+            using (var connection = GetConnection())
+            {
+                connection.Execute(UpdateLastRunAtCommand, new
+                {
+                    Id = id,
+                    LastRunAt = lastRunAt.ToUniversalTime(),
+                }, commandType: CommandType.Text, commandTimeout: ConnectionConfig.CommandTimeout);
             }
         }
 

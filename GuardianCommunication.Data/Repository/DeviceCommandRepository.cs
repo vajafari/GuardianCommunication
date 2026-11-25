@@ -140,7 +140,7 @@ namespace GuardianCommunication.Data.Repository
 						, tmp.[CommandContent] AS CommandContent
 						, tmp.[DeviceContent] AS DeviceContent
 				FROM    (
-				        SELECT  ROW_NUMBER() OVER (PARTITION BY dc.[DeviceId] ORDER BY dc.[Priority] DESC, dc.[RetryCount] ASC, dc.[CommitTime] ASC) RowNumber
+				        SELECT  ROW_NUMBER() OVER (PARTITION BY dc.[DeviceId] ORDER BY dc.[Priority] DESC, dc.[RetryCount] ASC, dc.[CommitTime] ASC, dc.[NumericId] ASC) RowNumber
 								, dc.[Id] AS Id
 								, dc.[NumericId] AS NumericId
 								, dc.[DeviceId] AS DeviceId
@@ -156,6 +156,7 @@ namespace GuardianCommunication.Data.Repository
                                 {1}
 				        ) tmp
 				WHERE   tmp.RowNumber <= @Count
+				ORDER BY tmp.[DeviceId], tmp.RowNumber
 			";
 
         private const string NotSendConditionForDeviceCommand =
@@ -164,11 +165,11 @@ namespace GuardianCommunication.Data.Repository
 						AND dc.[RetryCount] < dc.[MaxRetry]
 						AND (
 								dc.[VisiblilityTime] IS NULL
-								OR dc.[VisiblilityTime] <= GETDATE()
+								OR dc.[VisiblilityTime] <= GETUTCDATE()
 							)
 						AND (
 								dc.[Deadline] IS NULL 
-								OR dc.[Deadline] >= GETDATE()
+								OR dc.[Deadline] >= GETUTCDATE()
 							)";
 
         private const string SelectUnsentCommandsCountByDeviceNumberCommand =
@@ -492,7 +493,7 @@ namespace GuardianCommunication.Data.Repository
                         : @"AND dc.[ResponseTime] IS NULL
 								AND (
 									dc.[VisiblilityTime] IS NULL
-									OR dc.[VisiblilityTime] <= GETDATE()
+									OR dc.[VisiblilityTime] <= GETUTCDATE()
 								)
 						");
                 }
@@ -574,7 +575,7 @@ namespace GuardianCommunication.Data.Repository
             {
                 return connection.Query<DtoDeviceUnsentCommand>(
                     SelectUnsentCommandsForEachDeviceCommand.FormatInvariantCulture(NotSendConditionForDeviceCommand, sb.ToString())
-                    , new { filter.Count, filter.Producer, filter.SdkVersion, filter.DeviceNumbers, filter.DeviceSerialNumbers }
+                    , new { filter.Count, filter.Producer, filter.SdkVersion, filter.DeviceNumbers, filter.DeviceIds, filter.DeviceSerialNumbers }
                     , commandType: CommandType.Text
                     , commandTimeout: ConnectionConfig.CommandTimeout).AsList();
             }

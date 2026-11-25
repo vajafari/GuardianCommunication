@@ -36,7 +36,6 @@ namespace GuardianCommunication.Hardware.Virdi
 
         #region Variable
         private Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> _actionToGetCommands;
-        private Func<DtoServerMatchData, DtoServerMatchResult> _serverMatchProcessor;
         private readonly List<DtoDevice> _deviceList = new List<DtoDevice>();
         private Thread _deviceCommandsThread;
         private CancellationTokenSource _serverCts;
@@ -46,7 +45,6 @@ namespace GuardianCommunication.Hardware.Virdi
         private ITerminalUserData _terminalUserData;
         private IAccessLogData _accessLogData;
         private IServerUserData _serverUserData;
-        private IServerAuthentication _serverAuthentication;
         private const int NTemplateType400 = 400;
         private bool _isVirdiServerStarted;
         private VirdiServerConfig _config;
@@ -71,7 +69,6 @@ namespace GuardianCommunication.Hardware.Virdi
 
         public void StartVirdiServer(VirdiServerConfig config
             , Func<DeviceNotSentCommandsFilter, List<DtoDeviceUnsentCommand>> actionToGetCommands
-            , Func<DtoServerMatchData, DtoServerMatchResult> serverMatchProcessor
             , List<DtoDevice> deviceInfos)
         {
 
@@ -82,7 +79,6 @@ namespace GuardianCommunication.Hardware.Virdi
             LoggingSystem.LogInfo("Virdi Server started with config", config);
             _config = config;
             _actionToGetCommands = actionToGetCommands;
-            _serverMatchProcessor = serverMatchProcessor;
             var thread = new Thread(() => DelayedStartServer(deviceInfos)) { IsBackground = true };
             thread.Start();
         }
@@ -112,7 +108,6 @@ namespace GuardianCommunication.Hardware.Virdi
                 _ucsApi.EventWalkThroughData -= ucsAPI_EventWalkThroughData;
                 _ucsApi.EventRegistIris -= ucsAPI_EventRegistIris;
                 //_ucsApi.EventGetUserInfoList -= ucsAPI_EventGetUserInfoList;
-                _ucsApi.EventVerifyCard -= ucsAPI_EventVerifyCard;
                 _ucsApi.EventGetTerminalTime -= ucsAPI_OnEventGetTerminalTime;
 
                 _ucsApi.ServerStop();
@@ -186,7 +181,6 @@ namespace GuardianCommunication.Hardware.Virdi
                     _terminalUserData = _ucsApi.TerminalUserData as ITerminalUserData;
                     _accessLogData = _ucsApi.AccessLogData as IAccessLogData;
                     _serverUserData = _ucsApi.ServerUserData as IServerUserData;
-                    _serverAuthentication = _ucsApi.ServerAuthentication as IServerAuthentication;
 
                 }
 
@@ -214,7 +208,6 @@ namespace GuardianCommunication.Hardware.Virdi
                     _ucsApi.EventWalkThroughData += ucsAPI_EventWalkThroughData;
                     _ucsApi.EventRegistIris += ucsAPI_EventRegistIris;
                     //_ucsApi.EventGetUserInfoList += ucsAPI_EventGetUserInfoList;
-                    _ucsApi.EventVerifyCard += ucsAPI_EventVerifyCard;
                     _ucsApi.EventGetTerminalTime += ucsAPI_OnEventGetTerminalTime;
 
                     _isVirdiServerStarted = true;
@@ -1568,52 +1561,6 @@ namespace GuardianCommunication.Hardware.Virdi
             }
         }
 
-
-        #endregion
-
-        #region Match On Server
-
-
-        private void ucsAPI_EventVerifyCard(int terminalId, int authMode, int antiPassBackLevel, string rfidNumber)
-        {
-            if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.MatchOnServer))
-            {
-                LoggingSystem.LogInfo("Virdi Server Match on server card received", new { RfidNumber = rfidNumber, TerminalId = terminalId, AuthMode = authMode, AntiPassBackLevel = antiPassBackLevel });
-            }
-
-            var deviceInList = GetDeviceByTerminalId(terminalId);
-            if (deviceInList == null)
-            {
-                return;
-            }
-            var now = DateTime.UtcNow;
-
-            var authorizationResult = _serverMatchProcessor(new DtoServerMatchData
-            {
-                DeviceId = deviceInList.Id,
-                RfCardNumber = rfidNumber,
-                MatchType = ServerMatchingTypeEnumeration.Card,
-                EventDateTime = now,
-            });
-            if (AppConfigs.LogLevelVirdi.HasFlag(LogLevelVirdiEnumeration.MatchOnServer))
-            {
-                LoggingSystem.LogInfo("Virdi Server Match on server card result", new
-                {
-                    AuthResult = authorizationResult,
-                    RfidNumber = rfidNumber,
-                    TerminalId = terminalId,
-                    AuthMode = authMode,
-                    AntiPassBackLevel = antiPassBackLevel
-                });
-            }
-
-            var isAuthorized = authorizationResult.IsSuccessfullyProcessed ? 1 : 0;
-            _serverAuthentication.SetAuthType(1, 0, 0, 0, 1, 0);
-            _serverAuthentication.SetAuthTypeEx(0, 0, 0, 0, 0, 0, 0, 0);
-            // ReSharper disable PossibleInvalidOperationException
-            _serverAuthentication.SendAuthResultToTerminal(terminalId, (int)authorizationResult.UserIdOnDevice, 1, 0, isAuthorized, now.ToString("yyyy-MM-dd hh:mm:ss"), 0);
-            // ReSharper restore PossibleInvalidOperationException
-        }
 
         #endregion
 

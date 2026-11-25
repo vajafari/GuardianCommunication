@@ -108,11 +108,11 @@ namespace GuardianCommunication.ExternalServices.Shared
             {
                 request.Method = requestParams.Method.Value;
             }
-            //if (requestParams.RequestTimeout.HasValue)
-            //{
-            //    // 
-            //    //request.Timeout = ???
-            //}
+            // مهلت درخواست؛ بدون آن RestSharp صد ثانیه صبر می کند
+            if (requestParams.RequestTimeout.HasValue && requestParams.RequestTimeout.Value > TimeSpan.Zero)
+            {
+                request.Timeout = requestParams.RequestTimeout.Value;
+            }
 
             return request;
         }

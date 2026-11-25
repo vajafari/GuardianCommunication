@@ -142,7 +142,7 @@
     <Compile Include="Shared\RestApiBearerAuthorizationData.cs" />
     <Compile Include="Shared\RestApiBasicAuthorizationData.cs" />
     <Compile Include="Shared\RestSharpClient.cs" />
-    <Compile Include="KarnamaApi\PadisProxy.cs" />
+    <Compile Include="KarnamaApi\GuardianProxy.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>

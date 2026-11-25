@@ -304,6 +304,102 @@ namespace GuardianCommunication.Service
         }
 
 
+        #region Guardian Controller
+
+        public void GuardianControllerSetCalendar(GuardianControllerDeviceAndCalendarModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerSetCalendar(param.DeviceId, CommunicationModelMapper.MapGuardianControllerCalendarModelToDto(param.Calendar));
+        }
+
+        public void GuardianControllerSetCalendarTemplate(GuardianControllerDeviceAndCalendarTemplateModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerSetCalendarTemplate(param.DeviceId, CommunicationModelMapper.MapGuardianControllerCalendarTemplateModelToDto(param.CalendarTemplate));
+        }
+
+        public void GuardianControllerSetEasyAccess(GuardianControllerDeviceAndEasyAccessesModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerSetEasyAccess(param.DeviceId, CommunicationModelMapper.MapGuardianControllerEasyAccessModelToDto(param.EasyAccesses));
+        }
+
+        public void GuardianControllerDeleteEasyAccess(GuardianControllerDeviceAndEasyAccessesModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerDeleteEasyAccess(param.DeviceId, CommunicationModelMapper.MapGuardianControllerEasyAccessModelToDto(param.EasyAccesses));
+        }
+
+        public void GuardianControllerSetAccessLevel(GuardianControllerDeviceAndAccessLevelModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerSetAccessLevel(param.DeviceId, CommunicationModelMapper.MapGuardianControllerAccessLevelModelToDto(param.AccessLevel));
+        }
+
+        public void GuardianControllerSetAccessGroup(GuardianControllerDeviceAndAccessGroupModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerSetAccessGroup(param.DeviceId, CommunicationModelMapper.MapGuardianControllerAccessGroupModelToDto(param.AccessGroup));
+        }
+
+        public void GuardianControllerSetHardwareConfig(GuardianControllerDeviceAndHardwareConfigModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerSetHardwareConfig(param.DeviceId, CommunicationModelMapper.MapGuardianControllerHardwareConfigDoorModelToDto(param.Doors)
+                , CommunicationModelMapper.MapGuardianControllerHardwareConfigIoPortModelToDto(param.IoPorts));
+        }
+
+        public void GuardianControllerDeleteCalendarTemplate(GuardianControllerDeviceAndIdsModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerDeleteCalendarTemplate(param.DeviceId, param.Ids ?? new List<Guid>());
+        }
+
+        public void GuardianControllerDeleteCalendar(GuardianControllerDeviceAndIdsModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerDeleteCalendar(param.DeviceId, param.Ids ?? new List<Guid>());
+        }
+
+        public void GuardianControllerDeleteAccessLevel(GuardianControllerDeviceAndIdsModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerDeleteAccessLevel(param.DeviceId, param.Ids ?? new List<Guid>());
+        }
+
+        public void GuardianControllerDeleteAccessGroup(GuardianControllerDeviceAndIdsModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerDeleteAccessGroup(param.DeviceId, param.Ids ?? new List<Guid>());
+        }
+
+        public void GuardianControllerKeepOnly(GuardianControllerDeviceAndKeepOnlyModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.GuardianControllerKeepOnly(param.DeviceId, CommunicationModelMapper.MapGuardianControllerKeepOnlyModelToDto(param));
+        }
+
+        public void CommunicationOpenGuardianControllerDoorPermanent(OpenDoorModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.OpenGuardianControllerDoorPermanent(param.DeviceId, param.DoorId);
+        }
+
+        public void CommunicationCloseGuardianControllerDoorPermanent(OpenDoorModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.CloseGuardianControllerDoorPermanent(param.DeviceId, param.DoorId);
+        }
+
+        public void CommunicationLockGuardianControllerDoorPermanent(OpenDoorModel param)
+        {
+            var component = new CommunicationComponent(GetRepositoryFactory());
+            component.LockGuardianControllerDoorPermanent(param.DeviceId, param.DoorId);
+        }
+
+        #endregion
+
+
         #region Suprema SDK 1
 
 
@@ -341,22 +437,6 @@ namespace GuardianCommunication.Service
         #endregion
 
 
-
-        #endregion
-
-
-        #region Attendance
-
-        public void SaveOtherResourcesAttendanceForHook(OtherResourcesAttendanceModel param)
-        {
-            if (param == null)
-            {
-                return;
-            }
-            var component = new AttendanceComponent(GetRepositoryFactory());
-            component.HookOtherResourcesAttendance(CommunicationModelMapper.MapOtherResourcesAttendanceModelToDtoAttendance(param),
-                param.CheckDuplicateInterval);
-        }
 
         #endregion
 

@@ -3,6 +3,8 @@ using GuardianCommunication.Business.LiveModule;
 using GuardianCommunication.Business.Tasks;
 using GuardianCommunication.Data.Logger;
 using GuardianCommunication.Data.Repository;
+using GuardianCommunication.Hardware.GuardianController;
+using GuardianCommunication.Hardware.GuardianController.Model;
 using GuardianCommunication.Hardware.Shared;
 using GuardianCommunication.Hardware.Suprema;
 using GuardianCommunication.Hardware.Suprema.SupremaConcepts.V1;
@@ -43,6 +45,7 @@ namespace TestHost
         private AutoCollectSupremaSdk1Task _autoCollectSupremaSdk1Task;
         private AutoCollectSupremaSdk2Task _autoCollectSupremaSdk2Task;
         private AutoCollectVirdiTask _autoCollectVirdiTask;
+        private AutoCollectGuardianControllerTask _autoCollectGuardianControllerTask;
         private AttendanceSendToGuardianTask _attendanceSendToGuardianTask;
         private AttendanceHookTask _attendanceHookTask;
         private OnlineDeviceTask _onlineDeviceTask;
@@ -161,6 +164,9 @@ namespace TestHost
                     case 7:
                         _onlineDeviceTask.Process();
                         break;
+                    case 8:
+                        _autoCollectGuardianControllerTask.Process();
+                        break;
                 }
             }
             catch (Exception exception)
@@ -219,6 +225,7 @@ namespace TestHost
                 _attendanceSendToGuardianTask,
                 _attendanceHookTask,
                 _onlineDeviceTask,
+                new CronHookTask(TimeSpan.FromSeconds(systemConfig.CronHookTimerIntervalInSeconds)),
             };
 
             if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Zk))
@@ -253,6 +260,12 @@ namespace TestHost
                 _autoCollectVirdiTask =
                     new AutoCollectVirdiTask(TimeSpan.FromMinutes(systemConfig.AutomaticCollectAttendanceTimerInterval));
                 allTasks.Add(_autoCollectVirdiTask);
+            }
+            if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Guardian))
+            {
+                _autoCollectGuardianControllerTask =
+                    new AutoCollectGuardianControllerTask(TimeSpan.FromMinutes(systemConfig.AutomaticCollectAttendanceTimerInterval));
+                allTasks.Add(_autoCollectGuardianControllerTask);
             }
 
             TaskManager.Instance.SetTimedBaseTaskList(allTasks.ToArray());
@@ -366,7 +379,6 @@ namespace TestHost
                         MaxVisibleLightImageSizeWidth = systemConfig.VirdiMaxVisibleLightImageSizeWidth,
                     }
                         , _deviceCommandComponent.GetUnsentCommandsForEachDevice
-                        , _attendanceComponent.ProcessServerMatchEvent
                         , allDevices
                     );
                 }
@@ -391,6 +403,29 @@ namespace TestHost
                 catch (Exception exp)
                 {
                     LoggingSystem.LogError(exp, "Error on start TimyServer");
+                }
+            }
+
+            if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Guardian))
+            {
+                try
+                {
+                    GuardianControllerServer.Instance.StartGuardianControllerServer(new GuardianControllerServerConfig
+                    {
+                        GrpcServerPort = systemConfig.GuardianControllerGrpcServerPort,
+                        GrpcServerCommandCount = systemConfig.GuardianControllerGrpcServerCommandCount,
+                        GrpcCommandTimerIntervalInMillisecond = systemConfig.GuardianControllerGrpcCommandTimerIntervalInMillisecond,
+                        GrpcServerTimeoutShortInMillisecond = systemConfig.GuardianControllerGrpcServerTimeoutShortInMillisecond,
+                        GrpcServerTimeoutLongInMillisecond = systemConfig.GuardianControllerGrpcServerTimeoutLongInMillisecond,
+                        GrpcServerTimeoutVeryLongInMillisecond = systemConfig.GuardianControllerGrpcServerTimeoutVeryLongInMillisecond,
+                    }
+                        , _deviceCommandComponent.GetUnsentCommandsForEachDevice
+                        , _attendanceComponent.ProcessServerMatchEvent
+                        , allDevices);
+                }
+                catch (Exception exp)
+                {
+                    LoggingSystem.LogError(exp, "Error on start GuardianControllerServer");
                 }
             }
 
@@ -431,6 +466,19 @@ namespace TestHost
                 catch (Exception exp)
                 {
                     LoggingSystem.LogError(exp, "Error on Stop TimyServer");
+                }
+            }
+
+            if (ApplicationEmbeddedInfo.ActiveProducers.HasFlag(ProducerEnumeration.Guardian))
+            {
+                try
+                {
+                    GuardianControllerServer.Instance.StopGuardianControllerServer();
+                    LoggingSystem.LogInfo("GuardianControllerServer stopped");
+                }
+                catch (Exception exp)
+                {
+                    LoggingSystem.LogError(exp, "Error on Disposing GuardianControllerServer");
                 }
             }
 

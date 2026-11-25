@@ -32,7 +32,7 @@ namespace GuardianCommunication.Shared.Definition
 
         public const int ServerDelayStart = 20;
 
-        public const string LogSource = "Padis Communication";
+        public const string LogSource = "Guardian Communication";
         public const string LogNameHookError = "Hook Error";
         public const string NationalPlateRegex = @"(^\d+)\s*(\D+)\s*(\d+)\s*\D+\s*(\d+$)";
 

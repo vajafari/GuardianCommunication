@@ -18,89 +18,111 @@ namespace GuardianCommunication.Shared.Definition
         [EnumMember]
         SetPhoto = 5,
         [EnumMember]
-        SetTimeZone = 6,
+        DeleteUser = 6,
         [EnumMember]
-        SetHoliday = 7,
+        ReadAttendance = 7,
         [EnumMember]
-        DeleteUser = 8,
+        ReadoutAttendance = 8,
         [EnumMember]
-        ReadAttendance = 9,
+        ReadUser = 9,
         [EnumMember]
-        ReadoutAttendance = 10,
+        ReadFingerPrint = 10,
         [EnumMember]
-        ReadUser = 11,
+        ClearData = 11,
         [EnumMember]
-        ReadFingerPrint = 12,
+        ClearUser = 12,
         [EnumMember]
-        ClearData = 13,
+        Check = 13,
         [EnumMember]
-        ClearUser = 14,
+        ScanFace = 14,
         [EnumMember]
-        Check = 15,
+        ScanFinger = 15,
         [EnumMember]
-        ScanFace = 16,
+        Reboot = 16,
         [EnumMember]
-        ScanFinger = 17,
+        Unlock = 17,
         [EnumMember]
-        Reboot = 18,
+        EnrollUserWithTemplate = 18,
         [EnumMember]
-        Unlock = 19,
+        ScanCard = 19,
         [EnumMember]
-        EnrollUserWithTemplate = 20,
+        FaceCount = 20,
         [EnumMember]
-        ScanCard = 21,
+        FingerCount = 21,
         [EnumMember]
-        FaceCount = 22,
+        UserCount = 22,
         [EnumMember]
-        FingerCount = 23,
+        AttendanceLogCount = 23,
         [EnumMember]
-        UserCount = 24,
+        SetDateAndTime = 24,
         [EnumMember]
-        AttendanceLogCount = 25,
+        ScanIris = 25,
         [EnumMember]
-        SendWithoutFinger = 26,
+        CancelOperation = 26,
+        /// <summary>
+        /// پیکربندی سخت‌افزار برد کنترلر گاردین (درب‌ها با رله، ویگند، ورودی/خروجی‌ها و تنظیمات درب)
+        /// </summary>
         [EnumMember]
-        SendValidInvalid = 27,
+        GuardianControllerSetHardwareConfig = 27,
+        /// <summary>
+        /// ارسال قالب تقویم (چرخه چندروزه) به برد کنترلر گاردین
+        /// </summary>
         [EnumMember]
-        SetDateAndTime = 28,
-        //[EnumMember]
-        //OpenDoor = 29,
+        GuardianControllerSetCalendarTemplate = 28,
+        /// <summary>
+        /// حذف قالب‌های تقویم از برد کنترلر گاردین (با شناسه)
+        /// </summary>
         [EnumMember]
-        SendHolidays = 30,
+        GuardianControllerDeleteCalendarTemplate = 29,
+        /// <summary>
+        /// ارسال تقویم به برد کنترلر گاردین
+        /// </summary>
         [EnumMember]
-        SendAccessGroup = 31,
+        GuardianControllerSetCalendar = 30,
+        /// <summary>
+        /// حذف تقویم‌ها از برد کنترلر گاردین (با شناسه)
+        /// </summary>
         [EnumMember]
-        SetDoorInfo = 32,
+        GuardianControllerDeleteCalendar = 31,
+        /// <summary>
+        /// ارسال سطح دسترسی (درب‌های همین برد) به برد کنترلر گاردین
+        /// </summary>
         [EnumMember]
-        VirdiAccessControlData = 33,
+        GuardianControllerSetAccessLevel = 32,
+        /// <summary>
+        /// حذف سطح‌های دسترسی از برد کنترلر گاردین (با شناسه)
+        /// </summary>
         [EnumMember]
-        SupremaSdk2HolidayGroup = 34,
+        GuardianControllerDeleteAccessLevel = 33,
+        /// <summary>
+        /// ارسال گروه دسترسی به برد کنترلر گاردین
+        /// </summary>
         [EnumMember]
-        SupremaSdk2AccessSchedule = 35,
+        GuardianControllerSetAccessGroup = 34,
+        /// <summary>
+        /// حذف گروه‌های دسترسی از برد کنترلر گاردین (با شناسه)
+        /// </summary>
         [EnumMember]
-        SupremaSdk2AccessLevel = 36,
+        GuardianControllerDeleteAccessGroup = 35,
+        /// <summary>
+        /// ثبت یا به‌روزرسانی جداگانه دسترسی‌های آسان روی برد کنترلر گاردین (با شناسه)
+        /// </summary>
         [EnumMember]
-        SupremaSdk2AccessGroup = 37,
+        GuardianControllerSetEasyAccess = 36,
+        /// <summary>
+        /// حذف جداگانه دسترسی‌های آسان از برد کنترلر گاردین (با شناسه)
+        /// </summary>
         [EnumMember]
-        SupremaSdk2DoorInfo = 38,
+        GuardianControllerDeleteEasyAccess = 37,
+        /// <summary>
+        /// پایان همگام‌سازی کامل برد کنترلر گاردین: برد هر چیزی را که در فهرست‌ها نیست حذف می‌کند
+        /// </summary>
         [EnumMember]
-        ScanIris = 39,
+        GuardianControllerKeepOnly = 38,
+        /// <summary>
+        /// فرمان درب برد کنترلر گاردین: باز کردن لحظه‌ای، باز یا بسته نگه داشتن دائم و برگشت به حالت عادی
+        /// </summary>
         [EnumMember]
-        CancelOperation = 40,
-        [EnumMember]
-        PadisControllerSetRelay = 41,       
-        [EnumMember]
-        PadisControllerSetIoPort = 42,
-        [EnumMember]
-        PadisControllerSetWiegand = 43,
-        [EnumMember]
-        PadisControllerSetCalendar = 44,
-        [EnumMember]
-        TimySetDayTimezone = 45,
-        [EnumMember]
-        TimySetWeekTimezone = 45,
-        [EnumMember]
-        TimySetHoliday = 46,
-
+        GuardianControllerDoorControl = 39,
     }
 }

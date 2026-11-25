@@ -2,12 +2,26 @@
 
 namespace GuardianCommunication.Shared.Definition
 {
+    /// <summary>
+    /// نقش رله برد کنترلر گاردین - هم‌شماره با گاردین؛ معادل relay_type
+    /// </summary>
     [DataContract]
-    public enum GuardianControllerRelayTypeEnumeration
+    public enum GuardianControllerRelayTypeEnumeration : short
     {
+        /// <summary>
+        /// قفل درب
+        /// </summary>
         [EnumMember]
-        Single = 1,
+        MainLock = 1,
+        /// <summary>
+        /// آژیر هشدار
+        /// </summary>
         [EnumMember]
-        Double = 2,
+        AlarmBuzzer = 2,
+        /// <summary>
+        /// دستگاه جانبی
+        /// </summary>
+        [EnumMember]
+        AuxDevice = 3,
     }
 }

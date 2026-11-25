@@ -79,6 +79,14 @@ namespace GuardianCommunication.Shared.HardwareDefinition
         /// محدودیت به دلیل محدودیت در بازه زمانی بیسته بودن درب
         /// </summary>
         InvalidBecauseOfCalendarLock = 18,
+        /// <summary>
+        /// عدم صدور مجوز به دلیل محدودیت تعداد تردد
+        /// </summary>
+        InvalidBecauseOfAttendanceLimit = 20,
+        /// <summary>
+        /// عدم صدور مجوز به دلیل عدم صدور مجوز مدیر
+        /// </summary>
+        InvalidBecauseOfMasterPrimerRequired = 21,
 
     }
 }

@@ -199,6 +199,8 @@ CREATE TABLE [com].[HookDefinition](
 	[IsActive] [bit] NOT NULL,
 	[InsertedAt] [datetime2](7) NOT NULL,
 	[UpdatedAt] [datetime2](7) NULL,
+	[Cron] [nvarchar](100) NULL,
+	[LastRunAt] [datetime2](7) NULL,
  CONSTRAINT [PK_HookDefinition] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -309,32 +311,32 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_Attendance_InsertDateTime]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[Attendance] ADD  CONSTRAINT [DF_Attendance_InsertDateTime]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [com].[Attendance] ADD  CONSTRAINT [DF_Attendance_InsertDateTime]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_Attendance_InsertDateTime1]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[Attendance] ADD  CONSTRAINT [DF_Attendance_InsertDateTime1]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [com].[Attendance] ADD  CONSTRAINT [DF_Attendance_InsertDateTime1]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_AttendanceHookSystem_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[AttendanceHookDefinition] ADD  CONSTRAINT [DF_AttendanceHookSystem_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [com].[AttendanceHookDefinition] ADD  CONSTRAINT [DF_AttendanceHookSystem_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_AttendanceHookSystem_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[AttendanceHookDefinition] ADD  CONSTRAINT [DF_AttendanceHookSystem_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [com].[AttendanceHookDefinition] ADD  CONSTRAINT [DF_AttendanceHookSystem_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_AttendanceSendToGuardianResult_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[AttendanceSendToGuardianResult] ADD  CONSTRAINT [DF_AttendanceSendToGuardianResult_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [com].[AttendanceSendToGuardianResult] ADD  CONSTRAINT [DF_AttendanceSendToGuardianResult_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_AttendanceSendToGuardianResult_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[AttendanceSendToGuardianResult] ADD  CONSTRAINT [DF_AttendanceSendToGuardianResult_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [com].[AttendanceSendToGuardianResult] ADD  CONSTRAINT [DF_AttendanceSendToGuardianResult_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_DeviceCommand_DeviceContent]') AND type = 'D')
@@ -374,22 +376,22 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_DeviceCommand_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[DeviceCommand] ADD  CONSTRAINT [DF_DeviceCommand_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [com].[DeviceCommand] ADD  CONSTRAINT [DF_DeviceCommand_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_DeviceCommand_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[DeviceCommand] ADD  CONSTRAINT [DF_DeviceCommand_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [com].[DeviceCommand] ADD  CONSTRAINT [DF_DeviceCommand_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_DeviceCommunicationData_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[DeviceCommunicationData] ADD  CONSTRAINT [DF_DeviceCommunicationData_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [com].[DeviceCommunicationData] ADD  CONSTRAINT [DF_DeviceCommunicationData_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_DeviceCommunicationData_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[DeviceCommunicationData] ADD  CONSTRAINT [DF_DeviceCommunicationData_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [com].[DeviceCommunicationData] ADD  CONSTRAINT [DF_DeviceCommunicationData_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_HookDefinition_EndPointUrl]') AND type = 'D')
@@ -444,12 +446,12 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_HookDefinition_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[HookDefinition] ADD  CONSTRAINT [DF_HookDefinition_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [com].[HookDefinition] ADD  CONSTRAINT [DF_HookDefinition_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DF_HookDefinition_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [com].[HookDefinition] ADD  CONSTRAINT [DF_HookDefinition_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [com].[HookDefinition] ADD  CONSTRAINT [DF_HookDefinition_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_Device_IoType]') AND type = 'D')
@@ -469,12 +471,12 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_Device_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [core].[Device] ADD  CONSTRAINT [DF_Device_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [core].[Device] ADD  CONSTRAINT [DF_Device_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_Device_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [core].[Device] ADD  CONSTRAINT [DF_Device_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [core].[Device] ADD  CONSTRAINT [DF_Device_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_IsActive]') AND type = 'D')
@@ -494,12 +496,12 @@ END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_InsertedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_InsertedAt]  DEFAULT (getdate()) FOR [InsertedAt]
+ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_InsertedAt]  DEFAULT (getutcdate()) FOR [InsertedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[core].[DF_DeviceDoorBase_UpdatedAt]') AND type = 'D')
 BEGIN
-ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_UpdatedAt]  DEFAULT (getdate()) FOR [UpdatedAt]
+ALTER TABLE [core].[DeviceDoorBase] ADD  CONSTRAINT [DF_DeviceDoorBase_UpdatedAt]  DEFAULT (getutcdate()) FOR [UpdatedAt]
 END
 GO
 IF NOT EXISTS (SELECT * FROM sys.foreign_keys WHERE object_id = OBJECT_ID(N'[com].[FK_AttendanceHookDefinition_Attendance]') AND parent_object_id = OBJECT_ID(N'[com].[AttendanceHookDefinition]'))
@@ -565,18 +567,18 @@ BEGIN
 		AND dc.[RetryCount] < dc.[MaxRetry]
 		AND (
 				dc.[VisiblilityTime] IS NULL
-				OR dc.[VisiblilityTime] <= GETDATE()
+				OR dc.[VisiblilityTime] <= GETUTCDATE()
 			)
 		AND (
 				dc.[Deadline] IS NULL 
-				OR dc.[Deadline] >= GETDATE()
+				OR dc.[Deadline] >= GETUTCDATE()
 			)
 		AND dc.ProducerNumber = @Producer
 		AND dc.SdkVersion = @SdkVersion
     GROUP BY
         s.IntegerValue;
 END
-
+GO
 
 IF NOT EXISTS (SELECT * FROM sys.objects WHERE object_id = OBJECT_ID(N'[com].[DeviceCommandCountByDeviceId]') AND type in (N'P', N'PC'))
 BEGIN
@@ -594,7 +596,7 @@ BEGIN
 	SET NOCOUNT ON;
     SELECT
         s.UniqueIdentifierValue AS DeviceId,
-        COUNT(dc.DeviceId) AS DeviceId
+        COUNT(dc.DeviceId) AS CommandCount
     FROM @DeviceIdsList AS s
 		LEFT JOIN com.DeviceCommand AS dc ON dc.DeviceId = s.UniqueIdentifierValue
 	WHERE
@@ -602,11 +604,11 @@ BEGIN
 		AND dc.[RetryCount] < dc.[MaxRetry]
 		AND (
 				dc.[VisiblilityTime] IS NULL
-				OR dc.[VisiblilityTime] <= GETDATE()
+				OR dc.[VisiblilityTime] <= GETUTCDATE()
 			)
 		AND (
 				dc.[Deadline] IS NULL 
-				OR dc.[Deadline] >= GETDATE()
+				OR dc.[Deadline] >= GETUTCDATE()
 			)
 		AND dc.ProducerNumber = @Producer
 		AND dc.SdkVersion = @SdkVersion
@@ -647,11 +649,11 @@ BEGIN
 		AND dc.[RetryCount] < dc.[MaxRetry]
 		AND (
 				dc.[VisiblilityTime] IS NULL
-				OR dc.[VisiblilityTime] <= GETDATE()
+				OR dc.[VisiblilityTime] <= GETUTCDATE()
 			)
 		AND (
 				dc.[Deadline] IS NULL 
-				OR dc.[Deadline] >= GETDATE()
+				OR dc.[Deadline] >= GETUTCDATE()
 			)
 		AND dc.ProducerNumber = @Producer
 		AND dc.SdkVersion = @SdkVersion
@@ -911,7 +913,8 @@ IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'S
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'HookType'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'نوع داده ای که باید هوک شود
-1 = تردد' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'HookType'
+1 = تردد
+2 = زمان بند (Cron): آدرس در زمان های عبارت Cron ردیف صدا زده می شود' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'HookType'
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'EndPointUrl'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'آدرس سیستم مقصد' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'EndPointUrl'
@@ -956,7 +959,7 @@ IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'S
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'تاریخ اخرین به روزرسانی' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'UpdatedAt'
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', NULL,NULL))
-	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'بخش ارتباطات نرم افزار به دلیل اینکه یک سیستم سرویس Based و زنده است امکان تعریف Hook های مختلف برای ارسال اطلاعات برای سیستم های مختلف را دارد. این جدول در بر گیرنده سیستم های مقصد برای ارسال اطلاعات می باشد. ' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition'
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'بخش ارتباطات نرم افزار به دلیل اینکه یک سیستم سرویس Based و زنده است امکان تعریف Hook های مختلف برای ارسال اطلاعات برای سیستم های مختلف را دارد. این جدول در بر گیرنده سیستم های مقصد برای ارسال اطلاعات می باشد. ردیف های نوع زمان بند (Cron) آدرس هایی هستند که سرویس در زمان های عبارت Cron صدا می زند، مثل کارهای زمان دار Guardian (فرستادن صف اعلان ها، رویدادهای زمان دار، همگام سازی روزانه دسترسی قراردادها)؛ این ردیف ها فقط با اسکریپت ساخته می شوند' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition'
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'core', N'TABLE',N'Device', N'COLUMN',N'Id'))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'شناسه رکورد در دیتابیس' , @level0type=N'SCHEMA',@level0name=N'core', @level1type=N'TABLE',@level1name=N'Device', @level2type=N'COLUMN',@level2name=N'Id'
@@ -1065,4 +1068,59 @@ IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'S
 GO
 IF NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'core', N'TABLE',N'DeviceDoorBase', NULL,NULL))
 	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'مشخصات مشترک درب های ' , @level0type=N'SCHEMA',@level0name=N'core', @level1type=N'TABLE',@level1name=N'DeviceDoorBase'
+GO
+
+---- SCRIPT LOGICAL REGION -----
+
+-- تنظیمات بورد کنترلر گاردین (مقدارهای پیش‌فرض گاردین)؛ جدول com.SystemConfig در این اسکریپت ساخته نمی‌شود،
+-- پس فقط وقتی جدول هست، کلیدهایی که نیستند درج می‌شوند و مقدار کلیدهای موجود دست نمی‌خورد
+IF OBJECT_ID(N'[com].[SystemConfig]', N'U') IS NOT NULL
+BEGIN
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerMaxRetryForUserCommands')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerMaxRetryForUserCommands', N'20')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerMaxRetryForOtherCommands')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerMaxRetryForOtherCommands', N'10')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerGrpcServerCommandCount')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerGrpcServerCommandCount', N'1')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerGrpcServerPort')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerGrpcServerPort', N'37426')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerGrpcCommandTimerIntervalInMillisecond')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerGrpcCommandTimerIntervalInMillisecond', N'1000')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerGrpcServerTimeoutShortInMillisecond')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerGrpcServerTimeoutShortInMillisecond', N'5000')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerGrpcServerTimeoutLongInMillisecond')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerGrpcServerTimeoutLongInMillisecond', N'15000')
+	IF NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'GuardianControllerGrpcServerTimeoutVeryLongInMillisecond')
+		INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'GuardianControllerGrpcServerTimeoutVeryLongInMillisecond', N'60000')
+END
+GO
+
+-- زمان بند سرویس ارتباطات (1405/09/04): ردیف های نوع 2 (Cron) جدول com.HookDefinition کارهای زمان دار را صدا می زنند؛ Cron پنج بخشی و به وقت
+-- محلی سرویس است و LastRunAt زمان شروع آخرین اجرا (UTC) است تا زمان های جاافتاده بعد از روشن شدن سرویس یک بار اجرا شوند
+IF OBJECT_ID(N'com.HookDefinition', N'U') IS NOT NULL AND COL_LENGTH(N'com.HookDefinition', N'Cron') IS NULL
+	ALTER TABLE [com].[HookDefinition] ADD [Cron] [nvarchar](100) NULL;
+GO
+IF OBJECT_ID(N'com.HookDefinition', N'U') IS NOT NULL AND COL_LENGTH(N'com.HookDefinition', N'LastRunAt') IS NULL
+	ALTER TABLE [com].[HookDefinition] ADD [LastRunAt] [datetime2](7) NULL;
+GO
+-- فاصله تیک زمان بند (CronHookTask) به ثانیه، پیش فرض یک دقیقه؛ مقدار کلید موجود دست نمی خورد
+IF OBJECT_ID(N'[com].[SystemConfig]', N'U') IS NOT NULL
+   AND NOT EXISTS (SELECT * FROM [com].[SystemConfig] WHERE [ConfigName] = N'CronHookTimerIntervalInSeconds')
+	INSERT [com].[SystemConfig] ([ConfigName], [ConfigValue]) VALUES (N'CronHookTimerIntervalInSeconds', N'60')
+GO
+IF EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'HookType'))
+	EXEC sys.sp_updateextendedproperty @name=N'MS_Description', @value=N'نوع داده ای که باید هوک شود
+1 = تردد
+2 = زمان بند (Cron): آدرس در زمان های عبارت Cron ردیف صدا زده می شود' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'HookType'
+GO
+IF EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', NULL,NULL))
+	EXEC sys.sp_updateextendedproperty @name=N'MS_Description', @value=N'بخش ارتباطات نرم افزار به دلیل اینکه یک سیستم سرویس Based و زنده است امکان تعریف Hook های مختلف برای ارسال اطلاعات برای سیستم های مختلف را دارد. این جدول در بر گیرنده سیستم های مقصد برای ارسال اطلاعات می باشد. ردیف های نوع زمان بند (Cron) آدرس هایی هستند که سرویس در زمان های عبارت Cron صدا می زند، مثل کارهای زمان دار Guardian (فرستادن صف اعلان ها، رویدادهای زمان دار، همگام سازی روزانه دسترسی قراردادها)؛ این ردیف ها فقط با اسکریپت ساخته می شوند' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition'
+GO
+IF COL_LENGTH(N'com.HookDefinition', N'Cron') IS NOT NULL
+   AND NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'Cron'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'عبارت Cron ردیف زمان بند (فقط نوع 2): پنج بخش دقیقه، ساعت، روز ماه، ماه و روز هفته (0 و 7 یکشنبه، 6 شنبه) به وقت محلی سرویس ارتباطات؛ هر بخش * یا عدد یا بازه a-b است، گام با /n و چند مقدار با , جدا می شوند. آدرسی که با / شروع شود مسیری روی Guardian است و با آدرس و کاربر Guardian در تنظیمات سرویس صدا زده می شود و آدرس کامل با احراز هویت خود ردیف' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'Cron'
+GO
+IF COL_LENGTH(N'com.HookDefinition', N'LastRunAt') IS NOT NULL
+   AND NOT EXISTS (SELECT * FROM sys.fn_listextendedproperty(N'MS_Description' , N'SCHEMA',N'com', N'TABLE',N'HookDefinition', N'COLUMN',N'LastRunAt'))
+	EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'زمان شروع آخرین اجرای ردیف زمان بند (UTC)، چه فراخوانی موفق بوده باشد چه نه؛ خالی یعنی هنوز اجرا نشده و اولین تیک زمان بند اجرایش می کند. زمان های جاافتاده (مثلا وقتی سرویس خاموش بوده) روی هم یک اجرا می شوند' , @level0type=N'SCHEMA',@level0name=N'com', @level1type=N'TABLE',@level1name=N'HookDefinition', @level2type=N'COLUMN',@level2name=N'LastRunAt'
 GO

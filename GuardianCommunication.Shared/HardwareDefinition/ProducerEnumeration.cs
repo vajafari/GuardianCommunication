@@ -35,9 +35,9 @@ namespace GuardianCommunication.Shared.HardwareDefinition
         PouyaFanavaran = 16,
 
         /// <summary>
-        /// اساگارد
+        /// گاردین
         /// </summary>
-        AsaGuard = 32,
+        Guardian = 32,
 
         /// <summary>
         /// تمامی تولید کنندگان

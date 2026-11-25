@@ -41,6 +41,7 @@ namespace GuardianCommunication.Shared.Dto
         public DtoDeviceCommunicationDataZk Zk { get; set; }
         public DtoDeviceCommunicationDataSuprema1 Suprema1 { get; set; }
         public DtoDeviceCommunicationDataSuprema2 Suprema2 { get; set; }
+        public DtoDeviceCommunicationDataGuardianController GuardianController { get; set; }
     }
 
 
@@ -61,6 +62,11 @@ namespace GuardianCommunication.Shared.Dto
         public long LastLogId { get; set; }
         public DateTime? LastAttendanceLogDateTime { get; set; }
         public DateTime? LastLogDateTime { get; set; }
+    }
+
+    public class DtoDeviceCommunicationDataGuardianController
+    {
+        public DateTime? LastAttendanceLogDateTime { get; set; }
     }
 
 }

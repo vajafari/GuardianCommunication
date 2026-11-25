@@ -83,6 +83,10 @@ namespace GuardianCommunication.Business.Component
                     result.MaxRetryForUserCommand = configCache.MaxRetryForVirdiUserCommands;
                     result.WaitBetweenCommandSendInMilliseconds = configCache.VirdiWaitInCommandLoopInMilliseconds;
                     break;
+                case ProducerEnumeration.Guardian:
+                    result.MaxRetryForOtherCommand = configCache.GuardianControllerMaxRetryForOtherCommands;
+                    result.MaxRetryForUserCommand = configCache.GuardianControllerMaxRetryForUserCommands;
+                    break;
             }
             return result;
         }
@@ -149,7 +153,14 @@ namespace GuardianCommunication.Business.Component
 
         internal DtoSystemConfig GetSystemConfigCache()
         {
-            return GuardianCommunicationInMemoryCacheWrapper.Instance.GetSystemConfigCache();
+            // بار اول (و بعد از Reset) تنظیمات از دیتابیس خوانده و در کش گذاشته می شود
+            var systemConfig = GuardianCommunicationInMemoryCacheWrapper.Instance.GetSystemConfigCache();
+            if (systemConfig == null)
+            {
+                systemConfig = GetSystemConfig();
+                GuardianCommunicationInMemoryCacheWrapper.Instance.SetSystemConfigCache(systemConfig);
+            }
+            return systemConfig;
         }
 
         #endregion

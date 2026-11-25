@@ -198,6 +198,9 @@
     <Compile Include="CommunicationModels\UserIrisModelEnrolled.cs" />
     <Compile Include="CommunicationModels\OpenCabinetDoorModel.cs" />
     <Compile Include="Definition\GuardianControllerRelayTypeEnumeration.cs" />
+    <Compile Include="Definition\GuardianControllerContactTypeEnumeration.cs" />
+    <Compile Include="Definition\GuardianControllerGpioTypeEnumeration.cs" />
+    <Compile Include="Definition\GuardianControllerMasterPrimerResetPeriodEnumeration.cs" />
     <Compile Include="Definition\GuardianControllerWiegandDataTypeEnumeration.cs" />
     <Compile Include="Definition\GuardianControllerWiegandFormatEnumeration.cs" />
     <Compile Include="Definition\AttendanceVerificationStyleEnumeration.cs" />
@@ -234,7 +237,6 @@
     <Compile Include="CommunicationModels\ListInt64Model.cs" />
     <Compile Include="CommunicationModels\NotHookedAttendancesStatisticsInputModel.cs" />
     <Compile Include="CommunicationModels\NotHookedAttendancesStatisticsModel.cs" />
-    <Compile Include="CommunicationModels\OtherResourcesAttendanceModel.cs" />
     <Compile Include="CommunicationModels\DeviceAttendanceModel.cs" />
     <Compile Include="CommunicationModels\DataCountModel.cs" />
     <Compile Include="CommunicationModels\UserCardEnrolledModel.cs" />
@@ -303,6 +305,21 @@
     <Compile Include="Dto\DtoUserFinger.cs" />
     <Compile Include="Dto\DtoDevice.cs" />
     <Compile Include="Dto\DtoUserDeviceRelatedData.cs" />
+    <Compile Include="Dto\DtoGuardianControllerAccessGroup.cs" />
+    <Compile Include="Dto\DtoGuardianControllerAccessGroupAccessData.cs" />
+    <Compile Include="Dto\DtoGuardianControllerAccessLevel.cs" />
+    <Compile Include="Dto\DtoGuardianControllerCalendar.cs" />
+    <Compile Include="Dto\DtoGuardianControllerCalendarDetails.cs" />
+    <Compile Include="Dto\DtoGuardianControllerCalendarTemplate.cs" />
+    <Compile Include="Dto\DtoGuardianControllerCalendarTemplateDetails.cs" />
+    <Compile Include="Dto\DtoGuardianControllerHardwareConfigDoor.cs" />
+    <Compile Include="Dto\DtoGuardianControllerHardwareConfigIoPort.cs" />
+    <Compile Include="Dto\DtoGuardianControllerHardwareConfigCloseCalendar.cs" />
+    <Compile Include="Dto\DtoGuardianControllerHardwareConfigRelay.cs" />
+    <Compile Include="Dto\DtoGuardianControllerUserAccessData.cs" />
+    <Compile Include="Dto\DtoGuardianControllerUserEasyAccess.cs" />
+    <Compile Include="Dto\DtoGuardianControllerEasyAccess.cs" />
+    <Compile Include="Dto\DtoGuardianControllerKeepOnly.cs" />
     <Compile Include="Dto\DtoSystemConfig.cs" />
     <Compile Include="Dto\DtoSystemConfigPure.cs" />
     <Compile Include="CommunicationModels\ErrorModel.cs" />
@@ -311,6 +328,7 @@
     <Compile Include="ExtensionsAndUtilities\NetworkHelpers.cs" />
     <Compile Include="ExtensionsAndUtilities\AsyncHelper.cs" />
     <Compile Include="ExtensionsAndUtilities\ApiCallHelpers.cs" />
+    <Compile Include="ExtensionsAndUtilities\CronHelper.cs" />
     <Compile Include="ExtensionsAndUtilities\CollectionHelper.cs" />
     <Compile Include="ExtensionsAndUtilities\DateTimeHelper.cs" />
     <Compile Include="Filter\DeviceFilter.cs" />
@@ -339,7 +357,6 @@
     <Compile Include="HardwareDefinition\SdkVersionEnumeration.cs" />
     <Compile Include="HardwareDefinition\DeviceConnectionModeEnumeration.cs" />
     <Compile Include="HardwareDefinition\EnrollStandardEnumeration.cs" />
-    <Compile Include="HardwareDefinition\ServerMatchingTypeEnumeration.cs" />
     <Compile Include="HardwareDefinition\TemplateTypeEnumeration.cs" />
     <Compile Include="Definition\ServiceConstants.cs" />
     <Compile Include="ExtensionsAndUtilities\ConfigurationHelper.cs" />
@@ -357,6 +374,28 @@
     </Compile>
     <Compile Include="CommunicationModels\DeviceAndUserListModel.cs" />
     <Compile Include="CommunicationModels\UserModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerAccessGroupAccessDataModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerAccessLevelModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerCalendarDetailsModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerCalendarModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndAccessGroupModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndAccessLevelModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndCalendarModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerCalendarTemplateModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerCalendarTemplateDetailsModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndCalendarTemplateModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndHardwareConfigModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerHardwareConfigDoorModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerHardwareConfigIoPortModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerHardwareConfigCloseCalendarModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerHardwareConfigRelayModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerUserAccessDataModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerUserEasyAccessModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerEasyAccessModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndEasyAccessesModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndIdsModel.cs" />
+    <Compile Include="CommunicationModels\GuardianControllerDeviceAndKeepOnlyModel.cs" />
     <Compile Include="CommunicationModels\UserFaceModel.cs" />
     <Compile Include="CommunicationModels\UserFingerModel.cs" />
     <Compile Include="CommunicationModels\UserPalmModel.cs" />
@@ -387,7 +426,7 @@
     <Compile Include="SearchDataWrapper\SortTypeEnum.cs" />
     <Compile Include="SharedSettings\ApplicationEmbeddedInfo.cs" />
     <Compile Include="SharedSettings\AppConfigs.cs" />
-    <Compile Include="SharedSettings\PadisConnectionStringConfig.cs" />
+    <Compile Include="SharedSettings\GuardianConnectionStringConfig.cs" />
     <Compile Include="SharedSettings\ConnectionConfiguration.cs" />
   </ItemGroup>
   <ItemGroup>

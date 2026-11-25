@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props" Condition="Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -102,6 +103,15 @@
     <Reference Include="log4net, Version=1.2.11.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>Timy\SuperSocket Dlls\log4net.dll</HintPath>
+    </Reference>
+    <Reference Include="Google.Protobuf, Version=3.35.0.0, Culture=neutral, PublicKeyToken=a7d26565bac4d604, processorArchitecture=MSIL">
+      <HintPath>..\packages\Google.Protobuf.3.35.0\lib\net45\Google.Protobuf.dll</HintPath>
+    </Reference>
+    <Reference Include="Grpc.Core, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
+      <HintPath>..\packages\Grpc.Core.2.46.6\lib\net45\Grpc.Core.dll</HintPath>
+    </Reference>
+    <Reference Include="Grpc.Core.Api, Version=2.0.0.0, Culture=neutral, PublicKeyToken=d754f35622e28bad, processorArchitecture=MSIL">
+      <HintPath>..\packages\Grpc.Core.Api.2.80.0\lib\net462\Grpc.Core.Api.dll</HintPath>
     </Reference>
     <Reference Include="MD.PersianDateTime, Version=4.6.0.0, Culture=neutral, processorArchitecture=MSIL">
       <HintPath>..\packages\MD.PersianDateTime.4.6.0\lib\net20\MD.PersianDateTime.dll</HintPath>
@@ -251,6 +261,47 @@
     <Compile Include="Timy\TimyPushCommands.cs" />
     <Compile Include="Timy\TimyServer.cs" />
     <Compile Include="Timy\TimyUtils.cs" />
+    <Compile Include="GuardianController\Definition\GuardianControllerAttendanceStatusEnumeration.cs" />
+    <Compile Include="GuardianController\Definition\GuardianControllerDoorActionEnumeration.cs" />
+    <Compile Include="GuardianController\Definition\GuardianControllerDoorEventTypeEnumeration.cs" />
+    <Compile Include="GuardianController\Definition\GuardianControllerErrorEnumeration.cs" />
+    <Compile Include="GuardianController\GuardianControllerAgent.cs" />
+    <Compile Include="GuardianController\GuardianControllerOnDemandAdapter.cs" />
+    <Compile Include="GuardianController\GuardianControllerPushCommands.cs" />
+    <Compile Include="GuardianController\GuardianControllerServer.cs" />
+    <Compile Include="GuardianController\GuardianControllerUtils.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerAccessGroupAccessDataCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerAccessGroupCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerAccessLevelCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerAttendanceCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerCalendarCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerCalendarDetailsCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerCalendarTemplateCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerCalendarTemplateDetailsCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerChangeDoorStatusCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerConstants.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerDateAndTimeCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerDateIntervalCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerDeviceInfoCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerDoorEventCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerEasyAccessCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerErrorCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerGrpcDeviceCommandModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerGrpcDeviceCommandResultModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigCloseCalendarCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigDoorCalendarCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigDoorCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigIoPortCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigMasterAccessPrimerCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigRelayCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerHardwareConfigWiegandCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerKeepOnlyCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerMatchOnServerResponseModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerServerConfig.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerUserCommunicationModel.cs" />
+    <Compile Include="GuardianController\Model\GuardianControllerUserIdOnDeviceCommunicationModel.cs" />
+    <None Include="GuardianController\Protos\guardian_controller_service.proto" />
     <Compile Include="Virdi\VirdiCommands.cs" />
     <Compile Include="Shared\Commands\CommandDeviceNumberAndUser.cs" />
     <Compile Include="Shared\Commands\CommandStartAndEndDate.cs" />
@@ -452,6 +503,9 @@
     </COMReference>
   </ItemGroup>
   <ItemGroup />
+  <ItemGroup>
+    <Protobuf Include="GuardianController\Protos\guardian_controller_service.proto" GrpcServices="Server" Link="GuardianController\Protos\guardian_controller_service.proto" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <Import Project="..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets" Condition="Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" />
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
@@ -459,5 +513,10 @@
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
     <Error Condition="!Exists('..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\System.ValueTuple.4.6.2\build\net471\System.ValueTuple.targets'))" />
+    <Error Condition="!Exists('..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets'))" />
+    <Error Condition="!Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.props'))" />
+    <Error Condition="!Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets'))" />
   </Target>
+  <Import Project="..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets" Condition="Exists('..\packages\Grpc.Core.2.46.6\build\net45\Grpc.Core.targets')" />
+  <Import Project="..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets" Condition="Exists('..\packages\Grpc.Tools.2.81.0\build\Grpc.Tools.targets')" />
 </Project>

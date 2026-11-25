@@ -86,31 +86,6 @@ namespace GuardianCommunication.Business.Component
             };
         }
 
-        /// <summary>
-        /// ثبت تردد های دستی
-        /// دوربین تشخیص پلاک
-        /// API
-        /// در این تردد ها نوع ورود و خروج و اپلیکشین و چک کردن 
-        /// </summary>
-        public void HookOtherResourcesAttendance(DtoAttendance attendance, bool checkDuplicateInterval)
-        {
-            attendance.IsSentToGuardian = true;
-            var resultOfSave = SaveAttendance(new List<DtoAttendance> { attendance }
-                , checkDuplicateInterval, false);
-            if (resultOfSave.Successful.IsCollectionNotNullOrEmpty())
-            {
-                var newAttendance = resultOfSave.Successful.FirstOrDefault();
-                try
-                {
-                    HookIoEvent(newAttendance);
-                }
-                catch (Exception exp)
-                {
-                    LoggingSystem.LogError(exp, "Error on HookOtherResourceAttendances to hook system thread");
-                }
-            }
-        }
-
         public DtoAttendanceSaveResult SaveAttendance
             (List<DtoAttendance> attendances
                 , bool checkDuplicateInterval
@@ -165,7 +140,7 @@ namespace GuardianCommunication.Business.Component
                         }
                         if (applyDeviceRelatedProperties && deviceCache != null)
                         {
-                            if (deviceCache.ProducerNumber == ProducerEnumeration.AsaGuard && attendance.DoorId.HasValue)
+                            if (deviceCache.ProducerNumber == ProducerEnumeration.Guardian && attendance.DoorId.HasValue)
                             {
                                 var doorInCache = deviceComponent.GetDeviceDoorCache(attendance.DoorId.Value);
                                 if (doorInCache?.ReaderDeviceId != null)
@@ -181,7 +156,7 @@ namespace GuardianCommunication.Business.Component
                                     attendance.ModuleId = doorInCache.ReaderModuleId;
                                     attendance.IoType = doorInCache.ReaderIoType;
                                     attendance.CameraId = doorInCache.ReaderCameraId;
-                                    attendance.CameraId = doorInCache.ReaderLocationId;
+                                    attendance.LocationId = doorInCache.ReaderLocationId;
                                     attendance.ReaderDeviceId = null;
                                 }
                                 else
